@@ -232,7 +232,7 @@ class GameBrowser:
             return
         if self.page is None:
             return
-        LOGGER.debug("browser Start overlay")
+        # LOGGER.debug("browser Start overlay")
         self._canvas_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         font_size = int(self.height/48)
         prompt:str = "Mahjong Copilot"
@@ -266,7 +266,7 @@ class GameBrowser:
         
         if self.is_overlay_on() == False:
             return
-        LOGGER.debug("browser Stop overlay")
+        # LOGGER.debug("browser Stop overlay")
         js_code = f"""(() => {{
             const canvas = document.getElementById('{self._canvas_id}');
             if (canvas) {{

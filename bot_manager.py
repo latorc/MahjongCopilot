@@ -39,9 +39,8 @@ class BotManager:
         self.mitm_port = self.settings.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
-        self.automation = automation.Automation(self.browser)
+        self.automation = automation.Automation(self.browser)        
         
-        self.lan_str:lan_strings.LanStrings = lan_strings.LAN_OPTIONS[setting.language]
         self.model_file = None
         
         self._thread:threading.Thread = None
@@ -290,8 +289,8 @@ class BotManager:
         if self.browser.is_overlay_on() == False:
             self.browser.start_overlay()
         if reaction:
-            guide, options = mj_helper.mjai_reaction_2_guide(reaction, 3, self.lan_str)
-            self.browser.overlay_update_text(guide, self.lan_str.OPTIONS_TITLE, options)
+            guide, options = mj_helper.mjai_reaction_2_guide(reaction, 3, self.settings.lan())
+            self.browser.overlay_update_text(guide, self.settings.lan().OPTIONS_TITLE, options)
         else:
             self.browser.overlay_clear_text()
     
@@ -307,6 +306,7 @@ class BotManager:
             return False
         if not self.browser.is_running():
             return False
+        return True
     
     def _do_automation(self, reaction:dict):
         # auto play given mjai reaction        

@@ -17,11 +17,11 @@ class Settings:
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 8999)
-        self.language:str = self._get_value("language", "EN", Settings.valid_language)
+        self.language:str = self._get_value("language", next(iter(lan_strings.LAN_OPTIONS)), Settings.valid_language)
         self.model_file:str = self._get_value("model_file", "mortal.pth")
         self.enable_automation:bool = self._get_value("enable_automation", False, Settings.valid_bool)
         self.enable_overlay:bool = self._get_value("enable_overlay", True, Settings.valid_bool)
-    
+        
     def load_json(self) -> dict:
         if pathlib.Path(self._json_file).exists():
             with open(self._json_file, 'r') as file:
@@ -32,6 +32,7 @@ class Settings:
     
     def save_json(self):
         """ Save settings into json file"""
+        # save all non-private variables (not starting with "_") into dict
         settings_to_save = {key: value for key, value in self.__dict__.items()
                             if not key.startswith('_') and not callable(value)}
         with open(self._json_file, 'w') as file:
@@ -51,6 +52,10 @@ class Settings:
         except Exception as e:
             LOGGER.warning("setting '%s' use default value '%s' because error: %s", key, default_value,e, exc_info=True)
             return default_value
+    
+    def lan(self) -> lan_strings.LanStrings:
+        """ return the LanString instance"""
+        return lan_strings.LAN_OPTIONS[self.language]
         
     def valid_language(language:str):
         return (language in lan_strings.LAN_OPTIONS)

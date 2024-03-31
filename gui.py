@@ -38,8 +38,7 @@ class MainGUI(tk.Tk):
         super().__init__()
         self.bot_manager = bot_manager
         self.settings = setting
-        lan_code = self.settings.language
-        self.lan_strings:LanStrings = LAN_OPTIONS[lan_code]
+        self.lan_strings:LanStrings = self.settings.lan()
 
         icon = tk.PhotoImage(file=Path(RES_FOLDER)/'icon.png')
         self.iconphoto(True, icon)
