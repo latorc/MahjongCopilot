@@ -2,8 +2,10 @@ import json
 from liqi import MsgType
 from liqi import LiqiProto, LiqiMethod, LiqiAction
 
-
-import libriichi
+try:
+    import libriichi
+except:
+    import riichi as libriichi
 import mj_helper
 from mj_helper import MJAI_TYPE, GameInfo
 from mjai.engine import MortalEngine

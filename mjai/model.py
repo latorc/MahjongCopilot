@@ -7,7 +7,10 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_sequence
 from torch.distributions import Normal, Categorical
 from typing import *
 from functools import partial
-import libriichi
+try:
+    import libriichi
+except:
+    import riichi as libriichi
 
 
 class ChannelAttention(nn.Module):
