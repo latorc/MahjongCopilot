@@ -1,1 +1,1 @@
-pipreqs --ignore .venv --force
+pipreqs --ignore=.venv,test,temp --force .

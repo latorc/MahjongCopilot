@@ -18,6 +18,6 @@ log/
 mitm_config/
 temp/
 /models/*
-
+test/
 /dev_docs
 /_*.py

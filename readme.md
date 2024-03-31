@@ -49,12 +49,20 @@ In-game HUD (Overlay) 游戏中 HUD (覆盖显示）
 ## Credit 鸣谢
 
 - Based on Mortal Model an MJAI protocol
+  
   基于 Mortal 模型和 MJAI 协议
+  
   Mortal: https://github.com/Equim-chan/Mortal
 - Design and implementation based on Akagi
+  
   设计和功能实现基于 Akagi
+  
   Akagi: https://github.com/shinkuan/Akagi
+  
+  
 - MJAI Protocol Reference
+  
   MJAI协议参考
+  
   MJAI: https://mjai.app
 
