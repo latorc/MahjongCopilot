@@ -295,14 +295,27 @@ class BotManager:
         else:
             self.browser.overlay_clear_text()
     
-    def _do_automation(self, reaction:dict):
-        # auto play given mjai reaction
+    def _automation_conditions_met(self) -> bool:
+        # return True if automation conditions met
+        # False if:
+        # automation not enabled
+        # game state is None (not in game)
+        # browser is not running
         if not self.settings.enable_automation:
-            return 
+            return False
         if self.game_state is None:
-            return
-        if reaction is None:
-            return
+            return False
+        if not self.browser.is_running():
+            return False
+    
+    def _do_automation(self, reaction:dict):
+        # auto play given mjai reaction        
+        
+        if not self._automation_conditions_met():
+            return False
+        if not reaction:    # no reaction given
+            return False
+        
         try:
             self.automation.execute_action(reaction, self.game_state)
         except Exception as e:
@@ -310,11 +323,8 @@ class BotManager:
             
     def _retry_failed_automation(self):
         # retry pending reaction if enabled
-        if self.game_state is None:
-            return
-        if not self.settings.enable_automation:
-            return
-        
+        if not self._automation_conditions_met():
+            return False        
         try:
             self.automation.retry_pending_reaction(self.game_state)
         except Exception as e:
