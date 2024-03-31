@@ -1,0 +1,23 @@
+__pycache__/
+dist/
+build/
+.env
+.venv/
+venv/
+.vscode/
+.idea/
+
+*.log
+*.swp
+.DS_Store
+
+
+# Local folder/files
+browser_data/
+log/
+mitm_config/
+temp/
+/models/*
+
+/dev_docs
+/_*.py
