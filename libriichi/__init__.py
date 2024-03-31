@@ -1,9 +1,15 @@
-from .libriichi import *
+try:
+    from .libriichi import *
 
-__doc__ = libriichi.__doc__
-if hasattr(libriichi, "__all__"):
-    __all__ = libriichi.__all__
-    
+    __doc__ = libriichi.__doc__
+    if hasattr(libriichi, "__all__"):
+        __all__ = libriichi.__all__
+except Exception as e:
+    from .riichi import *
+
+    __doc__ = riichi.__doc__
+    if hasattr(riichi, "__all__"):
+        __all__ = riichi.__all__
 """
 Submodule: arena
 Module: libriichi.libriichi.arena

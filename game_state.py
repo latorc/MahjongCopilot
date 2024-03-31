@@ -95,9 +95,14 @@ class GameState:
         if self.mjai_bot is None:
             return None
         
-        tehai = self.mjai_bot.get_tehai()
-        aka_doras = self.mjai_bot.get_akas_in_hand()
-        tsumohai = self.mjai_bot.get_tsumohai()
+        # tehai = self.mjai_bot.get_tehai()
+        # aka_doras = self.mjai_bot.get_akas_in_hand()
+        # tsumohai = self.mjai_bot.get_tsumohai()
+        
+        state = self.mjai_bot.state
+        tehai = state.tehai # with tsumohai, no aka marked
+        aka_doras = state.akas_in_hand
+        tsumohai = state.last_self_tsumo()
         # state = self.mjai_bot.state
         # # bakaze = state.bakaze       # Bakaze (場風)
         # # jikaze = state.jikaze       # Jikaze (自風)

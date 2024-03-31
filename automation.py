@@ -1,3 +1,4 @@
+from collections import namedtuple
 import time
 import random
 import threading
@@ -118,6 +119,13 @@ def cvt_type_mjai_2_ms(mjai_type:str, gi:GameInfo) -> MSType:
     else:
         return MJAI_2_MS_TYPE[mjai_type]
 
+ActionStep = namedtuple('ActionStep', ['action', 'text'])
+def get_delay_step(delay:float):
+    """ Generate a delay step"""
+    action = lambda: time.sleep(delay)
+    text = f"delay {delay:.1f}s "
+    return ActionStep(action, text)
+
 class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul"""
     def __init__(self, browser: GameBrowser):
@@ -165,30 +173,27 @@ class Automation:
         liqi_operation = game_state.last_operation
         op_step = game_state.last_op_step        
         mjai_type = mjai_action['type']
+        LOGGER.debug("Automating action '%s', ms step = %d", mjai_type, op_step)
         
         # Design: generate action steps based on mjai action
         # action steps are individual steps like delay, mouse click, etc.
         # Then execute the steps in thread.
         # verify if the action has expired (Majsoul has new action/operation), and cancel executing if so
-       
-        delay = self.get_delay(mjai_action, game_state)  # first action is delay
-        action_steps = [lambda: time.sleep(delay)]
-        LOGGER.debug("Automating action '%s', ms step = %d (delay = %.1f)", mjai_type, op_step, delay)
-        
-        # subsequent actionlet generated according to mjai action and game state
         if  mjai_type == 'dahai':
-            more_actions = self._dahai_action_steps(mjai_action, gi, game_state.first_round)
+            more_steps:list[ActionStep] = self._dahai_action_steps(mjai_action, gi, game_state.first_round)
         elif mjai_type in ['none', 'chi', 'pon', 'daiminkan', 'ankan', 'kakan', 'hora', 'reach', 'ryukyoku', 'nukidora']:
-            more_actions = self._button_action_steps(mjai_action, gi, liqi_operation)
+            more_steps:list[ActionStep] = self._button_action_steps(mjai_action, gi, liqi_operation)
         else:
             LOGGER.error("Unrecognized mjai type %s. No action", mjai_type)
             return
-        action_steps.extend(more_actions)
         
+        delay = self.get_delay(mjai_action, game_state)  # first action is delay
+        action_steps:list[ActionStep] = [get_delay_step(delay)]
+        action_steps.extend(more_steps)
         
         def execute_action_steps():
             # task method for thread            
-            for action in action_steps:
+            for step in action_steps:
                 # verify if op_step changed, which indicates there is new liqi action, and old action has expired
                 # for example, when executing Chi, there might be another player Pon before Chi is finished
                 # upon which any action steps related to Chi should be canceled
@@ -199,7 +204,8 @@ class Automation:
                 if self._thread_stop_event.is_set():
                     LOGGER.debug("Automation steps stopped because stop event is set")
                     return                
-                action()
+                LOGGER.debug("Executing action step: %s", step.text)
+                step.action()
             # record execution info for possible retry
             self.last_exe_time = time.time()
             self.last_exe_step = op_step
@@ -223,7 +229,7 @@ class Automation:
         """ allow execution thread"""
         self._thread_stop_event.clear()
     
-    def retry_pending_reaction(self, game_state:GameState, min_interval:float=0.5):
+    def retry_pending_reaction(self, game_state:GameState, min_interval:float=1):
         """ Retry pending action from game state. if current time > last execution time + min interval"""
         if self._execution_thread and self._execution_thread.is_alive():
             # last action still executing, quit
@@ -251,7 +257,7 @@ class Automation:
         self.execute_action(mjai_action, game_state)
         
     
-    def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list:
+    def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list[ActionStep]:
         """ generate dahai (discard tile) action
         params:
             is_east_first(bool): if currently self is East and it's the first move"""
@@ -262,13 +268,6 @@ class Automation:
             # already in reach state. no need to manual dahai
             LOGGER.debug("Skip dahai %s because already in reach state.", dahai)
             return []
-
-        # # verify if there is only operation dahai
-        # if liqi_operation:
-        #     op_list = liqi_operation['operationList']
-        #     assert len(op_list) == 1, "Dahai opList should have only dahai"
-        #     assert op_list[0]['type'] == MSType.dahai, "operation type should be dahai"
-        
         
         if tsumogiri:   # tsumogiri: discard right most
             dahai_count = len([tile for tile in gi.my_tehai if tile != '?'])
@@ -278,11 +277,11 @@ class Automation:
                 action = lambda: self.mouse_click(Positions.TEHAI_X[dahai_count], Positions.TEHAI_Y)
             else:
                 action = lambda: self.mouse_click(Positions.TEHAI_X[dahai_count] + Positions.TRUMO_SPACE, Positions.TEHAI_Y)
-            return [action]
+            return [ActionStep(action, f"Dahai [{dahai}]")]
         else:       # tedashi: find the index and discard
             idx = gi.my_tehai.index(dahai)            
             action = lambda: self.mouse_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
-            return [action]
+            return [ActionStep(action, f"Dahai [{dahai}]")]
     
     def _process_oplist_for_kan(self, mstype_from_mjai, op_list:list) -> list:
         """ Process operation list for kan, and return the new op list"""
@@ -312,7 +311,7 @@ class Automation:
         return op_list        
 
     
-    def _button_action_steps(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list:
+    def _button_action_steps(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list[ActionStep]:
         """Generate button click related actions (chi, pon, kan, etc.)"""       
 
         actions = []
@@ -339,10 +338,9 @@ class Automation:
         the_op = None
         for idx, operation in enumerate(op_list):
             if operation['type'] == mstype_from_mjai:
-                LOGGER.debug("Automating step - clicking button %d (%s)", idx, mjai_type)
+                text = f"clicking button {idx} ({mjai_type})"
                 action = lambda: self.mouse_click(Positions.BUTTONS[idx][0], Positions.BUTTONS[idx][1])
-                actions.append(action)
-                # actions.append(lambda: self.browser.auto_hu())
+                actions.append(ActionStep(action, text))
                 the_op = operation
                 break
         if the_op is None:
@@ -354,8 +352,7 @@ class Automation:
         if mstype_from_mjai == MSType.reach:            
             reach_dahai = mjai_action['reach_dahai']
             delay = 0.5 + 1.0 * random.random()
-            actions.append(lambda: time.sleep(delay))
-            LOGGER.debug("Automating step - reach dahai (delay=%.1f)", delay)
+            actions.append(get_delay_step(delay))
             dahai_actions = self._dahai_action_steps(reach_dahai, gi, False)
             actions.extend(dahai_actions)
             return actions
@@ -383,8 +380,8 @@ class Automation:
                 consumed_liqi = mj_helper.sort_mjai_tiles(consumed_liqi)
                 if mjai_consumed == consumed_liqi:  # match. This is the combination to click on
                     delay = len(combs) * (0.5 + random.random())
-                    actions.append(lambda: time.sleep(delay))
-                    LOGGER.debug("Automating step - clicking candidate %s (delay=%.1f)", mjai_consumed, delay)
+                    actions.append(get_delay_step(delay))                    
+                    text = f"clicking candidate {mjai_consumed}"
                     
                     if mstype_from_mjai in [MSType.chi, MSType.pon, MSType.daiminkan]:
                         candidate_idx = int((-(len(combs)/2)+idx+0.5)*2+5)
@@ -398,7 +395,7 @@ class Automation:
                             Positions.CANDIDATES_KAN[candidate_idx][0],
                             Positions.CANDIDATES_KAN[candidate_idx][1])
                     
-                    actions.append(action)
+                    actions.append(ActionStep(action,text))
                     return actions
         else:
             return actions
