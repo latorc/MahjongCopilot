@@ -4,8 +4,8 @@
     "browser_height": 720, 
     "ms_url": "https://game.maj-soul.com/1/", 
     "mitm_port": 10999, 
-    "language": "ZHS", 
+    "language": "EN", 
     "model_file": "model_v4_20240308_best_min.pth", 
-    "enable_automation": true, 
-    "enable_overlay": true
+    "enable_automation": false, 
+    "enable_overlay": false
 }

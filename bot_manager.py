@@ -23,12 +23,12 @@ METHODS_TO_IGNORE = [
     liqi.LiqiMethod.fetchAccountActivityData,
     liqi.LiqiMethod.fetchServerTime,
 ]
-ALLOWED_DOMAINS = [
-    "maj-soul.com",     # China
-    "majsoul.com",      
-    "mahjongsoul.com",  # Japan
-    "yo-star.com"
-]
+# ALLOWED_DOMAINS = [
+#     "maj-soul.com",     # China
+#     "majsoul.com",      
+#     "mahjongsoul.com",  # Japan
+#     "yo-star.com"
+# ]
 class BotManager:
     """ Bot logic manager"""
     def __init__(self, setting:settings.Settings) -> None:
@@ -37,7 +37,7 @@ class BotManager:
         self.game_flow_id = None
         self.liqi_parser:liqi.LiqiProto = None
         self.mitm_port = self.settings.mitm_port
-        self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port, ALLOWED_DOMAINS)
+        self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
         self.automation = automation.Automation(self.browser)
         

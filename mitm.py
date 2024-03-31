@@ -35,20 +35,32 @@ class WSDataInterceptor:
         self.message_queue = queue.Queue()      
         """Queue for unretrieved messages
         each element is: WSMessage"""
+        
+    def allow_url(self, url:str) -> bool:
+        """ return true if url is allowed"""
+        if not self.allowed_domains:
+            # no filtering if None/empty
+            return True
+        
+        if any(d in url for d in self.allowed_domains):
+            # allowed
+            return True
+        
+        return False
 
     def websocket_start(self, flow:HTTPFlow):
-        if any(allowed_domain in flow.request.pretty_url for allowed_domain in self.allowed_domains):
+        if self.allow_url(flow.request.pretty_url):
             self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_START))
         else:
             flow.kill()
             LOGGER.info("Killing flow since it is not in allowed domains: %s", flow.request.pretty_url)            
         
     def websocket_message(self, flow:HTTPFlow):
-        if any(allowed_domain in flow.request.pretty_url for allowed_domain in self.allowed_domains):
+        if self.allow_url(flow.request.pretty_url):
             self.message_queue.put(WSMessage(flow.id, flow.websocket.messages[-1].timestamp, flow.websocket.messages[-1].content))
         
     def websocket_end(self, flow:HTTPFlow):
-        if not any(allowed_domain in flow.request.pretty_url for allowed_domain in self.allowed_domains):
+        if self.allow_url(flow.request.pretty_url):
             self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_END))        
 
 class MitmController:
@@ -59,7 +71,8 @@ class MitmController:
         """
         params:
             proxy_port(int): proxy server port to open
-            allowed_domains(list): Intercept data only from allowed domains. Other websocket traffic will be blocked."""
+            allowed_domains(list): Intercept data only from allowed domains. Other websocket traffic will be blocked.
+                filtering turned off if None/empty"""
         
         self.proxy_port = proxy_port
         self.mitm_config_folder = utils.get_sub_folder(MITM_CONFDIR)
