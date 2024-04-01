@@ -36,12 +36,12 @@ def wait_for_file(file:str, timeout:int=5) -> bool:
         time.sleep(0.5)
     return True
 
-def install_root_cert(cert_file:str) -> bool:
+def install_root_cert(cert_file:str) -> tuple[bool, str]:
     """ Install Root certificate onto the system
     params:
         cert_file(str): certificate file to be installed
     Returns:
-        bool: True if the certificate is installed successfully        
+        (bool, str): True if the certificate is installed successfully, str is the stdout
     """
     # Install cert. If the cert exists, system will skip installation
     if sys.platform == "win32":
@@ -54,19 +54,19 @@ def install_root_cert(cert_file:str) -> bool:
             capture_output=True, text=True, check=True)
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)
-        return
+        return False, ""
     
     # Check if successful
     if result.returncode == 0:  # success     
-        return True
+        return True, result.stdout
     else:   # error        
-        return False
+        return False, result.stdout
     
 def list_files(folder:str, full_path:bool=False) -> list[pathlib.Path]:
     """ return the list of files in the folder 
     params:
-    folder(str): name of the folder
-    full_path(bool): True to return the full path, while False to return only the file name"""
+        folder(str): name of the folder
+        full_path(bool): True to return the full path, while False to return only the file name"""
     try:
         files = [f for f in pathlib.Path(folder).iterdir() if f.is_file()]
         if full_path:
@@ -74,8 +74,7 @@ def list_files(folder:str, full_path:bool=False) -> list[pathlib.Path]:
         else:
             return [f.name for f in files]
     except:
-        return []
-    
+        return []    
         
 
 if __name__=='__main__':
@@ -86,7 +85,7 @@ if __name__=='__main__':
     wait_res = wait_for_file("utils.py")
     print("wait file results:", wait_res)    
     
-    res = install_root_cert("non_exist.cert")
+    res, text = install_root_cert("non_exist.cert")
     print("install cert result:", res)
     
     files = list_files('resources',False)

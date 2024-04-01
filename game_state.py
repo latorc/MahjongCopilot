@@ -158,7 +158,7 @@ class GameState:
         returns:
             dict: Mjai message in dict format (i.e. AI's reaction) if any. May be None.
         """
-        reaction = self.input_inner(liqi_msg)
+        reaction = self._input_inner(liqi_msg)
         self._update_game_info()    # update game info (tehai tsumohai) after input        
         if reaction is not None:
             # Update last_reaction (not none) and set it to pending
@@ -166,13 +166,10 @@ class GameState:
             self.last_reaction_pending = True
         return reaction
     
-    def input_inner(self, liqi_msg: dict) -> dict | None:
-        
+    def _input_inner(self, liqi_msg: dict) -> dict | None:        
         liqi_type = liqi_msg['type']
         liqi_method = liqi_msg['method']
         liqi_data = liqi_msg['data']
-        
-        # TODO: clear last_reaction_pending flag after reaction is acted on/expired
         
         # SyncGame
         if liqi_method == LiqiMethod.syncGame or liqi_method == LiqiMethod.enterGame:
@@ -207,8 +204,6 @@ class GameState:
         
         # Actions        
         elif liqi_method == LiqiMethod.ActionPrototype: 
-            # start kyoku
-            
             # We assume here, when there is new action, last reaction has done/expired
             self.last_reaction_pending = False
             # when there is new action, accept reach
@@ -225,10 +220,7 @@ class GameState:
                     if liqi_data['data']['operation']['seat'] != self.seat:
                         LOGGER.warning(f"liqi_data['data']['operation']['seat'] {liqi_data['data']['operation']['seat']} != self.seat{self.seat}")
                     if 'operationList' not in liqi_data['data']['operation']:
-                        LOGGER.warning("No operation List: %s", liqi_data['data']['operation'])
-                # else:
-                #     self.last_operation = None
-                #     self.last_op_step = None            
+                        LOGGER.warning("No operation List: %s", liqi_data['data']['operation'])        
             
             if liqi_data['name'] == 'ActionNewRound':                
                 return self.ms_new_round(liqi_data)

@@ -80,9 +80,6 @@ class MitmController:
         self.mitm_thread = None
         self.dump_master = None
         
-        self.flow_message_dict:dict[str, queue.Queue] = {}
-        """ Used for exchanging flow data between mitm(thread) and interface.
-        {flow_id: msg_queue, ...}"""
         self.ws_data_addon = WSDataInterceptor(allowed_domains)
         
     def start(self):
@@ -139,11 +136,11 @@ class MitmController:
             return False
         else:
             LOGGER.debug(f"Certificate file: {cert_file}")
-            install_success = utils.install_root_cert(cert_file)
+            install_success, text = utils.install_root_cert(cert_file)
             if install_success:
                 return True
             else:
-                LOGGER.error("Failed to install MITM certificate. Please install manually.")
+                LOGGER.error("Failed to install MITM certificate. Please install manually. Stdout: %s", text)
                 return False
 
             

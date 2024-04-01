@@ -133,13 +133,13 @@ class LiqiProto:
                     proto_obj = liqi_pb2_res.FromString(msg_block[1]['data'])
                     dict_obj = MessageToDict(proto_obj, including_default_value_fields=True)
                 else:
-                    LOGGER.info('unknow msg: %s', buf)
+                    LOGGER.error('unknow msg (type=%s): %s', msg_type, buf)
                     return None
             result = {'id': msg_id, 'type': msg_type,
                     'method': method_name, 'data': dict_obj}
             self.tot += 1
         except Exception as e:
-            LOGGER.error('error: %s unknow msg: %s', e, buf)
+            LOGGER.error('Failed to parse msg: %s, error: %s', buf, e, exc_info=True)
             return None
         return result
     

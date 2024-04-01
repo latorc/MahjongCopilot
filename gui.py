@@ -42,6 +42,9 @@ class MainGUI(tk.Tk):
 
         icon = tk.PhotoImage(file=Path(RES_FOLDER)/'icon.png')
         self.iconphoto(True, icon)
+        
+        self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
+        
         # create window widgets
         self._create_widgets()
 
@@ -83,7 +86,7 @@ class MainGUI(tk.Tk):
         self.toolbar.add_button(self.lan_strings.OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
         self.toolbar.add_button(self.lan_strings.HELP, 'help.png', self._on_btn_help_clicked)
         self.toolbar.add_sep()
-        self.toolbar.add_button(self.lan_strings.EXIT, 'exit.png', self._on_btn_exit_clicked)
+        self.toolbar.add_button(self.lan_strings.EXIT, 'exit.png', self._on_exit)
 
         # AI guidance
         _label = ttk.Label(self.grid_frame, text=self.lan_strings.AI_OUTPUT)
@@ -162,7 +165,7 @@ class MainGUI(tk.Tk):
         # open help dialog        
         messagebox.showinfo(self.lan_strings.HELP, self.lan_strings.HELP_STR)
     
-    def _on_btn_exit_clicked(self):
+    def _on_exit(self):
         # Exit the app
         # pop up that confirm if the user really wants to quit
         if messagebox.askokcancel(self.lan_strings.EXIT, self.lan_strings.EIXT_CONFIRM):

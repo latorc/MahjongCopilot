@@ -168,7 +168,8 @@ class Automation:
             return False
         if mjai_action is None:
             return False
-        
+        if self.is_running_execution():
+            LOGGER.warning("Previous action is still executing. Expect previous one to be canceled.")
         gi = game_state.get_game_info()
         liqi_operation = game_state.last_operation
         op_step = game_state.last_op_step        
@@ -184,7 +185,7 @@ class Automation:
         elif mjai_type in ['none', 'chi', 'pon', 'daiminkan', 'ankan', 'kakan', 'hora', 'reach', 'ryukyoku', 'nukidora']:
             more_steps:list[ActionStep] = self._button_action_steps(mjai_action, gi, liqi_operation)
         else:
-            LOGGER.error("Unrecognized mjai type %s. No action", mjai_type)
+            LOGGER.error("Exit Automation for unrecognized mjai type %s", mjai_type)
             return
         
         delay = self.get_delay(mjai_action, game_state)  # first action is delay
@@ -199,27 +200,27 @@ class Automation:
                 # upon which any action steps related to Chi should be canceled
                 game_step = game_state.last_op_step
                 if op_step != game_step:  
-                    LOGGER.debug("Current game step is %d, but operation step is %d. Cancel execution.", game_step, op_step)
+                    LOGGER.debug("Cancel execution. origin step = %d, current step = %dd", op_step, game_step)
                     return
                 if self._thread_stop_event.is_set():
-                    LOGGER.debug("Automation steps stopped because stop event is set")
+                    LOGGER.debug("Cancel execution. Stop event set")
                     return                
-                LOGGER.debug("Executing action step: %s", step.text)
+                LOGGER.debug("Executing step: %s", step.text)
                 step.action()
-            # record execution info for possible retry
-            self.last_exe_time = time.time()
-            self.last_exe_step = op_step
+                # record execution info for possible retry
+                self.last_exe_time = time.time()
+                self.last_exe_step = op_step
                            
         if action_steps:
             # Execute actions in thread to avoid blocking bot manager main thread
             self._execution_thread = threading.Thread(
                 target = execute_action_steps,
-                name="AutomationThread",
+                name=f"Auto_step_{op_step}",
                 daemon=True
             )
             self._execution_thread.start()
         else:
-            LOGGER.warning("Action list empty. Nothing to execute.")
+            LOGGER.warning("Exit Automation. Action step list empty.")
     
     def stop_execution(self):
         """ Stop ongoing execution if any"""
@@ -229,9 +230,15 @@ class Automation:
         """ allow execution thread"""
         self._thread_stop_event.clear()
     
+    def is_running_execution(self):
+        if self._execution_thread and self._execution_thread.is_alive():
+            return True
+        else:
+            return False
+    
     def retry_pending_reaction(self, game_state:GameState, min_interval:float=1):
         """ Retry pending action from game state. if current time > last execution time + min interval"""
-        if self._execution_thread and self._execution_thread.is_alive():
+        if self.is_running_execution():
             # last action still executing, quit
             return
         
@@ -240,7 +247,7 @@ class Automation:
             return
         
         if game_state is None:
-            LOGGER.warning("Game State is none!")
+            LOGGER.warning("Exit Automation. Game State is none!")
             return
         
         game_step = game_state.last_op_step
@@ -266,7 +273,7 @@ class Automation:
         
         if gi.reached:
             # already in reach state. no need to manual dahai
-            LOGGER.debug("Skip dahai %s because already in reach state.", dahai)
+            LOGGER.debug("Skip automating dahai %s because already in reach state.", dahai)
             return []
         
         if tsumogiri:   # tsumogiri: discard right most
@@ -303,7 +310,7 @@ class Automation:
                     idx_to_del = idx
         
         if idx_to_keep is None:
-            LOGGER.error("No matching kan type in operation list")
+            LOGGER.error("No matching type %s found in op list: %s", mstype_from_mjai, op_list)
             return op_list
         op_list[idx_to_keep]['combination'] = kan_combs
         if idx_to_del is not None:
@@ -345,7 +352,7 @@ class Automation:
                 break
         if the_op is None:
             # no liqi operation but mjai indicates operation. mismatch(e.g. last round no pon)
-            LOGGER.warning("No corresponding operation found in liqi msg for %s", mjai_type)            
+            LOGGER.error("No matching operation for mjai %s. Op list: %s", mjai_type, op_list)            
             return actions
         
         # process reach dahai action

@@ -226,9 +226,9 @@ class BotManager:
         """ process websocket message from mitm server"""
         
         if msg.type == mitm.WS_START:
-            LOGGER.debug("WS Flow started: %s", msg.flow_id)
+            LOGGER.debug("Websocket Flow started: %s", msg.flow_id)
         elif msg.type == mitm.WS_END:
-            LOGGER.debug("WS Flow ended: %s", msg.flow_id)
+            LOGGER.debug("Websocket Flow ended: %s", msg.flow_id)
             if msg.flow_id == self.game_flow_id:
                 self._process_end_game()
         elif msg.type == mitm.WS_MESSAGE:
