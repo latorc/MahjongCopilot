@@ -13,13 +13,13 @@ class Settings:
         self._settings_dict:dict = self.load_json()
         
         # read settings or set default values
-        # variable names must match keys in json, for saving later        
+        # variable names must match keys in json, for saving later       
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 10999)
-        self.language:str = self._get_value("language", [lan_str.LAN_OPTIONS.keys()][-1], self.valid_language)
+        self.language:str = self._get_value("language", list(lan_str.LAN_OPTIONS.keys())[-1], self.valid_language)
         
         self.model_type:str = self._get_value("model_type", "Local")
         """ model type: local, mjapi"""
@@ -37,11 +37,13 @@ class Settings:
         
     def load_json(self) -> dict:
         """ Load settings from json file into dict"""
-        if pathlib.Path(utils.sub_file("", self._json_file)).exists():
+        try:
             with open(self._json_file, 'r',encoding='utf-8') as file:
                 settings_dict:dict = json.load(file)
-        else:
+        except Exception as e:
+            LOGGER.warning("Error loading settings. Will use defaults. Error: %s", e)
             settings_dict = {}
+        
         return settings_dict
     
     def save_json(self):
@@ -66,7 +68,7 @@ class Settings:
                     , key, default_value, value)
                 return default_value
         except Exception as e:
-            LOGGER.warning("setting '%s' use default value '%s' because error: %s", key, default_value,e, exc_info=True)
+            LOGGER.warning("setting '%s' use default value '%s' due to error: %s", key, default_value,e)
             return default_value
     
     def lan(self) -> lan_str.LanStrings:

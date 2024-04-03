@@ -166,7 +166,7 @@ class MainGUI(tk.Tk):
         settings_window.grab_set()
         self.wait_window(settings_window)
         
-        if settings_window.GUI_need_reload:     # reload UI if needed
+        if settings_window.gui_need_reload:     # reload UI if needed
             self.reload_gui()
         if settings_window.model_updated:       # re-create bot if needed
             if not self.bot_manager.is_in_game():
@@ -483,12 +483,13 @@ class SettingsWindow(tk.Toplevel):
         self.lan_strings:LanStrings = LAN_OPTIONS[self.settings.language]
         self.title(self.lan_strings.SETTINGS)
         self.geometry('600x500')
-        self.resizable(False, False)
+        self.minsize(600,500)
+        # self.resizable(False, False)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
         
-        self.GUI_need_reload:bool = False
+        self.gui_need_reload:bool = False
         """ Whether a GUI refresh is needed to apply new settings"""
 
         self.model_updated:bool = False
@@ -528,7 +529,7 @@ class SettingsWindow(tk.Toplevel):
         options = ["1920 x 1080", "1600 x 900", "1280 x 720"]
         setting_size = f"{self.settings.browser_width} x {self.settings.browser_height}"
         self.client_size_var = tk.StringVar(value=setting_size)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=15)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # majsoul url
@@ -536,7 +537,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MAJSOUL_URL)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.ms_url_var = tk.StringVar(value=self.settings.ms_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=50)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
         
         # mitm port
@@ -544,7 +545,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MITM_PORT)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mitm_port_var = tk.StringVar(value=self.settings.mitm_port)
-        number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=10)
+        number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=15)
         number_entry.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # Select language
@@ -553,7 +554,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = [v.LANGUAGE_NAME for v in LAN_OPTIONS.values()]
         self.language_var = tk.StringVar(value=LAN_OPTIONS[self.settings.language].LANGUAGE_NAME)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly",width=15)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
 
         # Select Model Type
@@ -562,7 +563,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = [type.value for type in BOT_TYPE]
         self.model_type_var = tk.StringVar(value=self.settings.model_type)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly",width=15)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # Select Model File
@@ -571,7 +572,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = utils.list_files(utils.MODEL_FOLDER)
         self.model_file_var = tk.StringVar(value=self.settings.model_file)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly", width=30)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # MJAPI url
@@ -579,7 +580,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_URL)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mjapi_url_var = tk.StringVar(value=self.settings.mjapi_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var,width=50)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
         
         # MJAPI user
@@ -587,7 +588,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_USER)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mjapi_user_var = tk.StringVar(value=self.settings.mjapi_user)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var,width=15)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
         
         # MJAPI secret
@@ -595,7 +596,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_SECRET)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mjapi_secret_var = tk.StringVar(value=self.settings.mjapi_secret)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var,width=50)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))        
 
         # Buttons frame
@@ -629,9 +630,9 @@ class SettingsWindow(tk.Toplevel):
                 language_new = code
                 break
         if self.settings.language != language_new:
-            self.GUI_need_reload = True
+            self.gui_need_reload = True
         else:
-            self.GUI_need_reload = False
+            self.gui_need_reload = False
             
         model_type_new = self.model_type_var.get()        
         model_file_new = self.model_file_var.get()
