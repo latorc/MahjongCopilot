@@ -23,7 +23,7 @@ MjaiBot = libriichi.mjai.Bot
 def get_bot(settings:Settings) -> 'Bot':
     """ create the Bot instance based on settings"""
     if settings.model_type == BOT_TYPE.LOCAL.value:
-        bot = LocalMortalBot(str(Path(MODEL_FOLDER)/settings.model_file))                
+        bot = LocalMortalBot(utils.sub_file(MODEL_FOLDER, settings.model_file))                
     elif settings.model_type == BOT_TYPE.MJAPI.value:
         bot = MjapiBot(settings)
     else:
