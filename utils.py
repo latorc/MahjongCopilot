@@ -16,11 +16,21 @@ LOG_DIR = 'log'
 MITM_CONFDIR = 'mitm_config'
 TEMP_FOLDER = 'temp'
 
+# for automation
+GAME_MODES = ['4E', '4S', '3E', '3S']
 
 class BOT_TYPE(Enum):
     """ Model type for bot"""
     LOCAL = "Local"
     MJAPI = "MJAPI"
+    
+    
+class UI_STATE(Enum):
+    """ UI State for the game"""
+    NOT_RUNNING = 0
+    MAIN_MENU = 1
+    INGAME = 10
+    GAME_ENDING = 20
     
 class ModelFileException(Exception):
     """ Exception for model file error"""
@@ -31,8 +41,14 @@ class MITMException(Exception):
     pass
 
 def sub_folder(folder_name:str) -> pathlib.Path:
-    """ return the subfolder absolute path string, create it if not exists"""
-    subfolder = pathlib.Path(__main__.__file__).parent / folder_name
+    """ return the subfolder Path, create it if not exists"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = pathlib.Path(sys._MEIPASS).parent
+    except Exception as e:
+        base_path = pathlib.Path('.')
+        
+    subfolder = base_path / folder_name
     if not subfolder.exists():
         subfolder.mkdir(exist_ok=True)
     return subfolder.resolve()
@@ -40,7 +56,8 @@ def sub_folder(folder_name:str) -> pathlib.Path:
 def sub_file(folder:str, file:str) -> str:
     """ return the file absolute path string, given folder and filename, create the folder if not exists"""
     subfolder = sub_folder(folder)
-    return str(subfolder / file)
+    file_str = str((subfolder / file).resolve())
+    return file_str
 
 def wait_for_file(file:str, timeout:int=5) -> bool:
     """ Wait for file creation (blocking until the file exists) for {timeout} seconds

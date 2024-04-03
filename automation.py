@@ -2,11 +2,14 @@ from collections import namedtuple
 import time
 import random
 import threading
+from typing import Iterator
 from browser import GameBrowser
 from game_state import GameInfo, GameState
 import mj_helper
 from mj_helper import MJAI_TYPE, MSType
 from log_helper import LOGGER
+import img_proc
+import settings
 
 
 class Positions:
@@ -84,7 +87,6 @@ class Positions:
     ]
 
 
-    
 
 MJAI_2_MS_TYPE = {
     MJAI_TYPE.NONE: MSType.none,
@@ -128,57 +130,111 @@ def cvt_type_mjai_2_ms(mjai_type:str, gi:GameInfo) -> MSType:
 
 ActionStep = namedtuple('ActionStep', ['action', 'text'])
 
-class AutomationTask(threading.Thread):
-    """ represeting a thread executing a list of action steps"""
-    def __init__(self, action_list:list[ActionStep], game_state:GameState = None):
-        """ params:
-        action_list(list[ActionStep]): list of actions to run
-        game_state: if provided (not None), game_state.last_op_step will be used to check if the action has expired and execution should be canceled""" 
-        self.action_list = action_list
-        self.game_state = game_state
-        if game_state:
-            self.op_step = game_state.last_op_step
-        else:
-            self.op_step = None
-        self.stop_event = threading.Event()        # set event to stop running
-        self.last_exe_time = -1
-               
-        super().__init__(name=f"Auto_step_{self.op_step}", daemon=True)
-
+class AutomationTask():
+    """ represeting a thread executing actions"""
+    def __init__(self):
+        self._stop_event = threading.Event()        # set event to stop running
+        self._thread:threading.Thread = None
+        self.last_exe_time:float = -1
         
-    def run(self):
-        for step in self.action_list:
-            # verify if op_step changed, which indicates there is new liqi action, and old action has expired
-            # for example, when executing Chi, there might be another player Pon before Chi is finished
-            # upon which any action steps related to Chi should be canceled
-            if self.stop_event.is_set():
-                LOGGER.debug("Cancel execution. Stop event set")
-                return
+    @property
+    def name(self):
+        if self._thread:
+            return self._thread.name
+        else:
+            return None
+        
+    def stop(self, jointhread:bool=False):
+        """ stop the thread"""
+        self._stop_event.set()
+        if jointhread:
+            if self._thread:
+                self._thread.join()
+                
+    def is_running(self):
+        """ return true if thread is running"""
+        if self._thread and self._thread.is_alive():
+            return True
+        else:
+            return False
+        
+    def start_action_list(self, action_list:list[ActionStep], game_state:GameState = None):
+        """ start running action list in a thread"""
+        if self._thread:
+            return
+               
+        if game_state:
+            op_step = game_state.last_op_step
+        else:
+            op_step = None
             
-            if self.game_state:
-                game_step = self.game_state.last_op_step
-                if self.op_step != game_step:  
-                    LOGGER.debug("Cancel execution. origin step = %d, current step = %d", self.op_step, game_step)
+        def run_action_list():
+            for step in action_list:
+                # verify if op_step changed, which indicates there is new liqi action, and old action has expired
+                # for example, when executing Chi, there might be another player Pon before Chi is finished
+                # upon which any action steps related to Chi should be canceled
+                if self._stop_event.is_set():
+                    LOGGER.debug("Cancel execution. Stop event set")
                     return
-                            
-            LOGGER.debug("Executing step: %s", step.text)
-            step.action()
-            # record execution info for possible retry
-            self.last_exe_time = time.time()
-
+                
+                if game_state:
+                    game_step = game_state.last_op_step
+                    if op_step != game_step:
+                        LOGGER.debug("Cancel execution. origin step = %d, current step = %d", op_step, game_step)
+                        return
+                                
+                LOGGER.debug("Executing step: %s", step.text)
+                step.action()
+                # record execution info for possible retry
+                self.last_exe_time = time.time()
+        
+        self._thread = threading.Thread(
+            target=run_action_list,
+            name=f"Auto_step_{op_step}",
+            daemon=True
+        )
+        self._thread.start()
+        
+    def start_action_iter(self, action_iter:Iterator[ActionStep], name:str=None):
+        """ Start running action steps from iterator in a thread
+        Params:
+            action_iter(Iterator[ActionStep]): iterator of action steps
+            name: name for the task
+        """
+        if self._thread:
+            return
+        if name is None:
+            name = ""
+            
+        def run_iter():
+            for step in action_iter:
+                if self._stop_event.is_set():
+                    LOGGER.debug("Cancel execution. Stop event set")
+                    return
+                LOGGER.debug("Executing step: %s", step.text)
+                step.action()
+                self.last_exe_time = time.time()
+        self._thread = threading.Thread(
+            target=run_iter,
+            name=name,
+            daemon=True
+        )
+        self._thread.start()
 
 class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul"""
-    def __init__(self, browser: GameBrowser):
+    def __init__(self, browser: GameBrowser, setting:settings.Settings):
+        if browser is None:
+            raise ValueError("Browser is None")
         self.browser = browser
-        self.last_exe_time:float = -1     # last time an action execution was finished
-        self.last_exe_step:int = None
+        self.settings = setting
+        self.g_v = img_proc.GameVisual(browser)
         
         self._task:AutomationTask = None        # the task thread
         
-    def mouse_click(self, x, y):
+    def mouse_move_click(self, x, y, random_move:bool=True, blocking:bool=False):
         scalar = self.browser.width/16
-        self.browser.mouse_click(x * scalar, y * scalar)
+        self.browser.mouse_move_click(x * scalar, y * scalar, random_move, blocking)
 
     def get_delay(self, mjai_action:dict, game_state:GameState):
         """ return the delay based on action type and game info"""
@@ -194,7 +250,7 @@ class Automation:
         elif mjai_type == MJAI_TYPE.HORA:
             delay += 0
         else:
-            delay += 0.5       
+            delay += 0.5
         
         return delay
         
@@ -209,7 +265,7 @@ class Automation:
             return False
         if self.is_running_execution():
             LOGGER.warning("Previous action %s is still executing, stopping it", self._task.name)
-            self._task.stop_event.set()
+            self._task.stop()
             
         gi = game_state.get_game_info()        
         op_step = game_state.last_op_step        
@@ -229,7 +285,7 @@ class Automation:
         elif mjai_type in [
             MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
             MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA
-            ]:            
+            ]:
             liqi_operation = game_state.last_operation
             more_steps:list[ActionStep] = self._button_action_steps(mjai_action, gi, liqi_operation)
         else:
@@ -240,24 +296,26 @@ class Automation:
         action_steps:list[ActionStep] = [self._get_delay_step(delay)]
         action_steps.extend(more_steps)
         
-        self._task = AutomationTask(action_steps, game_state)
-        self._task.start()
+        self._task = AutomationTask()
+        self._task.start_action_list(action_steps, game_state)
         
     
     def stop_execution(self):
         """ Stop ongoing execution if any"""
         if self._task:
-            self._task.stop_event.set()
+            self._task.stop()
         self._task = None
     
     def is_running_execution(self):
-        if self._task and self._task.is_alive():
+        """ if task is still running"""
+        if self._task and self._task.is_running():
             return True
         else:
             return False
     
-    def retry_pending_reaction(self, game_state:GameState, min_interval:float=1):
+    def retry_pending_reaction(self, game_state:GameState, min_interval:float=2):
         """ Retry pending action from game state. if current time > last execution time + min interval"""
+        # TODO move to bot manager
         if self.is_running_execution():
             # last action still executing, quit
             return
@@ -273,12 +331,6 @@ class Automation:
         
         if game_state.reached:
             return
-        
-        game_step = game_state.last_op_step
-        if self._task:
-            if self._task.op_step != game_step:
-                # already new step. Only retry when old step = current step           
-                return
 
         mjai_action = game_state.get_pending_reaction()
         if mjai_action is None:
@@ -428,50 +480,66 @@ class Automation:
         text = f"delay {delay:.1f}s "
         return ActionStep(action, text)
     
-    def _get_click_step(self, x:float, y:float, what:str) -> ActionStep:
+    def _get_click_step(self, x:float, y:float, what:str, blocking:bool=True) -> ActionStep:
         """Generate a mouse click step
         params:
             x,y: in 16x9 resolution
             what(str): describe what is clicked"""
-        action = lambda: self.mouse_click(x, y)
-        text = f"clicking {what}"
+        action = lambda: self.mouse_move_click(x, y, self.settings.auto_random_move, blocking)
+        text = f"clicking {what}(blocking={blocking})"
         return ActionStep(action, text)
     
     def automate_end_game(self):
-        """Game end go back to lobby by clicking"""
-        steps = []
+        """Game end go back to lobby by clicking"""        
+        if self.is_running_execution():
+            LOGGER.warning("Previous action %s is still executing, stopping it", self._task.name)
+            self._task.stop()            
+            
+        self._task = AutomationTask()
+        self._task.start_action_iter(self._end_game_iter())
+        return
         
-        # 等待结算
-        steps.append(self._get_delay_step(25))
-        
-        # 2.最终顺位界面点击"确认"
-        x,y = Positions.GAMEOVER[0]
-        steps.append(self._get_click_step(x,y,"Confirm final ranking"))
-        
-        # 3. 段位pt结算界面点击"确认"
-        steps.append(self._get_delay_step(10))
-        x,y = Positions.GAMEOVER[0]
-        steps.append(self._get_click_step(x,y,"Confirm point change"))        
-        
-        # 4. 宝匣
-        # 开启宝匣
-        steps.append(self._get_delay_step(5))
-        x,y = Positions.GAMEOVER[1]
-        steps.append(self._get_click_step(x,y,"Confirm gift chest"))
-        
-        # 5. 好感度
-        steps.append(self._get_delay_step(3))
-        x,y = Positions.GAMEOVER[0]
-        steps.append(self._get_click_step(x,y,"Confirm character exp"))
-        
-        # 6.每日任务界面点击"确认"
-        steps.append(self._get_delay_step(8))
-        
-        self._task = AutomationTask(steps)
-        self._task.start()
+    def _end_game_iter(self) -> Iterator[ActionStep]:
+        # generate action steps until main menu tested
+        while True:
+            res, diff = self.g_v.test_mainmenu()
+            if res:
+                LOGGER.debug("Main menu tested true with diff %.1f", diff)
+                break
+            
+            yield self._get_delay_step(random.uniform(1,3))
+            
+            x,y = Positions.GAMEOVER[0]
+            yield self._get_click_step(x,y,"click OK until main menu")
+            
+            
         
         
+        # # 等待结算
+        # steps.append(self._get_delay_step(25))
         
+        # # 2.最终顺位界面点击"确认"
+        # x,y = Positions.GAMEOVER[0]
+        # steps.append(self._get_click_step(x,y,"Confirm final ranking"))
+        
+        # # 3. 段位pt结算界面点击"确认"
+        # steps.append(self._get_delay_step(10))
+        # x,y = Positions.GAMEOVER[0]
+        # steps.append(self._get_click_step(x,y,"Confirm point change"))        
+        
+        # # 4. 宝匣
+        # # 开启宝匣
+        # steps.append(self._get_delay_step(5))
+        # x,y = Positions.GAMEOVER[1]
+        # steps.append(self._get_click_step(x,y,"Confirm gift chest"))
+        
+        # # 5. 好感度
+        # steps.append(self._get_delay_step(3))
+        # x,y = Positions.GAMEOVER[0]
+        # steps.append(self._get_click_step(x,y,"Confirm character exp"))
+        
+        # # 6.每日任务界面点击"确认"
+        # steps.append(self._get_delay_step(8))        
 """
 2024-04-02 04:51:05,238 DEBUG [BotThread]bot_manager.py:259 | Game msg: {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameEndResult', 'data': {'result': {'players': [{'seat': 1, 'totalPoint': 29200, 'partPoint1': 39200, 'gradingScore': 70, 'gold': 2024, 'partPoint2': 0}, {'totalPoint': 11600, 'partPoint1': 31600, 'gradingScore': 32, 'gold': 804, 'seat': 0, 'partPoint2': 0}, {'seat': 3, 'totalPoint': -400, 'partPoint1': 29600, 'gold': -28, 'partPoint2': 0, 'gradingScore': 0}, {'seat': 2, 'totalPoint': -40400, 'partPoint1': -400, 'gradingScore': -60, 'gold': -2800, 'partPoint2': 0}]}}}
 

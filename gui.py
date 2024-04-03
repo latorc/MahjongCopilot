@@ -41,16 +41,16 @@ class MainGUI(tk.Tk):
         self.settings = setting
         self.lan_strings:LanStrings = self.settings.lan()
 
-        icon = tk.PhotoImage(file=Path(RES_FOLDER)/'icon.png')
+        icon = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)        
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
         
         # icon resources:
-        self.icon_green = Path(RES_FOLDER)/'green.png'
-        self.icon_red = Path(RES_FOLDER)/'red.png'
-        self.icon_yellow = Path(RES_FOLDER)/'yellow.png'
-        self.icon_gray = Path(RES_FOLDER)/'gray.png'
-        self.icon_ready = Path(RES_FOLDER)/'ready.png'
+        self.icon_green = utils.sub_file(RES_FOLDER,'green.png')
+        self.icon_red = utils.sub_file(RES_FOLDER,'red.png')
+        self.icon_yellow = utils.sub_file(RES_FOLDER,'yellow.png')
+        self.icon_gray =utils.sub_file(RES_FOLDER,'gray.png')
+        self.icon_ready = utils.sub_file(RES_FOLDER,'ready.png')
         
         # create window widgets
         self._create_widgets()
@@ -166,10 +166,13 @@ class MainGUI(tk.Tk):
         settings_window.grab_set()
         self.wait_window(settings_window)
         
-        if settings_window.GUI_need_reload:     # reload UI if needed
+        if settings_window.gui_need_reload:     # reload UI if needed
             self.reload_gui()
         if settings_window.model_updated:       # re-create bot if needed
             if not self.bot_manager.is_in_game():
+                self.bot_manager.create_bot()
+        else:
+            if not self.bot_manager.is_bot_created():
                 self.bot_manager.create_bot()
 
     def _on_btn_help_clicked(self):
@@ -316,9 +319,9 @@ class ToggleSwitch(tk.Frame):
         
         # Load images for on and off states
         img_ht = height*0.4
-        img_on = tk.PhotoImage(file=Path(RES_FOLDER)/'switch_on.png')
-        img_off = tk.PhotoImage(file=Path(RES_FOLDER)/'switch_off.png')
-        img_mid = tk.PhotoImage(file=Path(RES_FOLDER)/'switch_mid.png')
+        img_on = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'switch_on.png'))
+        img_off = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'switch_off.png'))
+        img_mid = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'switch_mid.png'))
         self.img_on = img_on.subsample(int(img_on.height()/img_ht), int(img_on.height()/img_ht))
         self.img_off = img_off.subsample(int(img_off.height()/img_ht), int(img_off.height()/img_ht))
         self.img_mid = img_mid.subsample(int(img_mid.height()/img_ht), int(img_mid.height()/img_ht))
@@ -444,14 +447,14 @@ class StatusBar(tk.Frame):
             column_frame.pack(side=tk.LEFT, padx=1, pady=1, expand=True, fill=tk.X)
 
         # Load icon
-        default_icon_file = str(Path(RES_FOLDER)/'gray.png')
-        icon = tk.PhotoImage(file=default_icon_file)  # Replace "icon.png" with your icon file
-        icon_ht = self.font_size * 2
-        icon = icon.subsample(int(icon.height()/icon_ht), int(icon.height()/icon_ht))
+        # default_icon_file = str(utils.sub_file(RES_FOLDER,'gray.png'))
+        # icon = tk.PhotoImage(file=default_icon_file)  # Replace "icon.png" with your icon file
+        # icon_ht = self.font_size * 2
+        # icon = icon.subsample(int(icon.height()/icon_ht), int(icon.height()/icon_ht))
         # Label with icon and text
-        label = ttk.Label(column_frame, image=icon, text=f'Column {index+1}', compound='left')  # Background color for label
-        label.image = icon  # Retain a reference to the image to prevent garbage collection
-        label.image_file = default_icon_file
+        label = ttk.Label(column_frame, text=f'Column {index+1}', compound='left')  # Background color for label
+        # label.image = icon  # Retain a reference to the image to prevent garbage collection
+        label.image_file = "placeholder"
         label.pack(side=tk.LEFT, anchor='w')
         column_frame.label = label
 
@@ -480,12 +483,13 @@ class SettingsWindow(tk.Toplevel):
         self.lan_strings:LanStrings = LAN_OPTIONS[self.settings.language]
         self.title(self.lan_strings.SETTINGS)
         self.geometry('600x500')
-        self.resizable(False, False)
+        self.minsize(600,500)
+        # self.resizable(False, False)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
         
-        self.GUI_need_reload:bool = False
+        self.gui_need_reload:bool = False
         """ Whether a GUI refresh is needed to apply new settings"""
 
         self.model_updated:bool = False
@@ -525,7 +529,7 @@ class SettingsWindow(tk.Toplevel):
         options = ["1920 x 1080", "1600 x 900", "1280 x 720"]
         setting_size = f"{self.settings.browser_width} x {self.settings.browser_height}"
         self.client_size_var = tk.StringVar(value=setting_size)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=15)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # majsoul url
@@ -533,7 +537,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MAJSOUL_URL)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.ms_url_var = tk.StringVar(value=self.settings.ms_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=50)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
         
         # mitm port
@@ -541,7 +545,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MITM_PORT)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mitm_port_var = tk.StringVar(value=self.settings.mitm_port)
-        number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=10)
+        number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=15)
         number_entry.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # Select language
@@ -550,7 +554,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = [v.LANGUAGE_NAME for v in LAN_OPTIONS.values()]
         self.language_var = tk.StringVar(value=LAN_OPTIONS[self.settings.language].LANGUAGE_NAME)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly",width=15)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
 
         # Select Model Type
@@ -559,7 +563,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = [type.value for type in BOT_TYPE]
         self.model_type_var = tk.StringVar(value=self.settings.model_type)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly",width=15)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # Select Model File
@@ -568,7 +572,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = utils.list_files(utils.MODEL_FOLDER)
         self.model_file_var = tk.StringVar(value=self.settings.model_file)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly")
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly", width=30)
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
         
         # MJAPI url
@@ -576,7 +580,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_URL)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mjapi_url_var = tk.StringVar(value=self.settings.mjapi_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var,width=50)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
         
         # MJAPI user
@@ -584,7 +588,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_USER)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mjapi_user_var = tk.StringVar(value=self.settings.mjapi_user)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var,width=15)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
         
         # MJAPI secret
@@ -592,7 +596,7 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_SECRET)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         self.mjapi_secret_var = tk.StringVar(value=self.settings.mjapi_secret)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var,width=50)
         string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))        
 
         # Buttons frame
@@ -626,9 +630,9 @@ class SettingsWindow(tk.Toplevel):
                 language_new = code
                 break
         if self.settings.language != language_new:
-            self.GUI_need_reload = True
+            self.gui_need_reload = True
         else:
-            self.GUI_need_reload = False
+            self.gui_need_reload = False
             
         model_type_new = self.model_type_var.get()        
         model_file_new = self.model_file_var.get()
