@@ -171,6 +171,9 @@ class MainGUI(tk.Tk):
         if settings_window.model_updated:       # re-create bot if needed
             if not self.bot_manager.is_in_game():
                 self.bot_manager.create_bot()
+        else:
+            if not self.bot_manager.is_bot_created():
+                self.bot_manager.create_bot()
 
     def _on_btn_help_clicked(self):
         # open help dialog        
@@ -444,14 +447,14 @@ class StatusBar(tk.Frame):
             column_frame.pack(side=tk.LEFT, padx=1, pady=1, expand=True, fill=tk.X)
 
         # Load icon
-        default_icon_file = str(utils.sub_file(RES_FOLDER,'gray.png'))
-        icon = tk.PhotoImage(file=default_icon_file)  # Replace "icon.png" with your icon file
-        icon_ht = self.font_size * 2
-        icon = icon.subsample(int(icon.height()/icon_ht), int(icon.height()/icon_ht))
+        # default_icon_file = str(utils.sub_file(RES_FOLDER,'gray.png'))
+        # icon = tk.PhotoImage(file=default_icon_file)  # Replace "icon.png" with your icon file
+        # icon_ht = self.font_size * 2
+        # icon = icon.subsample(int(icon.height()/icon_ht), int(icon.height()/icon_ht))
         # Label with icon and text
-        label = ttk.Label(column_frame, image=icon, text=f'Column {index+1}', compound='left')  # Background color for label
-        label.image = icon  # Retain a reference to the image to prevent garbage collection
-        label.image_file = default_icon_file
+        label = ttk.Label(column_frame, text=f'Column {index+1}', compound='left')  # Background color for label
+        # label.image = icon  # Retain a reference to the image to prevent garbage collection
+        label.image_file = "placeholder"
         label.pack(side=tk.LEFT, anchor='w')
         column_frame.label = label
 
