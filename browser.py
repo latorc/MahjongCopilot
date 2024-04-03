@@ -72,7 +72,7 @@ class GameBrowser:
                 # Initilize browser
                 chromium = playwright.chromium
                 self.context = chromium.launch_persistent_context(
-                    user_data_dir=Path(__file__).parent / BROWSER_DATA_FOLDER,
+                    user_data_dir=utils.sub_folder(BROWSER_DATA_FOLDER),
                     headless=False,
                     viewport={'width': self.width, 'height': self.height},
                     proxy=proxy_object,

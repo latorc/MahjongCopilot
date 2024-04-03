@@ -10,7 +10,7 @@ from typing import List, Dict
 from pathlib import Path
 
 from google.protobuf.json_format import MessageToDict, ParseDict
-
+import utils
 from liqi_proto import liqi_pb2 as pb
 from log_helper import LOGGER
 
@@ -78,10 +78,10 @@ class LiqiProto:
     """ converting Majsoul protobuf data captured from websocket to readable json messages"""
     def __init__(self):
         self.msg_id = 1
-        self.tot = 0 
+        self.tot = 0
         self.res_type = dict()
-        self.jsonProto = json.load(
-            open(Path('liqi_proto/liqi.json'), 'r', encoding='utf-8'))
+        jsonf = utils.sub_file('liqi_proto','liqi.json')
+        self.jsonProto = json.load(open(jsonf, 'r', encoding='utf-8'))
 
     def init(self):
         self.msg_id = 1

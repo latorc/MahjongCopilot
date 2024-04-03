@@ -37,7 +37,7 @@ class Settings:
         
     def load_json(self) -> dict:
         """ Load settings from json file into dict"""
-        if pathlib.Path(self._json_file).exists():
+        if pathlib.Path(utils.sub_file("", self._json_file)).exists():
             with open(self._json_file, 'r',encoding='utf-8') as file:
                 settings_dict:dict = json.load(file)
         else:

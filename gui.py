@@ -41,16 +41,16 @@ class MainGUI(tk.Tk):
         self.settings = setting
         self.lan_strings:LanStrings = self.settings.lan()
 
-        icon = tk.PhotoImage(file=Path(RES_FOLDER)/'icon.png')
+        icon = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)        
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
         
         # icon resources:
-        self.icon_green = Path(RES_FOLDER)/'green.png'
-        self.icon_red = Path(RES_FOLDER)/'red.png'
-        self.icon_yellow = Path(RES_FOLDER)/'yellow.png'
-        self.icon_gray = Path(RES_FOLDER)/'gray.png'
-        self.icon_ready = Path(RES_FOLDER)/'ready.png'
+        self.icon_green = utils.sub_file(RES_FOLDER,'green.png')
+        self.icon_red = utils.sub_file(RES_FOLDER,'red.png')
+        self.icon_yellow = utils.sub_file(RES_FOLDER,'yellow.png')
+        self.icon_gray =utils.sub_file(RES_FOLDER,'gray.png')
+        self.icon_ready = utils.sub_file(RES_FOLDER,'ready.png')
         
         # create window widgets
         self._create_widgets()
@@ -316,9 +316,9 @@ class ToggleSwitch(tk.Frame):
         
         # Load images for on and off states
         img_ht = height*0.4
-        img_on = tk.PhotoImage(file=Path(RES_FOLDER)/'switch_on.png')
-        img_off = tk.PhotoImage(file=Path(RES_FOLDER)/'switch_off.png')
-        img_mid = tk.PhotoImage(file=Path(RES_FOLDER)/'switch_mid.png')
+        img_on = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'switch_on.png'))
+        img_off = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'switch_off.png'))
+        img_mid = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'switch_mid.png'))
         self.img_on = img_on.subsample(int(img_on.height()/img_ht), int(img_on.height()/img_ht))
         self.img_off = img_off.subsample(int(img_off.height()/img_ht), int(img_off.height()/img_ht))
         self.img_mid = img_mid.subsample(int(img_mid.height()/img_ht), int(img_mid.height()/img_ht))
@@ -444,7 +444,7 @@ class StatusBar(tk.Frame):
             column_frame.pack(side=tk.LEFT, padx=1, pady=1, expand=True, fill=tk.X)
 
         # Load icon
-        default_icon_file = str(Path(RES_FOLDER)/'gray.png')
+        default_icon_file = str(utils.sub_file(RES_FOLDER,'gray.png'))
         icon = tk.PhotoImage(file=default_icon_file)  # Replace "icon.png" with your icon file
         icon_ht = self.font_size * 2
         icon = icon.subsample(int(icon.height()/icon_ht), int(icon.height()/icon_ht))
