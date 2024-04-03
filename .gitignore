@@ -20,5 +20,5 @@ temp/
 test/
 /dev_docs
 /_*.py
-/settings.json
+/settings*.json
 
