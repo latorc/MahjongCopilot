@@ -19,7 +19,7 @@ class Settings:
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 10999)
-        self.language:str = self._get_value("language", lan_str.LAN_OPTIONS[-1], self.valid_language)
+        self.language:str = self._get_value("language", [lan_str.LAN_OPTIONS.keys()][-1], self.valid_language)
         
         self.model_type:str = self._get_value("model_type", "Local")
         """ model type: local, mjapi"""

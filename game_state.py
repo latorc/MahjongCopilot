@@ -168,10 +168,11 @@ class GameState:
             
             # record operation and step no. for later use (automation).
             # newround is step 1 for Game start (where MJStart is step 0), and step 0 for other rounds?
+            if 'step' in liqi_data:
+                self.last_op_step = liqi_data['step']
             if 'data' in liqi_data:
                 if 'operation' in liqi_data['data']:                    
-                    self.last_operation = liqi_data['data']['operation']
-                    self.last_op_step = liqi_data['step']       
+                    self.last_operation = liqi_data['data']['operation']               
                     if liqi_data['data']['operation']['seat'] != self.seat:
                         LOGGER.warning("operation seat %s != self.seat %s", liqi_data['data']['operation']['seat'], self.seat)
                     if 'operationList' not in liqi_data['data']['operation']:
