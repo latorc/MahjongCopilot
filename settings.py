@@ -14,14 +14,14 @@ class Settings:
         
         # read settings or set default values
         # variable names must match keys in json, for saving later        
-        self.auto_launch_browser:bool = self._get_value("auto_launch_browser", True, self.valid_bool)
+        self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
-        self.mitm_port:int = self._get_value("mitm_port", 8999)
-        self.language:str = self._get_value("language", next(iter(lan_str.LAN_OPTIONS)), self.valid_language)
+        self.mitm_port:int = self._get_value("mitm_port", 10999)
+        self.language:str = self._get_value("language", lan_str.LAN_OPTIONS[-1], self.valid_language)
         
-        self.model_type:str = self._get_value("model_type", "local")
+        self.model_type:str = self._get_value("model_type", "Local")
         """ model type: local, mjapi"""
         # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
