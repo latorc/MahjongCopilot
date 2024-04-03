@@ -1,6 +1,7 @@
 from PIL import Image, ImageChops, ImageStat
 import utils
 from utils import TEMP_FOLDER
+from browser import GameBrowser
 
 def img_avg_diff(base_img:str, image:str, mask_path:str = None):
     """ Calculate the average difference between two images. given an optional mask file (black indicates ignored pixels)."""
@@ -38,6 +39,17 @@ def img_avg_diff(base_img:str, image:str, mask_path:str = None):
     
     return avg_diff, img_size
 
+
+class GameWatcher:
+    """ image analysis for Majsoul game screen"""
+    
+    def __init__(self, browser:GameBrowser) -> None:
+        self.browser = browser
+        if not browser:
+            raise ValueError("Browser is None")
+        
+        
+    
 
 if __name__ == "__main__":
     imgs_to_compare = [
