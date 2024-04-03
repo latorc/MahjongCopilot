@@ -2,6 +2,7 @@ import logging
 import time
 import threading
 import queue
+import random
 
 from pathlib import Path
 from playwright._impl._errors import TargetClosedError
@@ -12,7 +13,7 @@ from log_helper import LOGGER
 
 class GameBrowser:
     """ Wrapper for Playwright browser controlling maj-soul operations"""  
-    
+
     def __init__(self, width:int, height:int):
         """ Set browser with viewport size (width, height)"""
         self.width = width
@@ -20,9 +21,9 @@ class GameBrowser:
         self._action_queue = queue.Queue()       # thread safe queue for actions
         self._stop_event = threading.Event()    # set this event to stop processing actions
         self._browser_thread = None
-        
+
         self.init_vars()
-        
+
     def init_vars(self):
         """ initialize internal variables"""
         self.context:BrowserContext = None
@@ -32,10 +33,10 @@ class GameBrowser:
         self._page_title:str = None
         self._viewport_pos = None
         self._last_update_time:float = 0
-        
+
     def __del__(self):
         self.stop()
-    
+
     def start(self, url:str, proxy:str=None, width:int=None, height:int=None):
         """ Launch the browser in a thread, and start processing action queue
         params:
@@ -58,21 +59,21 @@ class GameBrowser:
             name="BrowserThread",
             daemon=True)
         self._browser_thread.start()
-    
+
     def _run_browser_and_action_queue(self, url:str, proxy:str):
         """ run browser and keep processing action queue (blocking)"""
         if proxy:
             proxy_object = {"server": proxy}
         else:
             proxy_object = None
-            
+
         LOGGER.info(f'Starting Chromium, viewport={self.width}x{self.height}, proxy={proxy}')
         with sync_playwright() as playwright:
             try:
                 # Initilize browser
                 chromium = playwright.chromium
                 self.context = chromium.launch_persistent_context(
-                    user_data_dir=Path(__file__).parent / BROWSER_DATA_FOLDER,
+                    user_data_dir=utils.sub_folder(BROWSER_DATA_FOLDER),
                     headless=False,
                     viewport={'width': self.width, 'height': self.height},
                     proxy=proxy_object,
@@ -97,7 +98,7 @@ class GameBrowser:
             
             self._clear_action_queue()
             # keep running actions until stop event is set
-            while self._stop_event.is_set() == False:
+            while self._stop_event.is_set() is False:
                 # check if page is closed, break and exit
                 try:
                     self._update_page_info()
@@ -116,7 +117,7 @@ class GameBrowser:
             # stop event is set: close browser
             LOGGER.debug("Closing browser")            
             try:                
-                if self.page.is_closed() == False:
+                if self.page.is_closed() is False:
                     self.page.close()
                 if self.context:
                     self.context.close()       
@@ -161,11 +162,30 @@ class GameBrowser:
             return False
         if self._canvas_id is None:
             return False
-        return True        
+        return True
     
-    def mouse_click(self, x:int, y:int):
+    def mouse_move(self, x:int, y:int, steps:int=5, blocking:bool=False):
+        """ Queue action: mouse move to (x,y) on viewport
+        if block, wait until action is done"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_move(x, y, steps, finish_event))
+        if blocking:
+            finish_event.wait()
+    
+    def mouse_click1(self, x:int, y:int, delay:float=80, blocking:bool=False):
+        """ Queue action: mouse click at (x,y) on viewport
+        if block, wait until action is done"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_click(x, y, delay, finish_event))
+        if blocking:
+            finish_event.wait()
+    
+    def mouse_move_click(self, x:int, y:int, random_move:bool=True, blocking:bool=False):
         """ Queue action: mouse click at (x,y) on viewport"""
-        self._action_queue.put(lambda: self._action_mouse_click(x, y))
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_move_click(x, y, random_move, finish_event))
+        if blocking:
+            finish_event.wait()
         
     def auto_hu(self):
         """ Queue action: Autohu action"""
@@ -210,27 +230,55 @@ class GameBrowser:
         """ Take screenshot from browser page and return file name if success, or None if not"""
         self._action_queue.put(self._action_screen_shot)
         file_name = utils.sub_file(TEMP_FOLDER,'screenshot.png')
-        res = utils.wait_for_file(file_name,1)
+        # delete file if exist
+        if Path(file_name).exists():
+            Path(file_name).unlink()
+        res = utils.wait_for_file(file_name,5)
         if res:
             return file_name
         else:
             return None
         
+    
+    def _action_mouse_move(self, x:int, y:int, steps:int, finish_event:threading.Event):
+        """ move mouse to (x,y) with steps, and set finish_event when done"""
+        if self.page:
+            self.page.mouse.move(x=x, y=y, steps=steps)
+        finish_event.set()
         
-        
-        
-        
-    def _action_mouse_click(self, x:int, y:int):
+    def _action_mouse_click(self, x:int, y:int, delay:float, finish_event:threading.Event):
         """ mouse click on page at (x,y)"""
         if self.page:
+            self.page.mouse.click(x=x, y=y, delay=delay)
+        finish_event.set()
+        
+        
+    
+        
+    def _action_mouse_move_click(self, px:int, py:int, random_move:bool, finish_event:threading.Event):
+        """ mouse click on page at (x,y)"""
+        if self.page:
+            if random_move:     # add random times of random moves
+                for i in range(random.randint(1,6)):
+                    rx = int(px + random.uniform(-self.width/2, self.width/2))
+                    rx = max(0, min(self.width, rx))
+                    ry = int(py + random.uniform(-self.height/2, self.height/2))
+                    ry = max(0, min(self.height, ry))
+                    # LOGGER.debug("moving on page (%d,%d)", rx, ry)
+                    self.page.mouse.move(x=rx, y=ry, steps=random.randint(5,15))
+                    time.sleep(0.11)
             # LOGGER.debug(f"Clicking on page ({x},{y})")
-            self.page.mouse.move(x=x, y=y)
+            self.page.mouse.move(x=px, y=py, steps=random.randint(5,15))
             time.sleep(0.15)
-            self.page.mouse.click(x=x, y=y, delay=100)
+            self.page.mouse.click(x=px, y=py, delay=random.randint(50,120))
             time.sleep(0.05)
-            self.page.mouse.move(x=self.width/2, y=self.height/2)   # move mouse to center
+            # move to a random position in center
+            rx = int(random.uniform(0.2,0.8) * self.width)
+            ry = int(random.uniform(0.3,0.8) * self.height)
+            self.page.mouse.move(x=rx, y=ry, steps=random.randint(5,15))   # move mouse to center
         else:
             LOGGER.debug("No page, no click")
+        finish_event.set()
     
     def _action_autohu(self):
         """ call autohu function in page"""
@@ -272,7 +320,7 @@ class GameBrowser:
     def _action_stop_overlay(self):
         """ Remove overlay from page. Will ignore if page is None, or overlay not on"""
         
-        if self.is_overlay_working() == False:
+        if self.is_overlay_working() is False:
             return
         # LOGGER.debug("browser Stop overlay")
         js_code = f"""(() => {{
@@ -352,7 +400,7 @@ class GameBrowser:
     
     def _action_overlay_clear_guide(self):
         """ delete text and the background box"""
-        if self.is_overlay_working() == False:
+        if self.is_overlay_working() is False:
             return
         font_size, line_space, min_box_width, initial_box_height, box_top, box_left = self._overlay_text_params()
         
@@ -369,7 +417,7 @@ class GameBrowser:
         self.page.evaluate(js_code)
         
     def _action_overlay_update_botleft(self, text:str=None):
-        if self.is_overlay_working() == False:
+        if self.is_overlay_working() is False:
             return
         font_size = int(self.height/48)
         box_top = 0.885
@@ -456,7 +504,7 @@ if __name__ == '__main__':
     PROXY = None
     # PROXY = "http://10.0.0.32:8002"
     browser = GameBrowser(1280, 720)
-    browser.mouse_click(300, 300)
+    browser.mouse_move_click(300, 300)
     browser.start(MS_URL, PROXY)
     browser.start(MS_URL, PROXY)
 
@@ -487,11 +535,11 @@ if __name__ == '__main__':
             sc = browser.screen_shot()
             print(sc)
             continue
-        browser.mouse_click(x, y)
+        browser.mouse_move_click(x, y)
     browser.auto_hu()
     time.sleep(1)
     browser.stop()
     browser.stop()
-    browser.mouse_click(300, 300)
+    browser.mouse_move_click(300, 300)
     time.sleep(1)
     print(f"browser on:{browser.is_running()}")

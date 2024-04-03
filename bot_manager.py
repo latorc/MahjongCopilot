@@ -20,6 +20,7 @@ import automation
 import mj_bot
 from lan_str import LanStrings
 import utils
+from utils import UI_STATE
 
 METHODS_TO_IGNORE = [
     liqi.LiqiMethod.checkNetworkDelay,
@@ -44,7 +45,7 @@ class BotManager:
         self.mitm_port = self.settings.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
-        self.automation = automation.Automation(self.browser)
+        self.automation = automation.Automation(self.browser, self.settings)
         
         self.bot:mj_bot.Bot = None
         
@@ -59,7 +60,8 @@ class BotManager:
         
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
-        self.game_exception:Exception = None   # game run time error (but does not break main thread)
+        self.game_exception:Exception = None   # game run time error (but does not break main thread)        
+        self.ui_state:UI_STATE = UI_STATE.NOT_RUNNING   # initially not running
         
     def start(self):
         """ Start bot manager thread"""
@@ -112,7 +114,7 @@ class BotManager:
     def start_browser(self):
         """ Start the browser thread, open browser window """
         ms_url = self.settings.ms_url
-        proxy = r'http://localhost:' + str(self.mitm_port)    
+        proxy = r'http://localhost:' + str(self.mitm_port)
         self.browser.start(ms_url, proxy, self.settings.browser_width, self.settings.browser_height)
         
     def get_pending_reaction(self) -> dict:
@@ -403,7 +405,7 @@ class BotManager:
             return False
             
         try:
-            self.automation.retry_pending_reaction(self.game_state)
+            self.automation.retry_pending_reaction(self.game_state, self.settings.auto_retry_interval)
         except Exception as e:
             LOGGER.error("Error retrying automation: %s", e, exc_info=True)
             
