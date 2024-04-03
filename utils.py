@@ -16,11 +16,21 @@ LOG_DIR = 'log'
 MITM_CONFDIR = 'mitm_config'
 TEMP_FOLDER = 'temp'
 
+# for automation
+GAME_MODES = ['4E', '4S', '3E', '3S']
 
 class BOT_TYPE(Enum):
     """ Model type for bot"""
     LOCAL = "Local"
     MJAPI = "MJAPI"
+    
+    
+class UI_STATE(Enum):
+    """ UI State for the game"""
+    NOT_RUNNING = 0
+    MAIN_MENU = 1
+    INGAME = 10
+    GAME_ENDING = 20
     
 class ModelFileException(Exception):
     """ Exception for model file error"""

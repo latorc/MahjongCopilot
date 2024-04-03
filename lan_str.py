@@ -56,6 +56,8 @@ MJAI: https://mjai.app
     MJAPI_USER = "MJAPI User"
     MJAPI_SECRET = "MJAPI Secret"
     MITM_PORT_ERROR_PROMPT = "Invalid MITM Port (must between 1000~65535)"
+    GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
+    GAME_MODES = ["4-p East","4-p South","3-p East","3-p South"]
     
     # Status
     MAIN_THREAD  = "Main Thread"
@@ -167,6 +169,8 @@ MJAI: https://mjai.app
     MJAPI_SECRET = "MJAPI 秘密 Secret"
     AUTO_LAUNCH_BROWSER = "自动启动浏览器"
     MITM_PORT_ERROR_PROMPT = "错误的 MITM 服务端口(必须是1000~65535)"
+    GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
+    GAME_MODES = ["四人东","四人南","三人东","三人南"]
     
     # Status
     MAIN_THREAD  = "主程序"
@@ -204,15 +208,15 @@ MJAI: https://mjai.app
     OPTIONS_TITLE = "候选项:"    
     
     MJAI_2_STR ={
-        '1m': '一萬', '2m': '二萬', '3m': '三萬', '4m': '四萬', '5m': '五萬',
+        '1m': '一萬', '2m': '二萬', '3m': '三萬', '4m': '四萬', '5m': '伍萬',
         '6m': '六萬', '7m': '七萬', '8m': '八萬', '9m': '九萬',
-        '1p': '一筒', '2p': '二筒', '3p': '三筒', '4p': '四筒', '5p': '五筒',
+        '1p': '一筒', '2p': '二筒', '3p': '三筒', '4p': '四筒', '5p': '伍筒',
         '6p': '六筒', '7p': '七筒', '8p': '八筒', '9p': '九筒',
-        '1s': '一索', '2s': '二索', '3s': '三索', '4s': '四索', '5s': '五索',
+        '1s': '一索', '2s': '二索', '3s': '三索', '4s': '四索', '5s': '伍索',
         '6s': '六索', '7s': '七索', '8s': '八索', '9s': '九索',
         'E': '東', 'S': '南', 'W': '西', 'N': '北',
         'C': '中', 'F': '發', 'P': '白',
-        '5mr': '赤五萬', '5pr': '赤五筒', '5sr': '赤五索', 
+        '5mr': '赤伍萬', '5pr': '赤伍筒', '5sr': '赤伍索', 
         'reach': '立直', 'chi_low': '吃-低', 'chi_mid': '吃-中', 'chi_high': '吃-高', 'pon': '碰', 'kan_select':'杠',
         'hora': '和牌', 'ryukyoku': '流局', 'none': '跳过'
     }

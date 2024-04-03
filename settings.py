@@ -4,6 +4,7 @@ from typing import Callable
 from log_helper import LOGGER
 import lan_str
 import utils
+from utils import GAME_MODES
 
 DEFAULT_SETTING_FILE = 'settings.json'
 class Settings:
@@ -32,6 +33,12 @@ class Settings:
         
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool)
+        
+        self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)
+        self.auto_random_move:bool = self._get_value("auto_random_move", True, self.valid_bool)
+        self.auto_next_game:bool = self._get_value("auto_next_game", False, self.valid_bool)
+        self.auto_next_level:int = self._get_value("auto_next_level", 0, self.valid_game_level)
+        self.auto_next_mode:int = self._get_value("auto_next_mode", GAME_MODES[0], self.valid_game_mode)
         
         self.save_json()
         
@@ -100,6 +107,21 @@ class Settings:
         if username:
             if len(username) > 1:
                 return True
+        else:
+            return False
+        
+    def valid_game_level(self, level:int) -> bool:
+        """ return true if game level is valid"""
+        if 0 <= level <= 4:
+            # 0 Bronze 1 Silver  2 Gold  3 Jade  4 Throne
+            return True
+        else:
+            return False
+        
+    def valid_game_mode(self, mode:str) -> bool:
+        """ return true if game mode is valid"""
+        if mode in GAME_MODES:
+            return True
         else:
             return False
     
