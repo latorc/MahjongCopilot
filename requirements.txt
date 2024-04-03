@@ -1,7 +1,3 @@
-fsspec==2024.3.1
-networkx==3.2.1
-pywin32==306
-setuptools==65.5.0
-sympy==1.12
+mitmproxy==10.2.4
+playwright==1.42.0
 torch==2.2.1
-tqdm==4.64.1

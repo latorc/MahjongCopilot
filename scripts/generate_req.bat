@@ -1,1 +1,1 @@
-pipreqs --ignore=.venv,test,temp --force .
+pipreqs --ignore=.venv,test,temp,dist,build,browser_data,dev_docs --use-local --force .
