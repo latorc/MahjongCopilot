@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 import utils
-from utils import BROWSER_DATA_FOLDER
+from utils import BROWSER_DATA_FOLDER, TEMP_FOLDER
 from log_helper import LOGGER
 
 class GameBrowser:
@@ -165,19 +165,19 @@ class GameBrowser:
     
     def mouse_click(self, x:int, y:int):
         """ Queue action: mouse click at (x,y) on viewport"""
-        self._action_queue.put(lambda: self._mouse_click_action(x, y))
+        self._action_queue.put(lambda: self._action_mouse_click(x, y))
         
     def auto_hu(self):
         """ Queue action: Autohu action"""
-        self._action_queue.put(lambda: self._auto_hu_action())
+        self._action_queue.put(lambda: self._action_autohu())
         
     def start_overlay(self):
         """ Queue action: Start showing the overlay"""
-        self._action_queue.put(lambda: self._start_overlay_action())
+        self._action_queue.put(lambda: self._action_start_overlay())
     
     def stop_overlay(self):
         """ Queue action: Stop showing the overlay"""
-        self._action_queue.put(lambda: self._stop_overlay_action())
+        self._action_queue.put(lambda: self._action_stop_overlay())
     
     def overlay_update_guidance(self, guide_str:str, option_subtitle:str, options:list):
         """ Queue action: update text area
@@ -185,28 +185,42 @@ class GameBrowser:
             guide_str(str): AI guide str (recommendation action)
             option_subtitle(str): subtitle for options (display before option list)
             options(list): list of (str, float), indicating action/tile with its probability """
-        self._action_queue.put(lambda: self._overlay_update_guide(guide_str, option_subtitle, options))
+        self._action_queue.put(lambda: self._action_overlay_update_guide(guide_str, option_subtitle, options))
     
     def overlay_clear_guidance(self):
         """ Queue action: clear overlay text area"""
-        self._action_queue.put(lambda: self._overlay_clear_text())
+        self._action_queue.put(lambda: self._action_overlay_clear_guide())
     
     def overlay_update_botleft(self, text:str):
         """ update bot-left corner text area
         params:
             text(str): Text, can have linebreak '\n'. None to clear text
         """
-        self._action_queue.put(lambda: self._overlay_update_botleft_text(text))
+        self._action_queue.put(lambda: self._action_overlay_update_botleft(text))
         
     def overlay_clear_botleft(self):
-        self._action_queue.put(lambda: self._overlay_update_botleft_text(None))
+        """ clear overlay bot-left texts"""
+        self._action_queue.put(lambda: self._action_overlay_update_botleft(None))
     
-    def draw_bars(self, bars:list[float]):
-        pass
-        
+    # def draw_bars(self, bars:list[float]): 
+    #     pass
     
+    
+    def screen_shot(self) -> str:
+        """ Take screenshot from browser page and return file name if success, or None if not"""
+        self._action_queue.put(self._action_screen_shot)
+        file_name = utils.sub_file(TEMP_FOLDER,'screenshot.png')
+        res = utils.wait_for_file(file_name,1)
+        if res:
+            return file_name
+        else:
+            return None
         
-    def _mouse_click_action(self, x:int, y:int):
+        
+        
+        
+        
+    def _action_mouse_click(self, x:int, y:int):
         """ mouse click on page at (x,y)"""
         if self.page:
             # LOGGER.debug(f"Clicking on page ({x},{y})")
@@ -218,7 +232,7 @@ class GameBrowser:
         else:
             LOGGER.debug("No page, no click")
     
-    def _auto_hu_action(self):
+    def _action_autohu(self):
         """ call autohu function in page"""
         if self.page:
             # LOGGER.debug(f"Setting AutoHu")
@@ -226,7 +240,7 @@ class GameBrowser:
         else:
             LOGGER.debug("No page, no autohu")
         
-    def _start_overlay_action(self):
+    def _action_start_overlay(self):
         """ Display overlay on page. Will ignore if already exist, or page is None"""
         # random 8-byte alpha-numeric string
         
@@ -255,7 +269,7 @@ class GameBrowser:
             }})()"""
         self.page.evaluate(js_code)
         
-    def _stop_overlay_action(self):
+    def _action_stop_overlay(self):
         """ Remove overlay from page. Will ignore if page is None, or overlay not on"""
         
         if self.is_overlay_working() == False:
@@ -280,7 +294,7 @@ class GameBrowser:
         box_left = int(self.width * 0.14)  # Distance from the left
         return (font_size, line_space, min_box_width, initial_box_height, box_top, box_left)    
     
-    def _overlay_update_guide(self, line1: str, option_title: str, options: list[tuple[str, float]]):        
+    def _action_overlay_update_guide(self, line1: str, option_title: str, options: list[tuple[str, float]]):        
         if not self.is_overlay_working():
             return        
         font_size, line_space, min_box_width, initial_box_height, box_top, box_left = self._overlay_text_params()
@@ -336,7 +350,7 @@ class GameBrowser:
         }})();"""
         self.page.evaluate(js_code)
     
-    def _overlay_clear_text(self):
+    def _action_overlay_clear_guide(self):
         """ delete text and the background box"""
         if self.is_overlay_working() == False:
             return
@@ -354,7 +368,7 @@ class GameBrowser:
         }});"""
         self.page.evaluate(js_code)
         
-    def _overlay_update_botleft_text(self, text:str=None):
+    def _action_overlay_update_botleft(self, text:str=None):
         if self.is_overlay_working() == False:
             return
         font_size = int(self.height/48)
@@ -422,27 +436,41 @@ class GameBrowser:
             #         innerHeight: window.innerHeight
             #     };
             #     }""")
-
+            
+    def _action_screen_shot(self):
+        """ take screen shot from browser page"""
+        if self.page:
+            
+            save_file = utils.sub_folder(TEMP_FOLDER)/"screenshot.png"
+            self.page.screenshot(path=save_file)
+        else:
+            LOGGER.debug("No page, no screenshot")
+        
 
 if __name__ == '__main__':
     # Test code for Browser
     import log_helper
-    log_helper.config_logging('Browser')
+    log_helper.config_logging('TestBrowser')
     # Test for Browser
     MS_URL = 'https://game.maj-soul.com/1/'
-    # proxy = None
-    PROXY = "http://10.0.0.32:8002"
-    browser = GameBrowser(1600, 900)
+    PROXY = None
+    # PROXY = "http://10.0.0.32:8002"
+    browser = GameBrowser(1280, 720)
     browser.mouse_click(300, 300)
     browser.start(MS_URL, PROXY)
     browser.start(MS_URL, PROXY)
 
-    LOGGER.info(f"browser on:{browser.is_running()}")
+    LOGGER.info("browser on: %s", browser.is_running())
+    
     while True:
         numbers_input = input("Enter x y :")
-        numbers = numbers_input.split()
-        x = int(numbers[0])
-        y = int(numbers[1])
+        numbers = numbers_input.split()        
+        try:
+            x,y=0,0
+            x = int(numbers[0])
+            y = int(numbers[1])
+        except Exception as e:
+            pass
         if x==0 and y==0:
             break
         if x==-1:
@@ -454,6 +482,10 @@ if __name__ == '__main__':
             continue
         if x == -2:
             browser.stop_overlay()
+            continue
+        if x == -3:
+            sc = browser.screen_shot()
+            print(sc)
             continue
         browser.mouse_click(x, y)
     browser.auto_hu()

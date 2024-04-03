@@ -66,8 +66,8 @@ class MainGUI(tk.Tk):
 
         # Main window properties
         self.title(self.lan_strings.APP_TITLE)
-        self.geometry('800x500')
-        self.minsize(700,500)
+        self.geometry('750x500')
+        self.minsize(750,500)
 
         # container for grid control
         self.grid_frame = tk.Frame(self)
@@ -157,7 +157,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_log_clicked(self):
         # LOGGER.debug('Open log')
-        os.startfile(log_helper.log_file_name())
+        os.startfile(log_helper.log_file_name)
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
@@ -181,7 +181,7 @@ class MainGUI(tk.Tk):
         # pop up that confirm if the user really wants to quit
         if messagebox.askokcancel(self.lan_strings.EXIT, self.lan_strings.EIXT_CONFIRM):
             self.settings.save_json()
-            self.bot_manager.stop(True)
+            self.bot_manager.stop(False)
             self.quit()
             
     def reload_gui(self):
@@ -614,7 +614,7 @@ class SettingsWindow(tk.Toplevel):
         height_new = int(size_list[1])
         
         mitm_port_new = int(self.mitm_port_var.get())
-        if not Settings.valid_mitm_port(mitm_port_new):
+        if not self.settings.valid_mitm_port(mitm_port_new):
             messagebox.showerror("⚠", self.lan_strings.MITM_PORT_ERROR_PROMPT)
             return
         

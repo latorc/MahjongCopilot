@@ -8,7 +8,7 @@ import queue
 
 DEFAULT_LOGGER_NAME = 'majsoul_copilot'
 LOGGER = logging.getLogger(DEFAULT_LOGGER_NAME)
-
+log_file_name:str = None
 
 def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True):
     """ Initialize logging format/output. Run once.
@@ -17,8 +17,7 @@ def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True)
         console (bool): if output to console
         file (bool): if output to file
     """
-    if not hasattr(config_logging, "log_file_name"):
-        config_logging.log_file_name = None
+    global log_file_name
         
     logger = LOGGER
     logger.setLevel(logging.DEBUG)
@@ -32,25 +31,19 @@ def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True)
     
     if file:
         file_name = file_prefix + '_' + dt_string() + '.log'
-        config_logging.log_file_name = utils.get_sub_folder(LOG_DIR) / file_name
-        file_handler = logging.FileHandler(config_logging.log_file_name)
+        log_file_name = utils.sub_file(LOG_DIR, file_name)
+        file_handler = logging.FileHandler(log_file_name)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
 def log_formatter() -> str:
+    """ return the default log formatter"""
     return logging.Formatter('%(asctime)s %(levelname)s [%(threadName)s]%(filename)s:%(lineno)d | %(message)s')
 
 def dt_string() -> str:
     """ return datetime string"""
     return datetime.datetime.now().strftime(r'%Y-%m-%d_%H-%M-%S')
-
-def log_file_name() -> str:
-    """ return the current log file name """
-    if hasattr(config_logging, "log_file_name"):
-        return str(config_logging.log_file_name)
-    else:
-        return None    
 
 class QueueHandler(logging.Handler):
     """ Log handler to send logging records to a thread-safe queue """

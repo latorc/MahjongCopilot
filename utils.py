@@ -2,17 +2,19 @@
 # no logging in this file
 
 from enum import Enum
+import __main__
 import pathlib
 import sys
 import time
 import subprocess
 
-VER_NUMBER = "0.2.5"
+VER_NUMBER = "0.2.6"
 MODEL_FOLDER = "models"
 BROWSER_DATA_FOLDER = "browser_data"
 RES_FOLDER = 'resources'
 LOG_DIR = 'log'
 MITM_CONFDIR = 'mitm_config'
+TEMP_FOLDER = 'temp'
 
 
 class BOT_TYPE(Enum):
@@ -28,12 +30,17 @@ class MITMException(Exception):
     """ Exception for MITM error"""
     pass
 
-def get_sub_folder(folder_name:str) -> pathlib.Path:
+def sub_folder(folder_name:str) -> pathlib.Path:
     """ return the subfolder absolute path string, create it if not exists"""
-    subfolder = pathlib.Path(__file__).parent / folder_name
+    subfolder = pathlib.Path(__main__.__file__).parent / folder_name
     if not subfolder.exists():
         subfolder.mkdir(exist_ok=True)
     return subfolder.resolve()
+
+def sub_file(folder:str, file:str) -> str:
+    """ return the file absolute path string, given folder and filename, create the folder if not exists"""
+    subfolder = sub_folder(folder)
+    return str(subfolder / file)
 
 def wait_for_file(file:str, timeout:int=5) -> bool:
     """ Wait for file creation (blocking until the file exists) for {timeout} seconds
@@ -96,8 +103,9 @@ def random_str(length:int) -> str:
 
 if __name__=='__main__':
     # Test code
-    folder = get_sub_folder('log')
-    print(folder)
+    folder = sub_folder('log')
+    print('subfolder: ',folder)
+    print('sub file: ', sub_file(LOG_DIR,'loglog123.log'))
     
     wait_res = wait_for_file("utils.py")
     print("wait file results:", wait_res)    
@@ -108,5 +116,6 @@ if __name__=='__main__':
     files = list_files('resources',False)
     print(files)
     files = list_files('resources',True)
-    print(files)
+    for f in files:
+        print(f)
     

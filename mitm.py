@@ -81,7 +81,7 @@ class MitmController:
                 filtering turned off if None/empty"""
         
         self.proxy_port = proxy_port
-        self.mitm_config_folder = utils.get_sub_folder(MITM_CONFDIR)
+        self.mitm_config_folder = utils.sub_folder(MITM_CONFDIR)
 
         self.mitm_thread = None
         self.dump_master = None
@@ -136,7 +136,7 @@ class MitmController:
         """Install mitm certificate onto the system
         Return:
             bool: True if installed successfully. False if failed or timeout"""
-        cert_file = Path(self.mitm_config_folder) / 'mitmproxy-ca-cert.cer'
+        cert_file = utils.sub_file(MITM_CONFDIR, 'mitmproxy-ca-cert.cer')
         if not utils.wait_for_file(cert_file, timeout):
             LOGGER.error(f"MITM certificate not found: {cert_file}")
             return False

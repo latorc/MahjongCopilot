@@ -1,4 +1,5 @@
-""" Bot wrappers for supportting different bot implementations
+""" Bot represents a mjai protocol bot
+implement wrappers for supportting different bot types
 """
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -13,6 +14,10 @@ from log_helper import LOGGER
 from settings import Settings
 import mjapi
 from utils import MODEL_FOLDER, BOT_TYPE
+
+# mjai Bot class from rust library
+# pylint: disable=no-member
+MjaiBot = libriichi.mjai.Bot
 
 
 def get_bot(settings:Settings) -> 'Bot':
@@ -91,7 +96,7 @@ class LocalMortalBot(Bot):
         if not Path(self.model_file).exists():
             raise utils.ModelFileException(f"Cannot find model file:{self.model_file}")
         
-        self.mjai_bot:libriichi.mjai.Bot = None
+        self.mjai_bot:MjaiBot = None
         self.str_input_history:list = []
         # thread lock for mjai.bot access
         # "mutable borrow" issue when running multiple methods at the same time        
@@ -99,7 +104,7 @@ class LocalMortalBot(Bot):
     
     def _init_bot_impl(self):
         engine = mjai.engine.get_engine(self.model_file)
-        self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
+        self.mjai_bot = MjaiBot(engine, self.seat)
         self.str_input_history.clear()
         
     def react(self, input_msg:dict) -> dict:
@@ -122,7 +127,7 @@ class LocalMortalBot(Bot):
                 # TODO better way? in rust code clone the bot?
                 LOGGER.debug("Create bot_reach for reach dahai reaction") 
                 new_engine = mjai.engine.get_engine(self.model_file)
-                mjai_bot_reach = libriichi.mjai.Bot(new_engine, self.seat)
+                mjai_bot_reach = MjaiBot(new_engine, self.seat)
                 for m in self.str_input_history:
                     mjai_bot_reach.react(m)
                 reach_msg = {'type': MJAI_TYPE.REACH, 'actor': self.seat}
@@ -158,11 +163,14 @@ class MjapiBot(Bot):
         if 'error' in res:
             LOGGER.warning("Error in MJAPI login: %s", res['error'])
             # try register
-            res_reg = self.mjapi.register(self.settings.mjapi_user)            
+            if not self.settings.mjapi_user:
+                self.settings.mjapi_user = utils.random_str(6)
+                LOGGER.info("Set random mjapi username:%s", self.settings.mjapi_user)
+            res_reg = self.mjapi.register(self.settings.mjapi_user)
             if 'secret' in res_reg:
                 self.settings.mjapi_secret = res_reg['secret']
                 self.settings.save_json()
-                LOGGER.info("Registered with MJAPI. Secret saved")
+                LOGGER.info("Registered new user [%s] with MJAPI. User name and secret saved to settings.", self.settings.mjapi_user)
                 res = self.mjapi.login(self.settings.mjapi_user, self.settings.mjapi_secret)
             elif 'error' in res_reg:
                 LOGGER.error("Error in MJAPI register: %s", res_reg['error'])
