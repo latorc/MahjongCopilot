@@ -1,9 +1,9 @@
 # Helper methods / constants
 # that deal with tile converting / mjai message parsing / etc.
 
+from dataclasses import dataclass
 import numpy as np
 from functools import cmp_to_key
-from lan_strings import LanStrings
 
 TILES_MS_2_MJAI = {
     '0m': '5mr',
@@ -32,6 +32,32 @@ def cvt_mjai2ms(mjai_tile:str) -> str:
         return TILES_MJAI_2_MS[mjai_tile]
     else:
         return mjai_tile
+
+class MSType:
+    """ Majsoul operation type constants"""
+    none = 0        # extra type added represeting the None/Pass button. not actually used by Majsoul
+    dahai = 1
+    chi = 2
+    pon = 3
+    ankan = 4
+    daiminkan = 5
+    kakan = 6
+    reach = 7
+    zimo = 8
+    hora = 9 
+    ryukyoku = 10
+    nukidora = 11
+
+class ChiPengGang:
+    """ majsoul action types"""
+    Chi = 0         # chi
+    Peng = 1        # pon
+    Gang = 2        # kan
+
+class MSGangType:
+    """ majsoul kan types"""
+    AnGang = 3      # ankan
+    AddGang = 2     # kakan/daminkan
 
 class MJAI_TYPE:
     """ MJAI message type string constants
@@ -120,6 +146,9 @@ MJAI_TILES_SORTED = [       # for sorting tiles, with aka doras
     "1s", "2s", "3s", "4s", "5sr", "5s", "6s", "7s", "8s", "9s",
     "E",  "S",  "W",  "N",  "P",  "F",  "C",  "?"
 ]
+
+MJAI_WINDS = ['E', 'S', 'W', 'N']
+
 MJAI_TILE_2_UNICODE = {      # https://en.wikipedia.org/wiki/Mahjong_Tiles_(Unicode_block)
     '1m': '🀇',    '2m': '🀈',    '3m': '🀉',    '4m': '🀊',    '5mr':'🀋',
     '5m': '🀋',    '6m': '🀌',    '7m': '🀍',    '8m': '🀎',    '9m': '🀏',
@@ -218,88 +247,16 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
     return (tile_list, tsumohai)
  
 
-def mjai_reaction_2_guide(
-    reaction:dict, 
-    max_options:int=3,
-    lan_str:LanStrings=LanStrings()
-    ) -> tuple[str, list]:
-    """ Convert mjai reaction message to language specific AI guide 
-    params:
-        reaction(dict): reaction (output) message from mjai bot
-        max_options(int): number of options to display. 0 to display no options
-        lan_str(LanString): language specific string constants
-        
-    return:
-        (action_str, options): action_str is the recommended action
-        options is a list of options (str, float), each option being a tuple of tile str and a percentage number 
-        
-        sample output for Chinese:
-        ("立直,切[西]", [("[西]", 0.9111111), ("立直", 0.077777), ("[一索]", 0.0055555)])        
-        """
-                
-    if reaction is None:
-        raise Exception("Input reaction is None")
-    re_type = reaction['type']
-    pai = reaction.get('pai', None)
-    def get_tile_str(mjai_tile:str):    # unicode + language specific name
-        return MJAI_TILE_2_UNICODE[mjai_tile] + lan_str.mjai2str(mjai_tile)
-    
-    if pai:
-        tile_str =  get_tile_str(pai)
-    
-    if re_type == 'dahai':
-        action_str = f"{lan_str.DISCARD}{tile_str}"
-    elif re_type == 'none':
-        action_str = ActionUnicode.PASS + lan_str.PASS
-    elif re_type == 'pon':
-        action_str = f"{ActionUnicode.PON}{lan_str.PON}{tile_str}"
-    elif re_type == 'chi':
-        comsumed = reaction['consumed']
-        comsumed_strs = [f"{get_tile_str(x)}" for x in comsumed]
-        action_str = f"{ActionUnicode.CHI}{lan_str.CHI}{tile_str}({''.join(comsumed_strs)})"
-        action_str = action_str            
-    elif re_type == 'kakan':
-        action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.KAKAN})"
-    elif re_type == 'daiminkan':
-        action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.DAIMINKAN})"
-    elif re_type == 'ankan':
-        tile_str = get_tile_str(reaction['consumed'][1])
-        action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.ANKAN})"
-    elif re_type =='reach': # attach reach dahai options
-        reach_dahai_reaction = reaction['reach_dahai']
-        dahai_action_str, dahai_options = mjai_reaction_2_guide(reach_dahai_reaction, 0, lan_str)
-        action_str = f"{ActionUnicode.REACH}{lan_str.RIICHI}," + dahai_action_str
-    elif re_type =='hora':
-        if reaction['actor'] == reaction['target']:
-            action_str = f"{ActionUnicode.AGARI}{lan_str.AGARI}({lan_str.TSUMO})"
-        else:
-            action_str = f"{ActionUnicode.AGARI}{lan_str.AGARI}({lan_str.RON})"
-    elif re_type == 'ryukyoku':
-        action_str = f"{ActionUnicode.RYUKYOKU}{lan_str.RYUKYOKU}"
-    else:
-        action_str = lan_str.mjai2str(re_type)
-    
-    options = []
-    if max_options > 0:
-        # process options. display top options with their weights
-        meta_options = reaction['meta_options'][:max_options]
-        if meta_options:
-            for (code, q) in meta_options:      # code is in MJAI_MASK_LIST
-                name_str = lan_str.mjai2str(code)
-                if code in MJAI_TILES_34 or code in MJAI_AKA_DORAS:
-                    # if it is a tile
-                    name_str = get_tile_str(code)
-                options.append((name_str, q))
-        
-    return (action_str, options)
 
 
+@dataclass
 class GameInfo:
     """ data class containing game info"""
     bakaze:str = None       # bakaze 场风
-    self_wind:str = None    # self_wind 自风
+    jikaze:str = None    # self_wind 自风
     kyoku:int = None        # kyoku 局 (under bakaze)
     honba:int = None        # honba 本场 (times of consequetive dealing)
     my_tehai:list = None    # tiles in hand
-    my_tsumohai = None      # new drawn tile if any
-    reached:bool = False
+    my_tsumohai:str = None      # new drawn tile if any
+    reached:bool = False        # if self is in REACH state
+    is_first_round:bool = False # if self first round has not passed

@@ -1,19 +1,31 @@
 # Common/utility methods
 # no logging in this file
 
-import datetime
-import logging
+from enum import Enum
 import pathlib
 import sys
 import time
 import subprocess
-import log_helper
 
-VER_NUMBER = "0.2"
+VER_NUMBER = "0.2.5"
 MODEL_FOLDER = "models"
+BROWSER_DATA_FOLDER = "browser_data"
+RES_FOLDER = 'resources'
+LOG_DIR = 'log'
+MITM_CONFDIR = 'mitm_config'
 
+
+class BOT_TYPE(Enum):
+    """ Model type for bot"""
+    LOCAL = "Local"
+    MJAPI = "MJAPI"
+    
 class ModelFileException(Exception):
     """ Exception for model file error"""
+    pass
+
+class MITMException(Exception):
+    """ Exception for MITM error"""
     pass
 
 def get_sub_folder(folder_name:str) -> pathlib.Path:
@@ -74,8 +86,13 @@ def list_files(folder:str, full_path:bool=False) -> list[pathlib.Path]:
         else:
             return [f.name for f in files]
     except:
-        return []    
-        
+        return []
+    
+def random_str(length:int) -> str:
+    """ Generate random string with specified length"""
+    import random
+    import string
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))        
 
 if __name__=='__main__':
     # Test code

@@ -2,7 +2,9 @@ import json
 import pathlib
 from typing import Callable
 from log_helper import LOGGER
-import lan_strings
+import lan_str
+import utils
+
 DEFAULT_SETTING_FILE = 'settings.json'
 class Settings:
     """ Settings class to load and save settings to json file"""
@@ -17,10 +19,21 @@ class Settings:
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 8999)
-        self.language:str = self._get_value("language", next(iter(lan_strings.LAN_OPTIONS)), Settings.valid_language)
+        self.language:str = self._get_value("language", next(iter(lan_str.LAN_OPTIONS)), Settings.valid_language)
+        
+        self.model_type:str = self._get_value("model_type", "local")
+        """ model type: local, mjapi"""
+        # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
+        # for mjapi
+        self.mjapi_url:str = self._get_value("mjapi_url", "https://begins-malta-bbc-huntington.trycloudflare.com")
+        self.mjapi_user:str = self._get_value("mjapi_user", utils.random_str(6))
+        self.mjapi_secret:str = self._get_value("mjapi_secret", "")
+        
         self.enable_automation:bool = self._get_value("enable_automation", False, Settings.valid_bool)
         self.enable_overlay:bool = self._get_value("enable_overlay", True, Settings.valid_bool)
+        
+        self.save_json()
         
     def load_json(self) -> dict:
         if pathlib.Path(self._json_file).exists():
@@ -37,6 +50,7 @@ class Settings:
                             if not key.startswith('_') and not callable(value)}
         with open(self._json_file, 'w') as file:
             json.dump(settings_to_save, file, indent=4, separators=(', ', ': '))
+        LOGGER.debug("Settings saved.")
     
     def _get_value(self, key:str, default_value:any, validator:Callable[[any],bool]=None) -> any:
         """ Get value from settings dictionary, or return default_value if error"""
@@ -53,12 +67,13 @@ class Settings:
             LOGGER.warning("setting '%s' use default value '%s' because error: %s", key, default_value,e, exc_info=True)
             return default_value
     
-    def lan(self) -> lan_strings.LanStrings:
+    def lan(self) -> lan_str.LanStrings:
         """ return the LanString instance"""
-        return lan_strings.LAN_OPTIONS[self.language]
-        
-    def valid_language(language:str):
-        return (language in lan_strings.LAN_OPTIONS)
+        return lan_str.LAN_OPTIONS[self.language]
+    
+    ### Validate functions: return true if the value is valid        
+    def valid_language(lan_code:str):
+        return (lan_code in lan_str.LAN_OPTIONS)
     
     def valid_mitm_port(port:int):
         if 1000 <= port <= 65535:
@@ -71,7 +86,6 @@ class Settings:
             return True
         else:
             return False
-
     
         
 if __name__ == '__main__':

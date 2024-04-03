@@ -2,18 +2,13 @@ import logging
 import time
 import threading
 import queue
-import random
-import string
 
 from pathlib import Path
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
-
 import utils
+from utils import BROWSER_DATA_FOLDER
 from log_helper import LOGGER
-
-
-DATA_FOLDER = 'browser_data'
 
 class GameBrowser:
     """ Wrapper for Playwright browser controlling maj-soul operations"""  
@@ -25,15 +20,18 @@ class GameBrowser:
         self._action_queue = queue.Queue()       # thread safe queue for actions
         self._stop_event = threading.Event()    # set this event to stop processing actions
         self._browser_thread = None
+        
+        self.init_vars()
+        
+    def init_vars(self):
+        """ initialize internal variables"""
         self.context:BrowserContext = None
         self.page:Page = None        # playwright page, only used by thread
-        
+        self._canvas_id = None      # for overlay
         # for tracking page info
         self._page_title:str = None
         self._viewport_pos = None
-        self._last_update_time:float = time.time()
-        
-        self._canvas_id = None
+        self._last_update_time:float = 0
         
     def __del__(self):
         self.stop()
@@ -74,7 +72,7 @@ class GameBrowser:
                 # Initilize browser
                 chromium = playwright.chromium
                 self.context = chromium.launch_persistent_context(
-                    user_data_dir=Path(__file__).parent / DATA_FOLDER,
+                    user_data_dir=Path(__file__).parent / BROWSER_DATA_FOLDER,
                     headless=False,
                     viewport={'width': self.width, 'height': self.height},
                     proxy=proxy_object,
@@ -116,21 +114,18 @@ class GameBrowser:
                     LOGGER.error('Error processing action: %s', e, exc_info=True)
             
             # stop event is set: close browser
-            LOGGER.debug("Closing browser")
-            self._canvas_id = None  
+            LOGGER.debug("Closing browser")            
             try:                
                 if self.page.is_closed() == False:
                     self.page.close()
-                self.page = None
                 if self.context:
-                    self.context.close()
-                    self.context = None                
+                    self.context.close()       
             except TargetClosedError as e:
                 # ok if closed already
                 pass                
             except Exception as e:
                 LOGGER.error('Error closing browser: %s', e ,exc_info=True)            
-        
+            self.init_vars()
         return
             
     def _clear_action_queue(self):        
@@ -155,11 +150,12 @@ class GameBrowser:
     def is_page_loaded(self):
         """ return True if page is loaded """
         if self.page:
-            return True
+            if self._page_title:
+                return True
         else:
             return False
     
-    def is_overlay_on(self):
+    def is_overlay_working(self):
         """ return True if overlay is on and working"""
         if self.page is None:
             return False
@@ -178,26 +174,32 @@ class GameBrowser:
     def start_overlay(self):
         """ Queue action: Start showing the overlay"""
         self._action_queue.put(lambda: self._start_overlay_action())
-        pass
     
     def stop_overlay(self):
         """ Queue action: Stop showing the overlay"""
         self._action_queue.put(lambda: self._stop_overlay_action())
-        pass
     
-    def overlay_update_text(self, guide_str:str, option_subtitle:str, options:list):
+    def overlay_update_guidance(self, guide_str:str, option_subtitle:str, options:list):
         """ Queue action: update text area
         params:
             guide_str(str): AI guide str (recommendation action)
             option_subtitle(str): subtitle for options (display before option list)
             options(list): list of (str, float), indicating action/tile with its probability """
-        self._action_queue.put(lambda: self._overlay_update_text(guide_str, option_subtitle, options))
-        pass
+        self._action_queue.put(lambda: self._overlay_update_guide(guide_str, option_subtitle, options))
     
-    def overlay_clear_text(self):
+    def overlay_clear_guidance(self):
         """ Queue action: clear overlay text area"""
         self._action_queue.put(lambda: self._overlay_clear_text())
-        pass
+    
+    def overlay_update_botleft(self, text:str):
+        """ update bot-left corner text area
+        params:
+            text(str): Text, can have linebreak '\n'. None to clear text
+        """
+        self._action_queue.put(lambda: self._overlay_update_botleft_text(text))
+        
+    def overlay_clear_botleft(self):
+        self._action_queue.put(lambda: self._overlay_update_botleft_text(None))
     
     def draw_bars(self, bars:list[float]):
         pass
@@ -233,7 +235,7 @@ class GameBrowser:
         if self.page is None:
             return
         # LOGGER.debug("browser Start overlay")
-        self._canvas_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        self._canvas_id = utils.random_str(8)
         font_size = int(self.height/48)
         prompt:str = "Mahjong Copilot"
         js_code = f"""(() => {{
@@ -247,24 +249,16 @@ class GameBrowser:
             canvas.style.position = 'fixed'; // Use 'fixed' or 'absolute' positioning
             canvas.style.left = '0'; // Position at the top-left corner of the viewport
             canvas.style.top = '0';
-            canvas.style.zIndex = '1000'; // High z-index to ensure it is on top
+            canvas.style.zIndex = '9999999'; // High z-index to ensure it is on top
             canvas.style.pointerEvents = 'none'; // Make the canvas click-through
-            document.body.appendChild(canvas);
-            
-            // Bot-left text
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#FFFFFF";
-            ctx.textBaseline = "top"
-            ctx.font = "{font_size}px Arial";       //double size for first line
-            ctx.fillText("{prompt}", {self.width}*0.01, {self.height}*0.95);
-            
+            document.body.appendChild(canvas);            
             }})()"""
         self.page.evaluate(js_code)
         
     def _stop_overlay_action(self):
         """ Remove overlay from page. Will ignore if page is None, or overlay not on"""
         
-        if self.is_overlay_on() == False:
+        if self.is_overlay_working() == False:
             return
         # LOGGER.debug("browser Stop overlay")
         js_code = f"""(() => {{
@@ -275,6 +269,7 @@ class GameBrowser:
             }})()"""
         self.page.evaluate(js_code)
         self._canvas_id = None
+        self._botleft_text = None
     
     def _overlay_text_params(self):
         font_size = int(self.height/45)  # e.g., 22
@@ -285,12 +280,15 @@ class GameBrowser:
         box_left = int(self.width * 0.14)  # Distance from the left
         return (font_size, line_space, min_box_width, initial_box_height, box_top, box_left)    
     
-    def _overlay_update_text(self, line1: str, option_title: str, options: list[tuple[str, float]]):        
-        if not self.is_overlay_on():
+    def _overlay_update_guide(self, line1: str, option_title: str, options: list[tuple[str, float]]):        
+        if not self.is_overlay_working():
             return        
         font_size, line_space, min_box_width, initial_box_height, box_top, box_left = self._overlay_text_params()
-
-        options_data = [[text, f"{perc*100:4.0f}%"] for text, perc in options]
+        if options:
+            options_data = [[text, f"{perc*100:4.0f}%"] for text, perc in options]
+        else:
+            options_data = []
+            
         js_code = f"""
         (() => {{
             const canvas = document.getElementById('{self._canvas_id}');
@@ -340,7 +338,7 @@ class GameBrowser:
     
     def _overlay_clear_text(self):
         """ delete text and the background box"""
-        if self.is_overlay_on() == False:
+        if self.is_overlay_working() == False:
             return
         font_size, line_space, min_box_width, initial_box_height, box_top, box_left = self._overlay_text_params()
         
@@ -355,40 +353,75 @@ class GameBrowser:
             ctx.clearRect({box_left}, {box_top}, {self.width}-{box_left}, {initial_box_height});
         }});"""
         self.page.evaluate(js_code)
+        
+    def _overlay_update_botleft_text(self, text:str=None):
+        if self.is_overlay_working() == False:
+            return
+        font_size = int(self.height/48)
+        box_top = 0.885
+        box_left = 0
+        box_width = 0.115
+        box_height = 1- box_top
+        
+        # Escape JavaScript special characters and convert newlines
+        js_text = text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n') if text else ''
+        
+        js_code = f"""(() => {{
+            // find canvas context
+            const canvas = document.getElementById('{self._canvas_id}');
+            if (!canvas || !canvas.getContext) {{
+                return;
+            }}
+            const ctx = canvas.getContext('2d');  
+            
+            // clear box          
+            const box_left = canvas.width * {box_left};
+            const box_top = canvas.height * {box_top};
+            const box_width = canvas.width * {box_width};
+            const box_height = canvas.height * {box_height};
+            ctx.clearRect(box_left, box_top, box_width, box_height);
+            
+            // transparent box background
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            ctx.fillRect(box_left, box_top, box_width, box_height);            
+            
+            // draw text
+            const text = "{js_text}"
+            if (!text) {{
+                return; // Skip drawing if text is empty
+            }}
+            
+            ctx.fillStyle = "#FFFFFF";
+            ctx.textBaseline = "top"
+            ctx.font = "{font_size}px Arial";
+            
+            // Split text into lines and draw each line
+            const lines = text.split('\\n');
+            const textX = {font_size} * 0.25
+            let startY = canvas.height * {box_top} + {font_size}*0.5;
+            const lineHeight = {font_size} * 1.2; // Adjust line height as needed
+            lines.forEach((line, index) => {{
+                ctx.fillText(line, canvas.width * {box_left} + textX, startY + (lineHeight * index));
+            }});            
+        }})()"""
+        self.page.evaluate(js_code)
     
     def _overlay_update_indicators(self, reaction:dict):        
         pass
         
     def _update_page_info(self):
         """ update page title and url"""
-        if time.time()-self._last_update_time > 0.5:
-            self._last_update_time = time.time()
-            self._page_title = self.page.title()
-            self._viewport_pos = self.page.evaluate("""() => {
-                return {
-                    screenX: window.screenX,
-                    screenY: window.screenY,
-                    outerWidth: window.outerWidth,
-                    innerWidth: window.innerWidth,
-                    outerHeight: window.outerHeight,
-                    innerHeight: window.innerHeight
-                };
-                }""")    
-            
-    def get_page_info(self):
-        if self._page_title is not None and self._viewport_pos is not None:
-            return self._page_title, self._viewport_pos
-            # return get_window_positions_by_title(title), offsets
-    
-        # try:
-        #     browser_path = self.context._impl_obj._parent.executable_path
-        # except Exception as e:
-        #     return None
-        
-        # pids = list(find_pids_by_executable(browser_path))
-
-
-
+        self._page_title = self.page.title()
+            # self._viewport_pos = self.page.evaluate("""() => {
+            #     return {
+            #         screenX: window.screenX,
+            #         screenY: window.screenY,
+            #         outerWidth: window.outerWidth,
+            #         innerWidth: window.innerWidth,
+            #         outerHeight: window.outerHeight,
+            #         innerHeight: window.innerHeight
+            #     };
+            #     }""")
 
 
 if __name__ == '__main__':
@@ -417,7 +450,7 @@ if __name__ == '__main__':
             # print("viewport: ", a)
             browser.start_overlay()
             options = [("立直", 0.95123), ("[发]", 0.03123123), ("[六万]", 0.01111)]
-            browser.overlay_update_text("立直,切[六万]","备选项:", options)
+            browser.overlay_update_guidance("立直,切[六万]","备选项:", options)
             continue
         if x == -2:
             browser.stop_overlay()

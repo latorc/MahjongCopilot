@@ -1,5 +1,6 @@
 # Language string constants
-from utils import VER_NUMBER
+from utils import VER_NUMBER, BOT_TYPE
+
 class LanStrings:
     """ String constants for default language (English) """
     LANGUAGE_NAME = 'English'
@@ -17,6 +18,7 @@ class LanStrings:
     AI_OUTPUT = 'AI Guidance'
     GAME_INFO = 'Game Info'
     HELP_STR = f"""
+    
 Mahjong Copilot v{VER_NUMBER}
 
 A Mahjong AI assistant for Majsoul, based on Mortal Mahjong AI. Currently the model only supports 4-person Mahjong game. When you enter a game in Majsoul, AI will give you step-by-step guidance.
@@ -34,6 +36,8 @@ Mortal: https://github.com/Equim-chan/Mortal
 Akagi: https://github.com/shinkuan/Akagi
 MJAI: https://mjai.app
 """
+    ON = "On"
+    OFF = "Off"
     
     # Settings
     SAVE = "Save"
@@ -46,7 +50,11 @@ MJAI: https://mjai.app
     CLIENT_SIZE = "Web Client Size"
     MAJSOUL_URL = "Majsoul URL"
     LANGUAGE = "Language"
-    AI_MODEL_FILE = "AI Model File"
+    MODEL_TYPE = "AI Model Type"
+    AI_MODEL_FILE = "Local Model File"
+    MJAPI_URL = "MJAPI URL"
+    MJAPI_USER = "MJAPI User"
+    MJAPI_SECRET = "MJAPI Secret"
     MITM_PORT_ERROR_PROMPT = "Invalid MITM Port (must between 1000~65535)"
     
     # Status
@@ -54,14 +62,18 @@ MJAI: https://mjai.app
     MITM_SERVICE = "MITM Service"
     WEB_CLIENT = "Web Client"
     GAME_RUNNING = "Game in Progress"
-    AI_MODEL_ERROR = "AI Model Error!"
+    GAME_ERROR = "Game Error!"
     MODEL_FILE_ERROR = "Model File not Found!"
+    MITM_SERVER_ERROR = "MITM Service Error!"
     MAIN_THREAD_ERROR = "Main Thread Error!"
     SYNCING = "Syncing..."
+    CALCULATING = "Calculating..."
     READY_FOR_GAME = "Ready for Game"
-    PREPARATION = "Prepare to Start"
+    GAME_STARTING = "Game Starting"
     KYOKU = "Kyoku"
     HONBA = "Honba"
+    MODEL = "Model"
+    AWAIT_BOT = "Model not loaded"
     
     # Reaction/Actions
     PASS = "Skip"
@@ -77,6 +89,7 @@ MJAI: https://mjai.app
     TSUMO = "Tsumo"
     RON = "Ron"
     RYUKYOKU = "Ryukyoku"
+    NUKIDORA = "Nukidora"
     OPTIONS_TITLE = "Options:"    
     
     MJAI_2_STR = {
@@ -89,7 +102,7 @@ MJAI: https://mjai.app
         'E': 'East', 'S': 'South', 'W': 'West', 'N': 'North',
         'C': 'Chun', 'F': 'Hatsu', 'P': 'Haku',
         '5mr': 'Red 5 Man', '5pr': 'Red 5 Pin', '5sr': 'Red 5 Sou',
-        'reach': 'Riichi', 'chi_low': 'Chi', 'chi_mid': 'Chi', 'chi_high': 'Chi', 'pon': 'Pon', 'kan_select':'Kan',
+        'reach': 'Riichi', 'chi_low': 'Chi Low', 'chi_mid': 'Chi Mid', 'chi_high': 'Chi High', 'pon': 'Pon', 'kan_select':'Kan',
         'hora': 'Agari', 'ryukyoku': 'Ryukyoku', 'none':'Skip'
     }
       
@@ -134,6 +147,8 @@ Mortal: https://github.com/Equim-chan/Mortal
 Akagi: https://github.com/shinkuan/Akagi
 MJAI: https://mjai.app
 """
+    ON = "开"
+    OFF = "关"
     
     # Settings
     SAVE = "保存"
@@ -145,7 +160,11 @@ MJAI: https://mjai.app
     CLIENT_SIZE = "网页客户端大小"
     MAJSOUL_URL = "雀魂网址"
     LANGUAGE = "语言" 
-    AI_MODEL_FILE = "AI 模型文件"
+    MODEL_TYPE = "AI 模型类型"
+    AI_MODEL_FILE = "本地 AI 模型文件"
+    MJAPI_URL = "MJAPI 网址"
+    MJAPI_USER = "MJAPI 用户名"
+    MJAPI_SECRET = "MJAPI 秘密 Secret"
     AUTO_LAUNCH_BROWSER = "自动启动浏览器"
     MITM_PORT_ERROR_PROMPT = "错误的 MITM 服务端口(必须是1000~65535)"
     
@@ -154,14 +173,18 @@ MJAI: https://mjai.app
     MITM_SERVICE = "MITM 服务"
     WEB_CLIENT = "网页客户端"
     GAME_RUNNING = "对局进行中"
-    AI_MODEL_ERROR = "AI 模型错误!"
+    GAME_ERROR = "对局发生错误!"
     MODEL_FILE_ERROR = "无法找到模型文件!"
+    MITM_SERVER_ERROR = "MITM 服务错误!"
     MAIN_THREAD_ERROR = "主进程发生错误!"
-    SYNCING = "同步中..."
-    READY_FOR_GAME = "等待开始游戏"
-    PREPARATION = "准备开始"
+    SYNCING = "同步中…"
+    CALCULATING = "计算中…"
+    READY_FOR_GAME = "等待游戏"
+    GAME_STARTING = "准备开始"
     KYOKU = "局"
     HONBA = "本场"
+    MODEL = "模型"
+    AWAIT_BOT = "模型未加载"
     
     # Reaction/Actions
     PASS = "跳过"
@@ -177,7 +200,8 @@ MJAI: https://mjai.app
     TSUMO = "自摸"
     RON = "荣和"
     RYUKYOKU = "流局"
-    OPTIONS_TITLE = "备选项:"    
+    NUKIDORA = "拔北"
+    OPTIONS_TITLE = "候选项:"    
     
     MJAI_2_STR ={
         '1m': '一萬', '2m': '二萬', '3m': '三萬', '4m': '四萬', '5m': '五萬',
@@ -189,7 +213,7 @@ MJAI: https://mjai.app
         'E': '東', 'S': '南', 'W': '西', 'N': '北',
         'C': '中', 'F': '發', 'P': '白',
         '5mr': '赤五萬', '5pr': '赤五筒', '5sr': '赤五索', 
-        'reach': '立直', 'chi_low': '吃', 'chi_mid': '吃', 'chi_high': '吃', 'pon': '碰', 'kan_select':'杠',
+        'reach': '立直', 'chi_low': '吃-低', 'chi_mid': '吃-中', 'chi_high': '吃-高', 'pon': '碰', 'kan_select':'杠',
         'hora': '和牌', 'ryukyoku': '流局', 'none': '跳过'
     }
 
@@ -204,7 +228,7 @@ LAN_OPTIONS:dict[str, LanStrings] = {
 
 def check_keys(lan_string_class):
     # check for each attribute in LanStrings, ZHS_String has override its implementation
-     # list of all variable attributes from class LanStrings
+    # list of all variable attributes from class LanStrings
     variable_attributes = [attr for attr in dir(lan_string_class) if not callable(getattr(lan_string_class, attr)) and not attr.startswith("__")]
     for key in variable_attributes:
         if key not in lan_string_class.__dict__ and key in variable_attributes:

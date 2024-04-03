@@ -1,11 +1,15 @@
 {
     "auto_launch_browser": false, 
-    "browser_width": 1280, 
-    "browser_height": 720, 
+    "browser_width": 1600, 
+    "browser_height": 900, 
     "ms_url": "https://game.maj-soul.com/1/", 
     "mitm_port": 10999, 
     "language": "ZHS", 
+    "model_type": "Local", 
     "model_file": "model_v4_20240308_best_min.pth", 
+    "mjapi_url": "https://begins-malta-bbc-huntington.trycloudflare.com", 
+    "mjapi_user": "lator4", 
+    "mjapi_secret": "cfan+V9+JCDz1gNbEudAGBLDktDWdEj8vYgYFk+Y3XU=", 
     "enable_automation": true, 
     "enable_overlay": true
 }

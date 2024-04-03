@@ -3,9 +3,9 @@ import datetime
 import logging
 import pathlib
 import utils
+from utils import LOG_DIR
 import queue
 
-LOG_DIR = 'log'
 DEFAULT_LOGGER_NAME = 'majsoul_copilot'
 LOGGER = logging.getLogger(DEFAULT_LOGGER_NAME)
 

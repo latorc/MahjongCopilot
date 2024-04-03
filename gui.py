@@ -11,15 +11,16 @@ import tkinter as tk
 from tkinter import font
 from tkinter import ttk, messagebox
 
-from bot_manager import BotManager
+from bot_manager import BotManager, mjai_reaction_2_guide
 import utils
+from utils import RES_FOLDER
 import log_helper
 from log_helper import LOGGER
 from settings import Settings
 import mj_helper
-from lan_strings import LAN_OPTIONS, LanStrings
+from lan_str import LAN_OPTIONS, LanStrings
+from mj_bot import BOT_TYPE
 
-RES_FOLDER = 'resources'
 
 def set_style_normal(style:ttk.Style, font_size:int=12):
     """ Set style for ttk widgets"""
@@ -41,16 +42,22 @@ class MainGUI(tk.Tk):
         self.lan_strings:LanStrings = self.settings.lan()
 
         icon = tk.PhotoImage(file=Path(RES_FOLDER)/'icon.png')
-        self.iconphoto(True, icon)
-        
+        self.iconphoto(True, icon)        
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
+        
+        # icon resources:
+        self.icon_green = Path(RES_FOLDER)/'green.png'
+        self.icon_red = Path(RES_FOLDER)/'red.png'
+        self.icon_yellow = Path(RES_FOLDER)/'yellow.png'
+        self.icon_gray = Path(RES_FOLDER)/'gray.png'
+        self.icon_ready = Path(RES_FOLDER)/'ready.png'
         
         # create window widgets
         self._create_widgets()
 
         self.bot_manager.start()        # start the main program
-        self.gui_update_delay = 100     # in ms
-        self._update_gui_info()          # start updating gui info
+        self.gui_update_delay = 50      # in ms
+        self._update_gui_info()         # start updating gui info
 
     def _create_widgets(self):
         # Styling
@@ -59,8 +66,8 @@ class MainGUI(tk.Tk):
 
         # Main window properties
         self.title(self.lan_strings.APP_TITLE)
-        self.geometry('700x500')
-        self.minsize(500,400)
+        self.geometry('800x500')
+        self.minsize(700,500)
 
         # container for grid control
         self.grid_frame = tk.Frame(self)
@@ -153,13 +160,17 @@ class MainGUI(tk.Tk):
         os.startfile(log_helper.log_file_name())
 
     def _on_btn_settings_clicked(self):
-        # open settings dialog
+        # open settings dialog (modal/blocking)
         settings_window = SettingsWindow(self,self.settings)
         settings_window.transient(self)
         settings_window.grab_set()
         self.wait_window(settings_window)
-        if settings_window.GUI_need_reload:
+        
+        if settings_window.GUI_need_reload:     # reload UI if needed
             self.reload_gui()
+        if settings_window.model_updated:       # re-create bot if needed
+            if not self.bot_manager.is_in_game():
+                self.bot_manager.create_bot()
 
     def _on_btn_help_clicked(self):
         # open help dialog        
@@ -169,6 +180,7 @@ class MainGUI(tk.Tk):
         # Exit the app
         # pop up that confirm if the user really wants to quit
         if messagebox.askokcancel(self.lan_strings.EXIT, self.lan_strings.EIXT_CONFIRM):
+            self.settings.save_json()
             self.bot_manager.stop(True)
             self.quit()
             
@@ -184,6 +196,7 @@ class MainGUI(tk.Tk):
         
 
     def _update_gui_info(self):
+        """ Update GUI widgets status with latest info from bot manager"""
         if not self.bot_manager.browser.is_running():
             self.btn_start_browser.config(state=tk.NORMAL)
         else:
@@ -207,80 +220,86 @@ class MainGUI(tk.Tk):
         pending_reaction = self.bot_manager.get_pending_reaction()
         # convert this reaction into string
         if pending_reaction:
-            action_str, options = mj_helper.mjai_reaction_2_guide(pending_reaction, 3, self.lan_strings)
+            action_str, options = mjai_reaction_2_guide(pending_reaction, 3, self.lan_strings)
             self.text_ai_guide.insert(tk.END, f'{action_str}\n')
             for tile_str, weight in options:
                 self.text_ai_guide.insert(tk.END, f' {tile_str}  {weight*100:4.0f}%\n')
         self.text_ai_guide.config(state=tk.DISABLED)
 
-        # update state
+        # update state: display tehai + tsumohai
         gi:mj_helper.GameInfo = self.bot_manager.get_game_info()
         self.text_state.config(state=tk.NORMAL)
         self.text_state.delete('1.0', tk.END)
         if gi and gi.my_tehai:
             tehai = gi.my_tehai
             tsumohai = gi.my_tsumohai
-            tehai_str = ''.join(mj_helper.MJAI_TILE_2_UNICODE[t] for t in tehai)
-            tsumohai_str = f"{' + ' + mj_helper.MJAI_TILE_2_UNICODE[tsumohai] if tsumohai != '?' else ''}"
-            info_str = f"{tehai_str}{tsumohai_str}"
-            self.text_state.insert(tk.END, info_str)
+            hand_str = ''.join(mj_helper.MJAI_TILE_2_UNICODE[t] for t in tehai)
+            if tsumohai:
+                hand_str += f" + {mj_helper.MJAI_TILE_2_UNICODE[tsumohai]}"
+            self.text_state.insert(tk.END, hand_str)
         self.text_state.config(state=tk.DISABLED)
 
         # Update status bar
-        if self.bot_manager.is_running():
-            self.status_bar.update_column(0, self.lan_strings.MAIN_THREAD, Path(RES_FOLDER)/'green.png')
+        if self.bot_manager.is_running():       # main thread
+            self.status_bar.update_column(0, self.lan_strings.MAIN_THREAD, self.icon_green)
         else:
-            self.status_bar.update_column(0, self.lan_strings.MAIN_THREAD, Path(RES_FOLDER)/'red.png')
+            self.status_bar.update_column(0, self.lan_strings.MAIN_THREAD, self.icon_red)
 
-        if self.bot_manager.mitm_server.is_running():
-            self.status_bar.update_column(1, self.lan_strings.MITM_SERVICE, Path(RES_FOLDER)/'green.png')
+        if self.bot_manager.is_bot_created():
+            text = self.settings.lan().MODEL + ": " + self.bot_manager.bot.type.value
+            self.status_bar.update_column(1, text, self.icon_green)
         else:
-            self.status_bar.update_column(1, self.lan_strings.MITM_SERVICE, Path(RES_FOLDER)/'red.png')
+            text = self.settings.lan().AWAIT_BOT
+            self.status_bar.update_column(1, text, self.icon_red)
 
         if self.bot_manager.browser.is_running():
-            self.status_bar.update_column(2, self.lan_strings.WEB_CLIENT, Path(RES_FOLDER)/'green.png')
+            self.status_bar.update_column(2, self.lan_strings.WEB_CLIENT, self.icon_green)
         else:
-            self.status_bar.update_column(2, self.lan_strings.WEB_CLIENT, Path(RES_FOLDER)/'gray.png')
+            self.status_bar.update_column(2, self.lan_strings.WEB_CLIENT, self.icon_gray)
 
         status_str, icon = self._get_status_text_icon(gi)
         self.status_bar.update_column(3, status_str, icon)
+        
+        self.bot_manager.update_overlay()
 
         self.after(self.gui_update_delay, self._update_gui_info)     # next update
 
     def _get_status_text_icon(self, gi:mj_helper.GameInfo) -> tuple[str, str]:
-        icon_green = Path(RES_FOLDER)/'green.png'
-        icon_red = Path(RES_FOLDER)/'red.png'
-        icon_yellow = Path(RES_FOLDER)/'yellow.png'
-        icon_gray = Path(RES_FOLDER)/'gray.png'
-        icon_ready = Path(RES_FOLDER)/'ready.png'
-
-        bot_exception = self.bot_manager.exception
-        if isinstance(bot_exception, utils.ModelFileException):
-            return self.lan_strings.MODEL_FILE_ERROR, icon_red
+        # Get text and icon for status bar last column, based on bot running info
+        
+        bot_exception = self.bot_manager.main_thread_exception        
+        if isinstance(bot_exception, utils.MITMException):
+            return self.settings.lan().MITM_SERVER_ERROR, self.icon_red
         elif isinstance(bot_exception, Exception):
-            return self.lan_strings.MAIN_THREAD_ERROR + str(bot_exception), icon_red
+            return self.lan_strings.MAIN_THREAD_ERROR + str(bot_exception), self.icon_red
         else:   # no exception in bot manager
             pass
-
+        
+        game_error:Exception = self.bot_manager.get_game_error()
+        if isinstance(game_error, utils.ModelFileException):
+            return self.lan_strings.MODEL_FILE_ERROR, self.icon_red
+        elif isinstance(game_error, Exception):
+            text = self.settings.lan().GAME_ERROR + " " + str(game_error)
+            return text, self.icon_red
+        else:       # no game error
+            pass
+            
         if self.bot_manager.is_in_game():
             info_str = self.lan_strings.GAME_RUNNING
-            if self.bot_manager.is_mjai_error():
-                info_str += " - " + self.lan_strings.AI_MODEL_ERROR
-                return info_str, icon_yellow
 
-            elif self.bot_manager.is_game_syncing():
+            if self.bot_manager.is_game_syncing():
                 info_str += " - " + self.lan_strings.SYNCING
-                return info_str, icon_green
+                return info_str, self.icon_green
 
             else:   # game in progress
                 if gi and gi.bakaze:
                     info_str += f" - {self.lan_strings.mjai2str(gi.bakaze)} {gi.kyoku} {self.lan_strings.KYOKU} {gi.honba} {self.lan_strings.HONBA}"
                 else:
-                    info_str += " - " + self.lan_strings.PREPARATION
-                return info_str, icon_green
+                    info_str += " - " + self.lan_strings.GAME_STARTING
+                return info_str, self.icon_green
         else:
             info_str = self.lan_strings.READY_FOR_GAME
-            return info_str, icon_ready
+            return info_str, self.icon_ready
 
 
 class ToggleSwitch(tk.Frame):
@@ -460,7 +479,7 @@ class SettingsWindow(tk.Toplevel):
         self.settings = setting
         self.lan_strings:LanStrings = LAN_OPTIONS[self.settings.language]
         self.title(self.lan_strings.SETTINGS)
-        self.geometry('600x400')
+        self.geometry('600x500')
         self.resizable(False, False)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
@@ -469,6 +488,8 @@ class SettingsWindow(tk.Toplevel):
         self.GUI_need_reload:bool = False
         """ Whether a GUI refresh is needed to apply new settings"""
 
+        self.model_updated:bool = False
+        
         # Call create_widgets after the window is fully initialized
         self.create_widgets()
 
@@ -532,14 +553,47 @@ class SettingsWindow(tk.Toplevel):
         select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly")
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
 
-        # Select Model
+        # Select Model Type
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.lan_strings.MODEL_TYPE)
+        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        options = [type.value for type in BOT_TYPE]
+        self.model_type_var = tk.StringVar(value=self.settings.model_type)
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly")
+        select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        
+        # Select Model File
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.lan_strings.AI_MODEL_FILE)
         _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
         options = utils.list_files(utils.MODEL_FOLDER)
-        self.model_var = tk.StringVar(value=self.settings.model_file)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_var, values=options, state="readonly")
+        self.model_file_var = tk.StringVar(value=self.settings.model_file)
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly")
         select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        
+        # MJAPI url
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_URL)
+        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        self.mjapi_url_var = tk.StringVar(value=self.settings.mjapi_url)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var)
+        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
+        
+        # MJAPI user
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_USER)
+        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        self.mjapi_user_var = tk.StringVar(value=self.settings.mjapi_user)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var)
+        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
+        
+        # MJAPI secret
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_SECRET)
+        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        self.mjapi_secret_var = tk.StringVar(value=self.settings.mjapi_secret)
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var)
+        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))        
 
         # Buttons frame
         button_frame = ttk.Frame(self)
@@ -551,37 +605,58 @@ class SettingsWindow(tk.Toplevel):
 
     def _on_save(self):
         # Get values from entry fields, validate, and save them
+        
+        # first get new values and validate
         auto_launch_new = self.auto_launch_var.get()
+        
         size_list = self.client_size_var.get().split(' x ')
         width_new = int(size_list[0])
         height_new = int(size_list[1])
+        
         mitm_port_new = int(self.mitm_port_var.get())
+        if not Settings.valid_mitm_port(mitm_port_new):
+            messagebox.showerror("⚠", self.lan_strings.MITM_PORT_ERROR_PROMPT)
+            return
+        
+        # language
         language_name = self.language_var.get()
         language_new = None
         for code, lan in LAN_OPTIONS.items():
             if language_name == lan.LANGUAGE_NAME:
                 language_new = code
                 break
-        model_new = self.model_var.get()
-
-        if not Settings.valid_mitm_port(mitm_port_new):
-            messagebox.showerror("Error", self.lan_strings.MITM_PORT_ERROR_PROMPT)
-            return
-
         if self.settings.language != language_new:
             self.GUI_need_reload = True
         else:
             self.GUI_need_reload = False
+            
+        model_type_new = self.model_type_var.get()        
+        model_file_new = self.model_file_var.get()
+        mjapi_url_new = self.mjapi_url_var.get()
+        mjapi_user_new = self.mjapi_user_var.get()
+        mjapi_secret_new = self.mjapi_secret_var.get()
         
-        # All validated, save settings
+        if (
+            self.settings.model_type != model_type_new or
+            self.settings.model_file != model_file_new or
+            self.settings.mjapi_url != mjapi_url_new or
+            self.settings.mjapi_user != mjapi_user_new or
+            self.settings.mjapi_secret != mjapi_secret_new
+        ):
+            self.model_updated = True
+        
+        # save settings        
         self.settings.auto_launch_browser = auto_launch_new
         self.settings.browser_width = width_new
         self.settings.browser_height = height_new
         self.settings.mitm_port = mitm_port_new
         self.settings.language = language_new
-        self.settings.model_file = model_new
+        self.settings.model_type = model_type_new
+        self.settings.model_file = model_file_new
+        self.settings.mjapi_url = mjapi_url_new
+        self.settings.mjapi_user = mjapi_user_new
+        self.settings.mjapi_secret = mjapi_secret_new
         self.settings.save_json()
-        LOGGER.info("Settings saved successfully")
         self.destroy()
 
     def _on_cancel(self):

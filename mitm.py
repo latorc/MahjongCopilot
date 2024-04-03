@@ -1,25 +1,26 @@
 import threading
 import asyncio
 import queue
+from dataclasses import dataclass
 from pathlib import Path
 from mitmproxy.http import HTTPFlow
 from mitmproxy import options
 from mitmproxy.tools.dump import DumpMaster
 import utils
+from utils import MITM_CONFDIR
 from log_helper import LOGGER
 
-MITM_CONFDIR = 'mitm_config'
-WS_START = 1
-WS_END = 2
-WS_MESSAGE = 3
-class WSMessage:    
+class WS_TYPE:
+    START = 1
+    END = 2
+    MESSAGE = 3
+@dataclass
+class WSMessage:        
     """ Websocket message"""
-    def __init__(self, flow_id: str, timestamp: float = None, content: bytes = None, msg_type:int=WS_MESSAGE) -> None:
-        self.flow_id = flow_id
-        self.timestamp = timestamp
-        self.content = content
-        self.type = msg_type
-
+    flow_id:str
+    timestamp:float = None
+    content:bytes = None
+    type:int = WS_TYPE.MESSAGE
 
 class WSDataInterceptor:
     """ mitm websocket addon that intercepts data"""
@@ -50,19 +51,24 @@ class WSDataInterceptor:
 
     def websocket_start(self, flow:HTTPFlow):
         if self.allow_url(flow.request.pretty_url):
-            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_START))
+            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_TYPE.START))
         else:
             flow.kill()
             LOGGER.info("Killing flow since it is not in allowed domains: %s", flow.request.pretty_url)            
         
     def websocket_message(self, flow:HTTPFlow):
+        msg = flow.websocket.messages[-1]
         if self.allow_url(flow.request.pretty_url):
-            self.message_queue.put(WSMessage(flow.id, flow.websocket.messages[-1].timestamp, flow.websocket.messages[-1].content))
+            self.message_queue.put(WSMessage(flow.id, msg.timestamp, msg.content))
         
     def websocket_end(self, flow:HTTPFlow):
         if self.allow_url(flow.request.pretty_url):
-            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_END))        
+            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_TYPE.END))        
 
+    def replace_next_msg(self):
+        pass
+    
+    
 class MitmController:
     """ Controlling mitm proxy server interactions and managing threads
     mitm proxy server intercepts data to/from the game server"""

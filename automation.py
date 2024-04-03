@@ -5,7 +5,7 @@ import threading
 from browser import GameBrowser
 from game_state import GameInfo, GameState
 import mj_helper
-from mj_helper import MJAI_TYPE
+from mj_helper import MJAI_TYPE, MSType
 from log_helper import LOGGER
 
 
@@ -16,7 +16,7 @@ class Positions:
         7.765625,   8.55625,    9.346875,   10.1375,    10.928125,  11.71875,   12.509375]
     TEHAI_Y = 8.3625
     TRUMO_SPACE = 0.246875
-    BUTTONS = [
+    BUTTONS:list[tuple] = [
         (10.875, 7),        # 0 (None)
         (8.6375, 7),        # 1
         (6.4   , 7),        # 2
@@ -34,7 +34,7 @@ class Positions:
     None is always at 0
     """
 
-    CANDIDATES = [
+    CANDIDATES:list[tuple] = [
         (3.6625,  6.3),         # 
         (4.49625, 6.3),
         (5.33 ,   6.3),
@@ -50,7 +50,7 @@ class Positions:
     """ chi/pon/daiminkan candidates (combinations) positions
     index = (-(len/2)+idx+0.5)*2+5 """
     
-    CANDIDATES_KAN = [
+    CANDIDATES_KAN:list[tuple] = [
         (4.325,   6.3),         #
         (5.4915,  6.3),
         (6.6583,  6.3),
@@ -62,21 +62,28 @@ class Positions:
     """ kakan/ankan candidates (combinations) positions
     idx_kan = int((-(len/2)+idx+0.5)*2+3)"""
     
+    GAMEOVER = [
+        (14.35, 8.12),    # 点击确定按钮，此坐标位于大厅的"商家"和"寻觅"按钮之间
+        (6.825, 6.8),     # 点击好感度礼物
+        (11.5, 2.75),     # 点击段位场
+    ]
     
-class MSType:
-    """ Majsoul operation type constants"""
-    none = 0        # extra type added represeting the None/Pass button. not actually used by Majsoul
-    dahai = 1
-    chi = 2
-    pon = 3
-    ankan = 4
-    daiminkan = 5
-    kakan = 6
-    reach = 7
-    zimo = 8
-    hora = 9 
-    ryukyoku = 10
-    nukidora = 11
+    LEVELS = [
+        (11.5, 3.375),  # 铜之间
+        (11.5, 4.825),  # 银之间
+        (11.5, 6.15),   # 金之间
+        (11.5, 5.425),  # 玉之间
+        (11.5, 6.825),  # 王座之间
+    ]
+    
+    ROOMS = [
+        (11.6, 3.325), # 四人东
+        (11.6, 4.675), # 四人南
+        (11.6, 6.1),   # 三人东
+        (11.6, 7.35),  # 三人南
+    ]
+
+
     
 
 MJAI_2_MS_TYPE = {
@@ -114,17 +121,51 @@ None is always the lowest, at bottom-right corner"""
 
 def cvt_type_mjai_2_ms(mjai_type:str, gi:GameInfo) -> MSType:
     """ Convert mjai type str to MSType enum"""
-    if gi.my_tsumohai != '?' and mjai_type == 'hora':
+    if gi.my_tsumohai and mjai_type == MJAI_TYPE.HORA:
         return MSType.zimo
     else:
         return MJAI_2_MS_TYPE[mjai_type]
 
 ActionStep = namedtuple('ActionStep', ['action', 'text'])
-def get_delay_step(delay:float):
-    """ Generate a delay step"""
-    action = lambda: time.sleep(delay)
-    text = f"delay {delay:.1f}s "
-    return ActionStep(action, text)
+
+class AutomationTask(threading.Thread):
+    """ represeting a thread executing a list of action steps"""
+    def __init__(self, action_list:list[ActionStep], game_state:GameState = None):
+        """ params:
+        action_list(list[ActionStep]): list of actions to run
+        game_state: if provided (not None), game_state.last_op_step will be used to check if the action has expired and execution should be canceled""" 
+        self.action_list = action_list
+        self.game_state = game_state
+        if game_state:
+            self.op_step = game_state.last_op_step
+        else:
+            self.op_step = None
+        self.stop_event = threading.Event()        # set event to stop running
+        self.last_exe_time = -1
+               
+        super().__init__(name=f"Auto_step_{self.op_step}", daemon=True)
+
+        
+    def run(self):
+        for step in self.action_list:
+            # verify if op_step changed, which indicates there is new liqi action, and old action has expired
+            # for example, when executing Chi, there might be another player Pon before Chi is finished
+            # upon which any action steps related to Chi should be canceled
+            if self.stop_event.is_set():
+                LOGGER.debug("Cancel execution. Stop event set")
+                return
+            
+            if self.game_state:
+                game_step = self.game_state.last_op_step
+                if self.op_step != game_step:  
+                    LOGGER.debug("Cancel execution. origin step = %d, current step = %d", self.op_step, game_step)
+                    return
+                            
+            LOGGER.debug("Executing step: %s", step.text)
+            step.action()
+            # record execution info for possible retry
+            self.last_exe_time = time.time()
+
 
 class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul"""
@@ -132,10 +173,8 @@ class Automation:
         self.browser = browser
         self.last_exe_time:float = -1     # last time an action execution was finished
         self.last_exe_step:int = None
-        """Majsoul operation step number of the last action finished execution
-        retry automation will perform if last_exe_step == game_state step no, or when last_exe_step is None"""
-        self._execution_thread:threading.Thread = None
-        self._thread_stop_event = threading.Event() #set the event to abort the thread
+        
+        self._task:AutomationTask = None        # the task thread
         
     def mouse_click(self, x, y):
         scalar = self.browser.width/16
@@ -148,7 +187,7 @@ class Automation:
         if mjai_type == MJAI_TYPE.DAHAI:
             if game_state.first_round:
                 delay += 1
-                if game_state.self_wind == 'E':
+                if game_state.jikaze  == 'E':
                     delay += 1.5
         elif mjai_type == MJAI_TYPE.REACH:
             delay += 1
@@ -159,7 +198,7 @@ class Automation:
         
         return delay
         
-    def execute_action(self, mjai_action:dict, game_state:GameState):
+    def automate_action(self, mjai_action:dict, game_state:GameState):
         """ execute action given by the mjai message
         params:
             mjai_action(dict): mjai output action msg
@@ -169,69 +208,50 @@ class Automation:
         if mjai_action is None:
             return False
         if self.is_running_execution():
-            LOGGER.warning("Previous action is still executing. Expect previous one to be canceled.")
-        gi = game_state.get_game_info()
-        liqi_operation = game_state.last_operation
+            LOGGER.warning("Previous action %s is still executing, stopping it", self._task.name)
+            self._task.stop_event.set()
+            
+        gi = game_state.get_game_info()        
         op_step = game_state.last_op_step        
         mjai_type = mjai_action['type']
-        LOGGER.debug("Automating action '%s', ms step = %d", mjai_type, op_step)
+        LOGGER.info("Automating action '%s', ms step = %d", mjai_type, op_step)
         
         # Design: generate action steps based on mjai action
         # action steps are individual steps like delay, mouse click, etc.
         # Then execute the steps in thread.
         # verify if the action has expired (Majsoul has new action/operation), and cancel executing if so
-        if  mjai_type == 'dahai':
+        if  mjai_type == MJAI_TYPE.DAHAI:
+            if gi.reached:
+                # already in reach state. no need to automate dahai
+                LOGGER.info("Skip automating dahai, already in REACH")
+                return False
             more_steps:list[ActionStep] = self._dahai_action_steps(mjai_action, gi, game_state.first_round)
-        elif mjai_type in ['none', 'chi', 'pon', 'daiminkan', 'ankan', 'kakan', 'hora', 'reach', 'ryukyoku', 'nukidora']:
+        elif mjai_type in [
+            MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
+            MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA
+            ]:            
+            liqi_operation = game_state.last_operation
             more_steps:list[ActionStep] = self._button_action_steps(mjai_action, gi, liqi_operation)
         else:
-            LOGGER.error("Exit Automation for unrecognized mjai type %s", mjai_type)
+            LOGGER.error("No automation, unrecognized mjai type: %s", mjai_type)
             return
         
         delay = self.get_delay(mjai_action, game_state)  # first action is delay
-        action_steps:list[ActionStep] = [get_delay_step(delay)]
+        action_steps:list[ActionStep] = [self._get_delay_step(delay)]
         action_steps.extend(more_steps)
         
-        def execute_action_steps():
-            # task method for thread            
-            for step in action_steps:
-                # verify if op_step changed, which indicates there is new liqi action, and old action has expired
-                # for example, when executing Chi, there might be another player Pon before Chi is finished
-                # upon which any action steps related to Chi should be canceled
-                game_step = game_state.last_op_step
-                if op_step != game_step:  
-                    LOGGER.debug("Cancel execution. origin step = %d, current step = %dd", op_step, game_step)
-                    return
-                if self._thread_stop_event.is_set():
-                    LOGGER.debug("Cancel execution. Stop event set")
-                    return                
-                LOGGER.debug("Executing step: %s", step.text)
-                step.action()
-                # record execution info for possible retry
-                self.last_exe_time = time.time()
-                self.last_exe_step = op_step
-                           
-        if action_steps:
-            # Execute actions in thread to avoid blocking bot manager main thread
-            self._execution_thread = threading.Thread(
-                target = execute_action_steps,
-                name=f"Auto_step_{op_step}",
-                daemon=True
-            )
-            self._execution_thread.start()
-        else:
-            LOGGER.warning("Exit Automation. Action step list empty.")
+        self._task = AutomationTask(action_steps, game_state)
+        self._task.start()
+        
     
     def stop_execution(self):
         """ Stop ongoing execution if any"""
-        self._thread_stop_event.set()
-        
-    def allow_execution(self):
-        """ allow execution thread"""
-        self._thread_stop_event.clear()
+        if self._task:
+            self._task.stop_event.set()
+        self._task = None
     
     def is_running_execution(self):
-        if self._execution_thread and self._execution_thread.is_alive():
+        if self._task and self._task.is_alive():
             return True
         else:
             return False
@@ -242,26 +262,30 @@ class Automation:
             # last action still executing, quit
             return
         
-        if time.time() - self.last_exe_time < min_interval:
-            # interval not reached, cancel
-            return
+        if self._task:
+            if time.time() - self._task.last_exe_time < min_interval:
+                # interval not reached, cancel
+                return
         
         if game_state is None:
             LOGGER.warning("Exit Automation. Game State is none!")
             return
         
+        if game_state.reached:
+            return
+        
         game_step = game_state.last_op_step
-        if self.last_exe_step is not None:
-            if game_step != self.last_exe_step:
-                # already new step. cancel retry old action             
+        if self._task:
+            if self._task.op_step != game_step:
+                # already new step. Only retry when old step = current step           
                 return
 
         mjai_action = game_state.get_pending_reaction()
         if mjai_action is None:
             return
         
-        LOGGER.debug("Retry automating pending reaction: %s", mjai_action['type'])
-        self.execute_action(mjai_action, game_state)
+        LOGGER.info("Retry automating pending reaction: %s", mjai_action['type'])
+        self.automate_action(mjai_action, game_state)
         
     
     def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list[ActionStep]:
@@ -270,25 +294,23 @@ class Automation:
             is_east_first(bool): if currently self is East and it's the first move"""
         dahai = mjai_action['pai']
         tsumogiri = mjai_action['tsumogiri']
-        
-        if gi.reached:
-            # already in reach state. no need to manual dahai
-            LOGGER.debug("Skip automating dahai %s because already in reach state.", dahai)
-            return []
-        
+        text = f"Dahai [{dahai}]"
         if tsumogiri:   # tsumogiri: discard right most
             dahai_count = len([tile for tile in gi.my_tehai if tile != '?'])
-            assert dahai == gi.my_tsumohai, "mjai tsumogiri but mjai dahai != game tsumohai"
+            assert dahai == gi.my_tsumohai, f"tsumogiri but dahai {dahai} != game tsumohai {gi.my_tsumohai}"
             # 14-tile tehai + no tsumohai treatment for East first round
-            if is_first_round and gi.self_wind == 'E':
-                action = lambda: self.mouse_click(Positions.TEHAI_X[dahai_count], Positions.TEHAI_Y)
+            if is_first_round and gi.jikaze  == 'E':
+                x = Positions.TEHAI_X[dahai_count]
+                y = Positions.TEHAI_Y
             else:
-                action = lambda: self.mouse_click(Positions.TEHAI_X[dahai_count] + Positions.TRUMO_SPACE, Positions.TEHAI_Y)
-            return [ActionStep(action, f"Dahai [{dahai}]")]
+                x = Positions.TEHAI_X[dahai_count] + Positions.TRUMO_SPACE
+                y = Positions.TEHAI_Y
+            step = self._get_click_step(x,y,text)
+            return [step]
         else:       # tedashi: find the index and discard
-            idx = gi.my_tehai.index(dahai)            
-            action = lambda: self.mouse_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
-            return [ActionStep(action, f"Dahai [{dahai}]")]
+            idx = gi.my_tehai.index(dahai)
+            step = self._get_click_step(Positions.TEHAI_X[idx], Positions.TEHAI_Y, text)            
+            return [step]
     
     def _process_oplist_for_kan(self, mstype_from_mjai, op_list:list) -> list:
         """ Process operation list for kan, and return the new op list"""
@@ -322,18 +344,12 @@ class Automation:
         """Generate button click related actions (chi, pon, kan, etc.)"""       
 
         actions = []
-        # if mjai_action['type'] == 'none':
-        #     action = lambda: self.mouse_click(Positions.BUTTONS[0][0], Positions.BUTTONS[0][1])
-        #     actions.append(action)
-        #     return actions
-        
-        # sort operation list by priority
         if 'operationList' not in liqi_operation:
             return actions
         op_list:list = liqi_operation['operationList']
         op_list = op_list.copy()
         op_list.append({'type': 0})     # add None/Pass button
-        op_list.sort(key=lambda x: ACTION_PIORITY[x['type']])        
+        op_list.sort(key=lambda x: ACTION_PIORITY[x['type']])   # sort operation list by priority       
         
         mjai_type = mjai_action['type']
         mstype_from_mjai = cvt_type_mjai_2_ms(mjai_type, gi)
@@ -345,9 +361,9 @@ class Automation:
         the_op = None
         for idx, operation in enumerate(op_list):
             if operation['type'] == mstype_from_mjai:
-                text = f"clicking button {idx} ({mjai_type})"
-                action = lambda: self.mouse_click(Positions.BUTTONS[idx][0], Positions.BUTTONS[idx][1])
-                actions.append(ActionStep(action, text))
+                click_what = f"button {idx} ({mjai_type})"
+                step = self._get_click_step(Positions.BUTTONS[idx][0], Positions.BUTTONS[idx][1],click_what)
+                actions.append(step)
                 the_op = operation
                 break
         if the_op is None:
@@ -359,7 +375,7 @@ class Automation:
         if mstype_from_mjai == MSType.reach:            
             reach_dahai = mjai_action['reach_dahai']
             delay = 0.5 + 1.0 * random.random()
-            actions.append(get_delay_step(delay))
+            actions.append(self._get_delay_step(delay))
             dahai_actions = self._dahai_action_steps(reach_dahai, gi, False)
             actions.extend(dahai_actions)
             return actions
@@ -379,6 +395,7 @@ class Automation:
                 return actions
             elif len(combs) == 0:
                 # something is wrong. no combination offered in liqi msg
+                LOGGER.warning("mjai type %s, but no combination in liqi operation list", mjai_type)
                 return actions
             for idx, comb in enumerate(combs):  
                 # for more than one candidate group, click on the matching group
@@ -387,22 +404,132 @@ class Automation:
                 consumed_liqi = mj_helper.sort_mjai_tiles(consumed_liqi)
                 if mjai_consumed == consumed_liqi:  # match. This is the combination to click on
                     delay = len(combs) * (0.5 + random.random())
-                    actions.append(get_delay_step(delay))                    
-                    text = f"clicking candidate {mjai_consumed}"
+                    actions.append(self._get_delay_step(delay))                    
+                    click_what = f"candidate {mjai_consumed}"
                     
                     if mstype_from_mjai in [MSType.chi, MSType.pon, MSType.daiminkan]:
                         candidate_idx = int((-(len(combs)/2)+idx+0.5)*2+5)
-                        action = lambda: self.mouse_click(
-                            Positions.CANDIDATES[candidate_idx][0],
-                            Positions.CANDIDATES[candidate_idx][1])
+                        x,y = Positions.CANDIDATES[candidate_idx]
+                        action = self._get_click_step(x,y,click_what)
                         
                     elif mstype_from_mjai in [MSType.ankan, MSType.kakan]:
                         candidate_idx = int((-(len(combs)/2)+idx+0.5)*2+3)
-                        action = lambda: self.mouse_click(
-                            Positions.CANDIDATES_KAN[candidate_idx][0],
-                            Positions.CANDIDATES_KAN[candidate_idx][1])
+                        x,y = Positions.CANDIDATES_KAN[candidate_idx]
+                        action = self._get_click_step(x,y,click_what)
                     
-                    actions.append(ActionStep(action,text))
+                    actions.append(action)
                     return actions
         else:
             return actions
+        
+    def _get_delay_step(self, delay:float) -> ActionStep:
+        """ Generate a delay step"""
+        action = lambda: time.sleep(delay)
+        text = f"delay {delay:.1f}s "
+        return ActionStep(action, text)
+    
+    def _get_click_step(self, x:float, y:float, what:str) -> ActionStep:
+        """Generate a mouse click step
+        params:
+            x,y: in 16x9 resolution
+            what(str): describe what is clicked"""
+        action = lambda: self.mouse_click(x, y)
+        text = f"clicking {what}"
+        return ActionStep(action, text)
+    
+    def automate_end_game(self):
+        """Game end go back to lobby by clicking"""
+        steps = []
+        
+        # 等待结算
+        steps.append(self._get_delay_step(25))
+        
+        # 2.最终顺位界面点击"确认"
+        x,y = Positions.GAMEOVER[0]
+        steps.append(self._get_click_step(x,y,"Confirm final ranking"))
+        
+        # 3. 段位pt结算界面点击"确认"
+        steps.append(self._get_delay_step(10))
+        x,y = Positions.GAMEOVER[0]
+        steps.append(self._get_click_step(x,y,"Confirm point change"))        
+        
+        # 4. 宝匣
+        # 开启宝匣
+        steps.append(self._get_delay_step(5))
+        x,y = Positions.GAMEOVER[1]
+        steps.append(self._get_click_step(x,y,"Confirm gift chest"))
+        
+        # 5. 好感度
+        steps.append(self._get_delay_step(3))
+        x,y = Positions.GAMEOVER[0]
+        steps.append(self._get_click_step(x,y,"Confirm character exp"))
+        
+        # 6.每日任务界面点击"确认"
+        steps.append(self._get_delay_step(8))
+        
+        self._task = AutomationTask(steps)
+        self._task.start()
+        
+        
+        
+"""
+2024-04-02 04:51:05,238 DEBUG [BotThread]bot_manager.py:259 | Game msg: {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameEndResult', 'data': {'result': {'players': [{'seat': 1, 'totalPoint': 29200, 'partPoint1': 39200, 'gradingScore': 70, 'gold': 2024, 'partPoint2': 0}, {'totalPoint': 11600, 'partPoint1': 31600, 'gradingScore': 32, 'gold': 804, 'seat': 0, 'partPoint2': 0}, {'seat': 3, 'totalPoint': -400, 'partPoint1': 29600, 'gold': -28, 'partPoint2': 0, 'gradingScore': 0}, {'seat': 2, 'totalPoint': -40400, 'partPoint1': -400, 'gradingScore': -60, 'gold': -2800, 'partPoint2': 0}]}}}
+
+2024-04-02 04:51:05,239 INFO [BotThread]game_state.py:613 | Bot in: {"type": "end_game"}
+
+2024-04-02 04:51:05,946 DEBUG [BotThread]bot_manager.py:268 | Other msg: {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyAccountUpdate', 'data': {'update': {'numerical': [{'id': 100002, 'final': 163907}], 'bag': {'updateItems': [{'itemId': 303021, 'stack': 2}], 'updateDailyGainRecord': []}, 'achievement': {'progresses': [{'id': 100130, 'counter': 34, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100131, 'counter': 34, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100132, 'counter': 34, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100193, 'counter': 25, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100231, 'counter': 191, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100062, 'counter': 65, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100064, 'counter': 19, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100066, 'counter': 31, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100135, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100136, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100137, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100138, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100141, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100142, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100143, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100156, 'counter': 39, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100157, 'counter': 39, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100158, 'counter': 39, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 900001, 'counter': 66, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100209, 'counter': 42, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100166, 'counter': 14, 'achieved': False, 'rewarded': False, 'achievedTime': 0}, {'id': 100167, 'counter': 14, 'achieved': False, 'rewarded': False, 'achievedTime': 0}], 'rewardedGroup': []}, 'newRechargedList': []}}}
+
+2024-04-02 04:51:05,949 DEBUG [BotThread]bot_manager.py:268 | Other msg: {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameFinishRewardV2', 'data': {'modeId': 6, 'levelChange': {'origin': {'id': 10203, 'score': 770}, 'final': {'id': 10203, 'score': 770}, 'type': 0}, 'matchChest': {'chestId': 1, 'origin': 945, 'final': 75, 'isGraded': True, 'rewards': [{'id': 303021, 'count': 1}, {'id': 303021, 'count': 1}]}, 'mainCharacter': {'exp': 1620, 'add': 60, 'level': 0}}}
+
+2024-04-02 04:51:15,228 DEBUG [BotThread]bot_manager.py:229 | Websocket Flow ended: 67985fd8-a72f-4757-9073-d01382580918
+
+
+"""        
+        
+"""
+def _auto_next(self, gm_msg):
+        method = gm_msg.get("method")
+        if not self.auto_next or method not in [".lq.NotifyGameEndResult", ".lq.NotifyGameTerminate"]:
+            return
+        if method == '.lq.NotifyGameEndResult':
+            # 1.等待结算
+            time.sleep(25) 
+            # 2.最终顺位界面点击"确认"
+            action = {"coord": AutoNext["gameover"][0], "wheel":False, "delay_time": 5, "content": "最终顺位界面点击'确认'"}
+            self.action.action_queue.put(action)
+            # 3.段位pt结算界面点击"确认"
+            action["delay_time"] = 10
+            action["content"] = "段位pt结算界面点击'确认'"
+            self.action.action_queue.put(action)
+            # 铜场无法获得宝匣礼物
+            if self.level != 0:
+                # 4.开启宝匣礼物
+                action["coord"] = AutoNext["gameover"][1]
+                action["delay_time"] = 5
+                action["content"] = "开启宝匣礼物"
+                self.action.action_queue.put(action)
+                # 5.宝匣好感度界面点击"确认"
+                action["coord"] = AutoNext["gameover"][0]
+                action["content"] = "宝匣好感度界面点击'确认'"
+                self.action.action_queue.put(action)
+            # 6.每日任务界面点击"确认"
+            action["delay_time"] = 8
+            action["content"] = "每日任务界面点击'确认'"
+            self.action.action_queue.put(action)
+            # 7.大厅界面点击段位场
+            action["coord"] = AutoNext["gameover"][2]
+            action["delay_time"] = 2
+            action["content"] = "大厅界面点击段位场"
+            self.action.action_queue.put(action)
+        # 解散房间
+        if self.auto_next and gm_msg['method'] == '.lq.NotifyGameTerminate':
+            # 点击段位场
+            self.action.action_queue.put({"coord": AutoNext["gameover"][2], "wheel":False, "delay_time": 2, "content": "大厅界面点击段位场"})
+        # 选择 level
+        if self.level < 3:
+            self.action.action_queue.put({"coord": AutoNext["levels"][self.level], "wheel":False, "delay_time": 2, "content": f"选择 level:{self.level}"})
+        else:
+            self.action.action_queue.put({"coord": AutoNext["levels"][self.level], "wheel":True, "delay_time": 2, "content": f"选择 level:{self.level}"})
+        # 选择 Room
+        self.action.action_queue.put({"coord": AutoNext["rooms"][self.room], "wheel":False, "delay_time": 1, "content": f"选择 Room:{self.room}"})       
+"""

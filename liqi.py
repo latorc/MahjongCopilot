@@ -44,6 +44,7 @@ class LiqiMethod:
 
 class LiqiAction:
     """ Liqi method action name string consts"""
+    NewRound = 'ActionNewRound'
     DealTile = 'ActionDealTile'
     DiscardTile = 'ActionDiscardTile'
     ChiPengGang = 'ActionChiPengGang'
@@ -52,8 +53,7 @@ class LiqiAction:
     Hule = 'ActionHule'
     NoTile = 'ActionNoTile'
     LiuJu = 'ActionLiuJu'
-    MJStart = 'ActionMJStart'    
-    
+    MJStart = 'ActionMJStart' 
     
 
 keys = [0x84, 0x5e, 0x4e, 0x42, 0x39, 0xa2, 0x1f, 0x60, 0x1c]
@@ -89,58 +89,65 @@ class LiqiProto:
         self.res_type.clear()
 
     def parse(self, flow_msg, injected=False) -> dict:
+        #parse一帧WS flow msg，要求按顺序parse
         if isinstance(flow_msg, bytes):
             buf = flow_msg
         else:
             buf = flow_msg.content
             from_client = flow_msg.from_client
         result = dict()
-        try:
-            msg_type = MsgType(buf[0])
-            if msg_type == MsgType.Notify:
-                msg_block = fromProtobuf(buf[1:])
-                method_name = msg_block[0]['data'].decode()
-                _, lq, message_name = method_name.split('.')
-                liqi_pb2_notify = getattr(pb, message_name)
-                proto_obj = liqi_pb2_notify.FromString(msg_block[1]['data'])
+        msg_type = MsgType(buf[0]) # 通信报文类型
+        if msg_type == MsgType.Notify:
+            msg_block = fromProtobuf(buf[1:])        # 解析剩余报文结构
+            method_name = msg_block[0]['data'].decode()
+            """
+            msg_block结构通常为
+            [{'id': 1, 'type': 'string', 'data': b'.lq.ActionPrototype'},
+            {'id': 2, 'type': 'string','data': b'protobuf_bytes'}]
+            """
+            _, lq, message_name = method_name.split('.')
+            liqi_pb2_notify = getattr(pb, message_name)
+            proto_obj = liqi_pb2_notify.FromString(msg_block[1]['data'])
+            dict_obj = MessageToDict(proto_obj, including_default_value_fields=True)
+            if 'data' in dict_obj:
+                B = base64.b64decode(dict_obj['data'])
+                action_proto_obj = getattr(pb, dict_obj['name']).FromString(decode(B))
+                action_dict_obj = MessageToDict(action_proto_obj, including_default_value_fields=True)
+                dict_obj['data'] = action_dict_obj
+            msg_id = -1
+        else:
+            msg_id = struct.unpack('<H', buf[1:3])[0]       # 小端序解析报文编号(0~255)
+            msg_block = fromProtobuf(buf[3:])               # 解析剩余报文结构
+            """
+                msg_block结构通常为
+                [{'id': 1, 'type': 'string', 'data': b'.lq.FastTest.authGame'},
+                {'id': 2, 'type': 'string','data': b'protobuf_bytes'}]
+            """
+            if msg_type == MsgType.Req:
+                assert(msg_id < 1 << 16)
+                assert(len(msg_block) == 2)
+                # assert(msg_id not in self.res_type)
+                method_name = msg_block[0]['data'].decode()                
+                _, lq, service, rpc = method_name.split('.')
+                proto_domain = self.jsonProto['nested'][lq]['nested'][service]['methods'][rpc]
+                liqi_pb2_req = getattr(pb, proto_domain['requestType'])
+                proto_obj = liqi_pb2_req.FromString(msg_block[1]['data'])
                 dict_obj = MessageToDict(proto_obj, including_default_value_fields=True)
-                if 'data' in dict_obj:
-                    B = base64.b64decode(dict_obj['data'])
-                    action_proto_obj = getattr(pb, dict_obj['name']).FromString(decode(B))
-                    action_dict_obj = MessageToDict(action_proto_obj, including_default_value_fields=True)
-                    dict_obj['data'] = action_dict_obj
-                msg_id = -1
+                self.res_type[msg_id] = (method_name, getattr(
+                    pb, proto_domain['responseType']))
+                self.msg_id = msg_id
+            elif msg_type == MsgType.Res:
+                assert(len(msg_block[0]['data']) == 0)
+                assert(msg_id in self.res_type)
+                method_name, liqi_pb2_res = self.res_type.pop(msg_id)
+                proto_obj = liqi_pb2_res.FromString(msg_block[1]['data'])
+                dict_obj = MessageToDict(proto_obj, including_default_value_fields=True)
             else:
-                msg_id = struct.unpack('<H', buf[1:3])[0]
-                msg_block = fromProtobuf(buf[3:])
-                if msg_type == MsgType.Req:
-                    assert(msg_id < 1 << 16)
-                    assert(len(msg_block) == 2)
-                    assert(msg_id not in self.res_type)
-                    method_name = msg_block[0]['data'].decode()
-                    _, lq, service, rpc = method_name.split('.')
-                    proto_domain = self.jsonProto['nested'][lq]['nested'][service]['methods'][rpc]
-                    liqi_pb2_req = getattr(pb, proto_domain['requestType'])
-                    proto_obj = liqi_pb2_req.FromString(msg_block[1]['data'])
-                    dict_obj = MessageToDict(proto_obj, including_default_value_fields=True)
-                    self.res_type[msg_id] = (method_name, getattr(
-                        pb, proto_domain['responseType']))
-                    self.msg_id = msg_id
-                elif msg_type == MsgType.Res:
-                    assert(len(msg_block[0]['data']) == 0)
-                    assert(msg_id in self.res_type)
-                    method_name, liqi_pb2_res = self.res_type.pop(msg_id)
-                    proto_obj = liqi_pb2_res.FromString(msg_block[1]['data'])
-                    dict_obj = MessageToDict(proto_obj, including_default_value_fields=True)
-                else:
-                    LOGGER.error('unknow msg (type=%s): %s', msg_type, buf)
-                    return None
-            result = {'id': msg_id, 'type': msg_type,
-                    'method': method_name, 'data': dict_obj}
-            self.tot += 1
-        except Exception as e:
-            LOGGER.error('Failed to parse msg: %s, error: %s', buf, e, exc_info=True)
-            return None
+                LOGGER.error('unknow msg (type=%s): %s', msg_type, buf)
+                return None
+        result = {'id': msg_id, 'type': msg_type,
+                'method': method_name, 'data': dict_obj}
+        self.tot += 1
         return result
     
     def parse_syncGame(self, liqi_data):
@@ -185,7 +192,7 @@ class LiqiProto:
             compose_id = msg_id
         if data['type'] == MsgType.Req:
             composed = b'\x02' + struct.pack('<H', compose_id) + toProtobuf(msg_block)
-            self.parse(composed)
+            # self.parse(composed)
             return composed
         elif data['type'] == MsgType.Res:
             composed = b'\x03' + struct.pack('<H', compose_id) + toProtobuf(msg_block)
