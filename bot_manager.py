@@ -1,8 +1,13 @@
+"""
+This file contains the BotManager class, which manages the bot logic, game state, and automation
+It also manages the browser and overlay display
+The BotManager class is run in a separate thread, and provide interface methods for UI
+"""
 import time
-import mitm
 import queue
 import threading
 from browser import GameBrowser
+import mitm
 import liqi
 import game_state
 import mj_helper
@@ -12,7 +17,6 @@ import log_helper
 from log_helper import LOGGER
 import settings
 import automation
-from mjai.engine import get_engine
 import mj_bot
 from lan_str import LanStrings
 import utils
@@ -40,7 +44,7 @@ class BotManager:
         self.mitm_port = self.settings.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
-        self.automation = automation.Automation(self.browser)        
+        self.automation = automation.Automation(self.browser)
         
         self.bot:mj_bot.Bot = None
         
@@ -56,20 +60,6 @@ class BotManager:
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
         self.game_exception:Exception = None   # game run time error (but does not break main thread)
-        
-    def _methods(self):
-        # api methods
-        if 0<1:
-            return
-        self.mitm_server.is_running()
-        self.mitm_server.install_mitm_cert()
-        
-        self.browser.is_running()
-        
-        self.start()
-        self.stop()
-        self.is_running()
-        self.is_in_game()
         
     def start(self):
         """ Start bot manager thread"""
@@ -265,21 +255,21 @@ class BotManager:
                 self._process_end_game()
         elif msg.type == mitm.WS_TYPE.MESSAGE:
             # process ws message
-            try:              
+            try:
                 liqimsg = self.liqi_parser.parse(msg.content)
             except Exception as e:
                 LOGGER.warning("Failed to parse liqi msg: %s\nError: %s", msg.content, e, exc_info=True)
                 return
-            liqi_id = liqimsg['id']
+            # liqi_id = liqimsg['id']
             liqi_type = liqimsg['type']
             liqi_method = liqimsg['method']
-            liqi_data = liqimsg['data']
-            liqi_datalen = len(liqimsg['data'])
+            # liqi_data = liqimsg['data']
+            # liqi_datalen = len(liqimsg['data'])
             
             if liqi_method in METHODS_TO_IGNORE:
                 pass
             
-            elif liqi_method == liqi.LiqiMethod.authGame and liqi_type == liqi.MsgType.Req:
+            elif liqi_method == liqi.LiqiMethod.authGame and liqi_type == liqi.MsgType.REQ:
                 # Game Start request msg: found game flow, initialize game state
                 LOGGER.info("Game Started. Game Flow ID=%s", msg.flow_id)
                 self.game_flow_id = msg.flow_id
@@ -439,7 +429,7 @@ def mjai_reaction_2_guide(
         """
                 
     if reaction is None:
-        raise Exception("Input reaction is None")
+        raise ValueError("Input reaction is None")
     re_type = reaction['type']
     pai = reaction.get('pai', None)
     def get_tile_str(mjai_tile:str):    # unicode + language specific name
@@ -458,7 +448,7 @@ def mjai_reaction_2_guide(
         comsumed = reaction['consumed']
         comsumed_strs = [f"{get_tile_str(x)}" for x in comsumed]
         action_str = f"{ActionUnicode.CHI}{lan_str.CHI}{tile_str}({''.join(comsumed_strs)})"
-        action_str = action_str            
+         
     elif re_type == MJAI_TYPE.KAKAN:
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.KAKAN})"
     elif re_type == MJAI_TYPE.DAIMINKAN:
@@ -509,7 +499,7 @@ if __name__ == "__main__":
         'auto on': manager.enable_automation,
         'auto off': manager.disable_automation,
         'hud text': lambda: manager.browser.overlay_update_botleft("Sample text\n123456"),
-        'hud text clear': lambda: manager.browser.overlay_clear_botleft(),
+        'hud text clear': manager.browser.overlay_clear_botleft,
         'quit': lambda: manager.stop(True),
     }
     

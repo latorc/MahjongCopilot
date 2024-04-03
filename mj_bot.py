@@ -1,9 +1,8 @@
-# Bot wrappers for supportting different bot implementations
+""" Bot wrappers for supportting different bot implementations
+"""
 from abc import ABC, abstractmethod
 from pathlib import Path
-from enum import Enum
 import threading
-from pathlib import Path
 import json
 import libriichi
 import mjai.engine
@@ -19,11 +18,11 @@ from utils import MODEL_FOLDER, BOT_TYPE
 def get_bot(settings:Settings) -> 'Bot':
     """ create the Bot instance based on settings"""
     if settings.model_type == BOT_TYPE.LOCAL.value:
-        bot = Local_Mortal_Bot(str(Path(MODEL_FOLDER)/settings.model_file))                
+        bot = LocalMortalBot(str(Path(MODEL_FOLDER)/settings.model_file))                
     elif settings.model_type == BOT_TYPE.MJAPI.value:
-        bot = MJAPI_Bot(settings)
+        bot = MjapiBot(settings)
     else:
-        raise Exception(f"Unknown model type: {settings.model_type}")
+        raise ValueError(f"Unknown model type: {settings.model_type}")
 
     return bot
 
@@ -40,18 +39,19 @@ class Bot(ABC):
     Note: reach msg is implemented differently. 
     Reach msg has reach_dahai attached, which is a 'dahai' msg, indicating the dahai action after reach
     msgs have 'meta_options', which is a translation of 'meta' into list of (mjai tile, weight)"""
-    
-    def __init__(self, type:BOT_TYPE, name:str) -> None:
-        self.type = type
+
+    def __init__(self, bot_type:BOT_TYPE, name:str) -> None:
+        self.type = bot_type
         self.name = name
-        self._initialized = False
-        
+        self._initialized:bool = False
+        self.seat:int = None
+
     def init_bot(self, seat:int):
         """ Initialize the bot before the game starts. Bot must be initialized before a new game""" 
-        self.seat = seat       
+        self.seat = seat
         self._init_bot_impl()
         self._initialized = True
-        
+
     @property
     def initialized(self) -> bool:
         """ return True if bot is initialized"""
@@ -60,12 +60,10 @@ class Bot(ABC):
     @abstractmethod
     def _init_bot_impl(self):
         """ Initialize the bot before the game starts."""
-        pass     
 
     @abstractmethod
     def react(self, input_msg:dict) -> dict:
         """ input mjai msg and get bot output if any, or None if not"""
-        pass
     
     def react_batch(self, input_list:list[dict]) -> dict:
         """ input list of mjai msg and get the last output, if any"""
@@ -74,7 +72,7 @@ class Bot(ABC):
             reaction = self.react(msg)
             if reaction:
                 last_reaction = reaction
-        return last_reaction 
+        return last_reaction
 
     # @abstractmethod
     # def get_hand_info(self) -> tuple[list[str], str]:
@@ -82,7 +80,7 @@ class Bot(ABC):
     #     pass
 
 
-class Local_Mortal_Bot(Bot):
+class LocalMortalBot(Bot):
     """ Mortal model based mjai bot"""
     def __init__(self, model_file:str) -> None:
         """ params:
@@ -100,8 +98,8 @@ class Local_Mortal_Bot(Bot):
         self.lock = threading.Lock()        
     
     def _init_bot_impl(self):
-        self.engine = mjai.engine.get_engine(self.model_file)
-        self.mjai_bot = libriichi.mjai.Bot(self.engine, self.seat)
+        engine = mjai.engine.get_engine(self.model_file)
+        self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
         self.str_input_history.clear()
         
     def react(self, input_msg:dict) -> dict:
@@ -146,7 +144,7 @@ class Local_Mortal_Bot(Bot):
         
         
         
-class MJAPI_Bot(Bot):
+class MjapiBot(Bot):
     """ MJAPI based mjai bot"""
     def __init__(self, setting:Settings) -> None:
         super().__init__(BOT_TYPE.MJAPI, "MJAPI Bot - " + setting.mjapi_url)
@@ -158,7 +156,7 @@ class MJAPI_Bot(Bot):
     def _login_or_reg(self):
         res = self.mjapi.login(self.settings.mjapi_user, self.settings.mjapi_secret)
         if 'error' in res:
-            LOGGER.warn(f"Error in MJAPI login: {res['error']}")
+            LOGGER.warning("Error in MJAPI login: %s", res['error'])
             # try register
             res_reg = self.mjapi.register(self.settings.mjapi_user)            
             if 'secret' in res_reg:
@@ -167,12 +165,12 @@ class MJAPI_Bot(Bot):
                 LOGGER.info("Registered with MJAPI. Secret saved")
                 res = self.mjapi.login(self.settings.mjapi_user, self.settings.mjapi_secret)
             elif 'error' in res_reg:
-                LOGGER.error(f"Error in MJAPI register: {res_reg['error']}")
-                raise Exception("Cannot log into MJAPI: %s")
+                LOGGER.error("Error in MJAPI register: %s", res_reg['error'])
+                raise RuntimeError(f"Cannot log into MJAPI: {res_reg['error']}")
             else:
                 msg = f"Unknown response registering: {res_reg}"
                 LOGGER.error(msg)
-                raise Exception(msg)
+                raise RuntimeError(msg)
 
         token = res['id']
         self.mjapi.set_bearer_token(token)

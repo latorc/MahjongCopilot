@@ -1,28 +1,27 @@
-# Capture websocket data and parse MajSoul data into readable json
+""" Capture websocket data and parse MajSoul data into readable json
 # Ref: https://github.com/747929791/majsoul_wrapper
+"""
 
 import json
 import struct
 import base64
 from enum import Enum
-from typing import List, Tuple, Dict
+from typing import List, Dict
 from pathlib import Path
 
 from google.protobuf.json_format import MessageToDict, ParseDict
 
 from liqi_proto import liqi_pb2 as pb
-
-import utils
 from log_helper import LOGGER
 
 
 class MsgType(Enum):
     """ Majsoul websocket message type"""
-    Notify = 1
+    NOTIFY = 1
     """ Server to client notification, 0x01+protobuf """
-    Req = 2
+    REQ = 2
     """ Client to server request, 0x02 + msg_id(2 bytes) + protobuf"""
-    Res = 3
+    RES = 3
     """ Server to client response, 0x03 + msg_id(2 bytes) + protobuf"""
 
 class LiqiMethod:
@@ -82,29 +81,29 @@ class LiqiProto:
         self.tot = 0 
         self.res_type = dict()
         self.jsonProto = json.load(
-            open(Path('liqi_proto/liqi.json'), 'r'))
+            open(Path('liqi_proto/liqi.json'), 'r', encoding='utf-8'))
 
     def init(self):
         self.msg_id = 1
         self.res_type.clear()
 
-    def parse(self, flow_msg, injected=False) -> dict:
+    def parse(self, flow_msg) -> dict:
         #parse一帧WS flow msg，要求按顺序parse
         if isinstance(flow_msg, bytes):
             buf = flow_msg
         else:
             buf = flow_msg.content
-            from_client = flow_msg.from_client
+            # from_client = flow_msg.from_client
         result = dict()
         msg_type = MsgType(buf[0]) # 通信报文类型
-        if msg_type == MsgType.Notify:
+        if msg_type == MsgType.NOTIFY:
             msg_block = fromProtobuf(buf[1:])        # 解析剩余报文结构
             method_name = msg_block[0]['data'].decode()
-            """
-            msg_block结构通常为
-            [{'id': 1, 'type': 'string', 'data': b'.lq.ActionPrototype'},
-            {'id': 2, 'type': 'string','data': b'protobuf_bytes'}]
-            """
+
+            # msg_block结构通常为
+            # [{'id': 1, 'type': 'string', 'data': b'.lq.ActionPrototype'},
+            # {'id': 2, 'type': 'string','data': b'protobuf_bytes'}]
+
             _, lq, message_name = method_name.split('.')
             liqi_pb2_notify = getattr(pb, message_name)
             proto_obj = liqi_pb2_notify.FromString(msg_block[1]['data'])
@@ -118,12 +117,12 @@ class LiqiProto:
         else:
             msg_id = struct.unpack('<H', buf[1:3])[0]       # 小端序解析报文编号(0~255)
             msg_block = fromProtobuf(buf[3:])               # 解析剩余报文结构
-            """
-                msg_block结构通常为
-                [{'id': 1, 'type': 'string', 'data': b'.lq.FastTest.authGame'},
-                {'id': 2, 'type': 'string','data': b'protobuf_bytes'}]
-            """
-            if msg_type == MsgType.Req:
+            # """
+            #     msg_block结构通常为
+            #     [{'id': 1, 'type': 'string', 'data': b'.lq.FastTest.authGame'},
+            #     {'id': 2, 'type': 'string','data': b'protobuf_bytes'}]
+            # """
+            if msg_type == MsgType.REQ:
                 assert(msg_id < 1 << 16)
                 assert(len(msg_block) == 2)
                 # assert(msg_id not in self.res_type)
@@ -136,7 +135,7 @@ class LiqiProto:
                 self.res_type[msg_id] = (method_name, getattr(
                     pb, proto_domain['responseType']))
                 self.msg_id = msg_id
-            elif msg_type == MsgType.Res:
+            elif msg_type == MsgType.RES:
                 assert(len(msg_block[0]['data']) == 0)
                 assert(msg_id in self.res_type)
                 method_name, liqi_pb2_res = self.res_type.pop(msg_id)
@@ -165,14 +164,14 @@ class LiqiProto:
     def parse_syncGameActions(self, dict_obj):
         dict_obj['data'] = MessageToDict(getattr(pb, dict_obj['name']).FromString(base64.b64decode(dict_obj['data'])), including_default_value_fields=True)
         msg_id = -1
-        result = {'id': msg_id, 'type': MsgType.Notify,
+        result = {'id': msg_id, 'type': MsgType.NOTIFY,
                   'method': '.lq.ActionPrototype', 'data': dict_obj}
         return result
 
     
     def compose(self, data, msg_id=-1):
-        """ compose liqi message from dict data"""
-        if data['type'] == MsgType.Notify:
+        """ compose liqi req/res message from dict data"""
+        if data['type'] == MsgType.NOTIFY:
             return self.compose_notify(data)
         msg_block = [
             {'id': 1, 'type': 'string', 'data': b'.lq.FastTest.authGame'},
@@ -180,9 +179,9 @@ class LiqiProto:
         ]
         _, lq, service, rpc = data['method'].split('.')
         proto_domain = self.jsonProto['nested'][lq]['nested'][service]['methods'][rpc]
-        if data['type'] == MsgType.Req:
+        if data['type'] == MsgType.REQ:
             message = ParseDict(data['data'], getattr(pb, proto_domain['requestType'])())
-        elif data['type'] == MsgType.Res:
+        elif data['type'] == MsgType.RES:
             message = ParseDict(data['data'], getattr(pb, proto_domain['responseType'])())
         msg_block[0]['data'] = data['method'].encode()
         msg_block[1]['data'] = message.SerializeToString()
@@ -190,24 +189,25 @@ class LiqiProto:
             compose_id = (self.msg_id-8)%256
         else:
             compose_id = msg_id
-        if data['type'] == MsgType.Req:
+        if data['type'] == MsgType.REQ:
             composed = b'\x02' + struct.pack('<H', compose_id) + toProtobuf(msg_block)
             # self.parse(composed)
             return composed
-        elif data['type'] == MsgType.Res:
+        elif data['type'] == MsgType.RES:
             composed = b'\x03' + struct.pack('<H', compose_id) + toProtobuf(msg_block)
             return composed
         else:
-            raise
+            raise NotImplementedError("only support req/res")
 
 
     def compose_notify(self, data):
+        """ compose liqi notify message"""
         msg_block = [
             {'id': 1, 'type': 'string', 'data': b'.lq.FastTest.authGame'},
             {'id': 2, 'type': 'string','data': b'protobuf_bytes'}
         ]
 
-        _, lq, message_name = data['method'].split('.')
+        _, _lq, message_name = data['method'].split('.')
 
         msg_block[0]['data'] = data['method'].encode()
         msg_block[1]['data'] = ...
@@ -277,7 +277,7 @@ def fromProtobuf(buf) -> List[Dict]:
             data = buf[p:p+s_len]
             p += s_len
         else:
-            raise Exception('unknow type:', block_type, ' at', p)
+            raise ValueError(f"Unknown type: {block_type}, at {p}")
         result.append({'id': block_id, 'type': block_type,
                        'data': data, 'begin': block_begin})
     return result

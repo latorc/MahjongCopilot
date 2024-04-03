@@ -1,11 +1,10 @@
-import json
+""" Game State Module for Majsoul
+This module processes Majsoul game state and take liqi messages as inputs,
+and interfaces with AI bot to generate reactions.
+"""
 from liqi import MsgType
 from liqi import LiqiProto, LiqiMethod, LiqiAction
 
-try:
-    import libriichi
-except:
-    import riichi as libriichi
 import mj_helper
 from mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
 from log_helper import LOGGER
@@ -38,7 +37,7 @@ class GameState:
         
         self.mjai_bot:mj_bot.Bot = bot         # mjai bot for generating reactions
         if self.mjai_bot is None:
-            raise Exception("Bot is None")
+            raise ValueError("Bot is None")
         
         self.mjai_pending_input_msgs = []   # input msgs to be fed into bot
         self.pending_reach_acc:dict = None  # Pending MJAI reach accepted message        
@@ -145,22 +144,22 @@ class GameState:
                 
         # All players are ready
         elif liqi_method == LiqiMethod.fetchGamePlayerState:
-            if liqi_type == MsgType.Res:
+            if liqi_type == MsgType.RES:
                 # liqi_data['stateList'] should be ['READY', 'READY', 'READY', 'READY']:
                 return None
         
         # Game Start
         elif liqi_method == LiqiMethod.authGame:            
-            if liqi_type == MsgType.Req:
+            if liqi_type == MsgType.REQ:
                 # request game info (first entering game)
                 # self.__init__()
                 self.accountId = liqi_data['accountId']
                 return None            
-            elif liqi_type == MsgType.Res:
+            elif liqi_type == MsgType.RES:
                 # response with game info (first entering game)
                 return self.ms_auth_game(liqi_data)
             else:
-                raise Exception('Unexpected liqi message, method=%s, type=%s', liqi_method, liqi_type)
+                raise RuntimeError(f'Unexpected liqi message, method={liqi_method}, type={liqi_type}')
         
         # Actions        
         elif liqi_method == LiqiMethod.ActionPrototype: 
@@ -174,7 +173,7 @@ class GameState:
                     self.last_operation = liqi_data['data']['operation']
                     self.last_op_step = liqi_data['step']       
                     if liqi_data['data']['operation']['seat'] != self.seat:
-                        LOGGER.warning(f"liqi_data['data']['operation']['seat'] {liqi_data['data']['operation']['seat']} != self.seat{self.seat}")
+                        LOGGER.warning("operation seat %s != self.seat %s", liqi_data['data']['operation']['seat'], self.seat)
                     if 'operationList' not in liqi_data['data']['operation']:
                         LOGGER.warning("No operation List: %s", liqi_data['data']['operation'])        
             
@@ -209,10 +208,10 @@ class GameState:
         Every game start there is sync message (may contain no data)"""
         self.is_ms_syncing = True
         LOGGER.debug('Start syncing game')
-        syncGame_msgs = LiqiProto().parse_syncGame(liqi_data)
+        sync_msgs = LiqiProto().parse_syncGame(liqi_data)
         reacts = []
-        for msg in syncGame_msgs:
-            LOGGER.debug(f"sync msg: {msg}")
+        for msg in sync_msgs:
+            LOGGER.debug("sync msg: %s", msg)
             react = self.input(msg)
             reacts.append(react)
         LOGGER.debug('Finished syncing game')
@@ -226,7 +225,7 @@ class GameState:
         """ Game start, initial info"""
         try:
             self.mode_id = liqi_data['gameConfig']['meta']['modeId']
-        except:
+        except Exception as e:
             self.mode_id = -1
 
         seatList:list = liqi_data['seatList']
@@ -414,7 +413,6 @@ class GameState:
                             'consumed': consumed_mjai
                         }
                     )
-                    pass
                 case ChiPengGang.Peng:
                     assert len(consumed_mjai) == 2
                     self.mjai_pending_input_msgs.append(
@@ -437,9 +435,8 @@ class GameState:
                             'consumed': consumed_mjai
                         }
                     )
-                    pass
                 case _:
-                    raise
+                    raise ValueError(f"Unknown ChiPengGang type {liqi_data['data']['type']}")
             return self._react_all()
                     
         # LiqiAction.AnGangAddGang -> MJAI ANKAN / KAKAN
@@ -565,7 +562,6 @@ class GameState:
     
     def ms_template(self, liqi_data:dict) -> dict:
         """ template"""
-        pass
             
     def _react_all(self) -> dict:
         """ Feed all pending messages to AI bot and get bot reaction
