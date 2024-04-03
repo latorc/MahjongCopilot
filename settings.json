@@ -1,7 +1,7 @@
 {
     "auto_launch_browser": false, 
-    "browser_width": 1600, 
-    "browser_height": 900, 
+    "browser_width": 1280, 
+    "browser_height": 720, 
     "ms_url": "https://game.maj-soul.com/1/", 
     "mitm_port": 10999, 
     "language": "ZHS", 
