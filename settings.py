@@ -2,7 +2,7 @@ import json
 import pathlib
 from typing import Callable
 from log_helper import LOGGER
-import lan_str
+from lan_str import LanStr, LAN_OPTIONS
 import utils
 from utils import GAME_MODES
 
@@ -20,7 +20,7 @@ class Settings:
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 10999)
-        self.language:str = self._get_value("language", list(lan_str.LAN_OPTIONS.keys())[-1], self.valid_language)
+        self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)
         
         self.model_type:str = self._get_value("model_type", "Local")
         """ model type: local, mjapi"""
@@ -30,6 +30,8 @@ class Settings:
         self.mjapi_url:str = self._get_value("mjapi_url", "https://begins-malta-bbc-huntington.trycloudflare.com")
         self.mjapi_user:str = self._get_value("mjapi_user", "")
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
+        self.mjapi_models:list = self._get_value("mjapi_models",[])
+        self.mjapi_model_select:str = self._get_value("mjapi_model_select","")
         
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool)
@@ -79,15 +81,15 @@ class Settings:
             LOGGER.warning("setting '%s' use default value '%s' due to error: %s", key, default_value,e)
             return default_value
     
-    def lan(self) -> lan_str.LanStrings:
+    def lan(self) -> LanStr:
         """ return the LanString instance"""
-        return lan_str.LAN_OPTIONS[self.language]
+        return LAN_OPTIONS[self.language]
     
     ### Validate functions: return true if the value is valid
        
     def valid_language(self, lan_code:str):
         """ return True if given language code is valid"""
-        return (lan_code in lan_str.LAN_OPTIONS)
+        return (lan_code in LAN_OPTIONS)
     
     def valid_mitm_port(self, port:int):
         """ return true if port number if valid"""
