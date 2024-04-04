@@ -18,7 +18,7 @@ from log_helper import LOGGER
 import settings
 import automation
 import mj_bot
-from lan_str import LanStrings
+from lan_str import LanStr
 import utils
 from utils import UI_STATE
 
@@ -60,8 +60,6 @@ class BotManager:
         self._overlay_botleft_last_update:float = 0 # last update time
         self._overlay_reaction:dict = None          # update overlay guidance if new reaction is different
         self._overlay_guide_last_update:float = 0   # last update time
-        self._mouse_last_time:float = 0                 # for mouse icon animation
-        self._mouse_icon:str = ' 🖱️'
         
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
@@ -177,9 +175,9 @@ class BotManager:
         try:            
             self.bot = mj_bot.get_bot(self.settings)
             self.game_exception = None
-            LOGGER.info("Created bot: %s", self.bot.name)                        
+            LOGGER.info("Created bot: %s", self.bot.name)
         except Exception as e:
-            LOGGER.error("Failed to create bot: %s", e, exc_info=True)
+            LOGGER.warning("Failed to create bot: %s", e, exc_info=True)
             self.bot = None
             self.game_exception = e
             
@@ -203,7 +201,7 @@ class BotManager:
             if self.mitm_server.install_mitm_cert():
                 LOGGER.info("MITM certificate installed")
             else:
-                LOGGER.error("MITM certificate installation failed")
+                LOGGER.warning("MITM certificate installation failed (No Admin rights?)")
             
             # Attempt to create bot. wait for the bot (gui may re-create)
             self.create_bot()
@@ -399,12 +397,9 @@ class BotManager:
         else:
             autoplay_text = '⬛' + self.settings.lan().AUTOPLAY + ': ' + self.settings.lan().OFF
         if self.automation.is_running_execution():
-            if time.time()-self._mouse_last_time > 0.5:
-                self._mouse_last_time = time.time()
-                self._mouse_icon = self._mouse_icon[::-1]
-            autoplay_text += " " + self._mouse_icon
+            autoplay_text += " 🖱️"
         text += '\n' + autoplay_text
-        
+
         # line 4
         if self.main_thread_exception:
             line = '❌' + self.settings.lan().MAIN_THREAD_ERROR
@@ -421,13 +416,11 @@ class BotManager:
             
         text += '\n' + line
                     
-        # update if there is a change or time elapsed
-        if text != self._overlay_botleft_text or time.time() - self._overlay_botleft_last_update > 0.5:            
+        # update if there is a change or time elapsed. avoid too often to burden browser
+        if text != self._overlay_botleft_text or time.time() - self._overlay_botleft_last_update > 1:
             self.browser.overlay_update_botleft(text)
             self._overlay_botleft_text = text
             self._overlay_botleft_last_update = time.time()
-        
-    
     
     def _do_automation(self, reaction:dict):
         # auto play given mjai reaction        
@@ -451,7 +444,7 @@ class BotManager:
 def mjai_reaction_2_guide(
     reaction:dict, 
     max_options:int=3,
-    lan_str:LanStrings=LanStrings()
+    lan_str:LanStr=LanStr()
     ) -> tuple[str, list]:
     """ Convert mjai reaction message to language specific AI guide 
     params:

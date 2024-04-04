@@ -1,7 +1,7 @@
 # Language string constants
 from utils import VER_NUMBER, BOT_TYPE
 
-class LanStrings:
+class LanStr:
     """ String constants for default language (English) """
     LANGUAGE_NAME = 'English'
     
@@ -21,12 +21,12 @@ class LanStrings:
 
 A Mahjong AI assistant for Majsoul, based on Mortal Mahjong AI. Currently the model only supports 4-person Mahjong game. When you enter a game in Majsoul, AI will give you step-by-step guidance.
 
-- 🔳Start Web Client: Start the game in browser with AI assistant. This program uses built-in Chromium browser. First time entering Majsoul will take a while to download game assets.
-- 🔘Web Overlay: Show/Hide the AI Guidance overlayed on Web Page.
-- 🔘Autoplay: Enable/Disable Autoplay. Autoplay clicks on the browser according to AI guidance.
-- 🔘Autojoin: Auto join next game given settings.
-- 🔳Settings: View and configure settings.
-- 🔳Open Log File: Open the log file with system default program.
+🔳 Start Web Client: Start the game in browser with AI assistant. This program uses built-in Chromium browser. First time entering Majsoul will take a while to download game assets.
+🔘 Web Overlay: Show/Hide the AI Guidance overlayed on Web Page.
+🔘 Autoplay: Enable/Disable Autoplay. Autoplay clicks on the browser according to AI guidance.
+🔘 Autojoin: Auto join next game given settings.
+🔳 Settings: View and configure settings.
+🔳 Open Log File: Open the log file with system default program.
     
 Github: https://github.com/latorc/MahjongCopilot
     
@@ -54,6 +54,8 @@ MJAI: https://mjai.app
     MJAPI_URL = "MJAPI URL"
     MJAPI_USER = "MJAPI User"
     MJAPI_SECRET = "MJAPI Secret"
+    MJAPI_MODEL_SELECT = "MJAPI Model Select"
+    LOGIN_TO_REFRESH = "Log in to refresh"
     MITM_PORT_ERROR_PROMPT = "Invalid MITM Port (must between 1000~65535)"
     AUTO_PLAY_SETTINGS = "Autoplay Settings"
     AUTO_JOIN_GAME = "Auto Join"
@@ -120,7 +122,7 @@ MJAI: https://mjai.app
         return self.MJAI_2_STR[mjai_option]
     
 
-class ZHS_Strings(LanStrings):
+class LanStrZHS(LanStr):
     """ String constants for Chinese Simplified"""
     LANGUAGE_NAME = '简体中文'
     
@@ -140,12 +142,12 @@ class ZHS_Strings(LanStrings):
 
 一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。 目前模型只支持四人麻将游戏。 当你进入游戏后, AI会对每一步行动进行指导。
     
-- 🔲启动网页客户端: 在浏览器中启动游戏和AI助手。 本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
-- 🔘网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
-- 🔘自动打牌: 打开/关闭自动打牌, 自动点击浏览器根据 AI 提示打牌。
-- 🔘自动加入: 根据设置的条件, 自动加入下一局游戏
-- 🔲设置: 查看和修改设置选项。
-- 🔲打开日志文件: 用系统默认程序打开日志文件。
+🔳 启动网页客户端: 在浏览器中启动游戏和AI助手。 本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
+🔘 网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
+🔘 自动打牌: 打开/关闭自动打牌, 自动点击浏览器根据 AI 提示打牌。
+🔘 自动加入: 根据设置的条件, 自动加入下一局游戏
+🔳 设置: 查看和修改设置选项。
+🔳 打开日志文件: 用系统默认程序打开日志文件。
     
 本项目 Github: https://github.com/latorc/MahjongCopilot
     
@@ -172,6 +174,8 @@ MJAI: https://mjai.app
     MJAPI_URL = "MJAPI 网址"
     MJAPI_USER = "MJAPI 用户名"
     MJAPI_SECRET = "MJAPI 秘密 Secret"
+    MJAPI_MODEL_SELECT = "MJAPI 模型选择"
+    LOGIN_TO_REFRESH = "登录后刷新"
     AUTO_LAUNCH_BROWSER = "自动启动浏览器"
     MITM_PORT_ERROR_PROMPT = "错误的 MITM 服务端口(必须是1000~65535)"
     AUTO_PLAY_SETTINGS = "自动打牌设置"
@@ -234,9 +238,9 @@ MJAI: https://mjai.app
 
 
 
-LAN_OPTIONS:dict[str, LanStrings] = {
-    'EN': LanStrings(),
-    'ZHS': ZHS_Strings(), 
+LAN_OPTIONS:dict[str, LanStr] = {
+    'EN': LanStr(),
+    'ZHS': LanStrZHS(), 
 }
 """ dict of {language code: LanString instance}"""
 
@@ -252,7 +256,7 @@ def check_keys(lan_string_class):
 if __name__ == "__main__":
     # Check if any keys are missing in languages (not translated from English)
     for k,v in LAN_OPTIONS.items():
-        if v.__class__==LanStrings:
+        if v.__class__==LanStr:
             continue
         print(f"Checking un-translated keys in code={k} (class={v.__class__.__name__}):")
         check_keys(v.__class__)

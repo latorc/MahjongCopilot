@@ -656,8 +656,7 @@ class Automation:
         LOGGER.info("Automating entering next game")
         self._task = AutomationTask()
         self._task.start_action_iter(self._next_game_action_iter(), AutomationTask.NEXT_GAME_TASK_NAME)
-        return
-    
+        return    
     
     def _next_game_action_iter(self) -> Iterator[ActionStep]:
         # generate action steps for next_game

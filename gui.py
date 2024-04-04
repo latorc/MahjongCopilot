@@ -19,7 +19,7 @@ import log_helper
 from log_helper import LOGGER
 from settings import Settings
 import mj_helper
-from lan_str import LAN_OPTIONS, LanStrings
+from lan_str import LAN_OPTIONS, LanStr
 from mj_bot import BOT_TYPE
 
 
@@ -316,7 +316,7 @@ class MainGUI(tk.Tk):
                 UI_STATE.GAME_ENDING: self.st.lan().GAME_ENDING,
                 UI_STATE.NOT_RUNNING: self.st.lan().GAME_NOT_RUNNING,
             }
-            info_str = self.st.lan().READY_FOR_GAME + " " + state_dict.get(self.bot_manager.automation.ui_state, "")
+            info_str = self.st.lan().READY_FOR_GAME + " - " + state_dict.get(self.bot_manager.automation.ui_state, "")
             return info_str, self.icon_ready
 
 
@@ -612,6 +612,24 @@ class SettingsWindow(tk.Toplevel):
         string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var,width=50)
         string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
         
+        # MJAPI model
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.settings.lan().MJAPI_MODEL_SELECT)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.mjapi_model_select_var = tk.StringVar(value=self.settings.mjapi_model_select)
+        options = self.settings.mjapi_models
+        sel_model = ttk.Combobox(main_frame, textvariable=self.mjapi_model_select_var, values=options, state="readonly", width=12)
+        sel_model.grid(row=cur_row, column=1, columnspan=1,  **args_entry)
+        
+        _label = ttk.Label(main_frame, text=self.settings.lan().LOGIN_TO_REFRESH)
+        _label.grid(row=cur_row, column=2, **args_entry)
+        
+        # models_str = self.settings.lan().MODEL + ": " + ','.join(self.settings.mjapi_models)
+        # text = tk.Text(main_frame, wrap=tk.NONE)
+        # text.insert(tk.END, models_str)
+        # text.configure(state=tk.DISABLED, height=1, width=30)
+        # text.grid(row=cur_row, column=2, columnspan=2, **args_label)
+        
         ### Auto play settings
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.settings.lan().AUTO_PLAY_SETTINGS)
@@ -646,7 +664,7 @@ class SettingsWindow(tk.Toplevel):
         
         # tips :Settings
         cur_row += 1
-        label_settings = ttk.Label(main_frame, text=self.settings.lan().SETTINGS_TIPS, width=30)
+        label_settings = ttk.Label(main_frame, text=self.settings.lan().SETTINGS_TIPS, width=40)
         label_settings.grid(row=cur_row, column=1, columnspan=3, **args_entry)
         
         # Buttons frame
@@ -690,13 +708,15 @@ class SettingsWindow(tk.Toplevel):
         mjapi_url_new = self.mjapi_url_var.get()
         mjapi_user_new = self.mjapi_user_var.get()
         mjapi_secret_new = self.mjapi_secret_var.get()
+        mjapi_model_select_new = self.mjapi_model_select_var.get()
         
         if (
             self.settings.model_type != model_type_new or
             self.settings.model_file != model_file_new or
             self.settings.mjapi_url != mjapi_url_new or
             self.settings.mjapi_user != mjapi_user_new or
-            self.settings.mjapi_secret != mjapi_secret_new
+            self.settings.mjapi_secret != mjapi_secret_new or 
+            self.settings.mjapi_model_select != mjapi_model_select_new
         ):
             self.model_updated = True
         
@@ -723,6 +743,7 @@ class SettingsWindow(tk.Toplevel):
         self.settings.mjapi_url = mjapi_url_new
         self.settings.mjapi_user = mjapi_user_new
         self.settings.mjapi_secret = mjapi_secret_new
+        self.settings.mjapi_model_select = mjapi_model_select_new
         
         self.settings.enable_automation = autoplay_new
         self.settings.auto_random_move = auto_random_moves_new
@@ -754,7 +775,7 @@ class HelpWindow(tk.Toplevel):
         self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
         
         self.textbox.tag_configure("title", font=font.Font(family="Microsoft YaHei", size=20, weight="bold"))
-        firstline = st.lan().APP_TITLE + f" v{utils.VER_NUMBER}" + " " + st.lan().HELP + "\n"
+        firstline = st.lan().APP_TITLE + " " + st.lan().HELP + "\n"
         self.textbox.insert(tk.END, firstline, "title")
         self.textbox.insert(tk.END, st.lan().HELP_STR)
         self.textbox.configure(state='disabled')  # Make the text read-only
