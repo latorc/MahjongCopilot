@@ -28,7 +28,7 @@ class Settings:
         self.model_file:str = self._get_value("model_file", "mortal.pth")
         # for mjapi
         self.mjapi_url:str = self._get_value("mjapi_url", "https://begins-malta-bbc-huntington.trycloudflare.com")
-        self.mjapi_user:str = self._get_value("mjapi_user", utils.random_str(6), self.valid_username)
+        self.mjapi_user:str = self._get_value("mjapi_user", "")
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
         
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
