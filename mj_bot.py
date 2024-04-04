@@ -186,7 +186,7 @@ class MjapiBot(Bot):
         
     def _init_bot_impl(self):
         res = self.mjapi.start_bot(self.seat, 256, self.model_name)
-        self.id = res['id'] 
+        self.id = -1
         
     def react(self, input_msg:dict) -> dict:
         # input_msg['can_act'] = True

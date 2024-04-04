@@ -255,7 +255,7 @@ class GameState:
         dora_marker = mj_helper.cvt_ms2mjai(liqi_data['data']['doras'][0])
         self.doras = [dora_marker]
         self.honba = liqi_data['data']['ben']
-        oya = liqi_data['data']['ju']
+        oya = liqi_data['data']['ju']           # oya is also the seat id of East
         self.kyoku = oya + 1
         self.jikaze  = MJAI_WINDS[(self.seat - oya)]
         kyotaku = liqi_data['data']['liqibang']
@@ -265,16 +265,16 @@ class GameState:
         tehais_mjai = [['?']*13]*4        
         my_tehai_ms = liqi_data['data']['tiles']
         self.my_tehai = [mj_helper.cvt_ms2mjai(tile) for tile in my_tehai_ms]
-        self.my_tehai = mj_helper.sort_mjai_tiles(self.my_tehai) 
+        self.my_tehai = mj_helper.sort_mjai_tiles(self.my_tehai)
         
         # For starting hand, if player is East, majsoul gives 14 tiles + no tsumohai
         # mjai accepts 13 tiles + following tsumohai event
-        # In Majsoul, last one of sorted tiles is the tsumohai              
-        if len(self.my_tehai) == 14:
+        # In Majsoul, last one of sorted tiles is the tsumohai
+        if len(self.my_tehai) == 14:        # self == East
             self.my_tsumohai = self.my_tehai[-1]
-            self.my_tehai.pop()            
+            self.my_tehai.pop()
             tehais_mjai[self.seat] = self.my_tehai     # take first 13 tiles
-            
+
             tsumo_msg = {
                 'type': MJAI_TYPE.TSUMO,
                 'actor': self.seat,
@@ -283,7 +283,11 @@ class GameState:
             
         elif len(self.my_tehai) == 13:
             tehais_mjai[self.seat] = self.my_tehai
-            tsumo_msg = None
+            tsumo_msg = {
+                'type': MJAI_TYPE.TSUMO,
+                'actor': oya,
+                'pai': '?'
+                }
         else:
             raise Exception("Unexpected tehai tiles:%d", len(my_tehai_ms))
         
@@ -298,7 +302,7 @@ class GameState:
             'oya': oya,
             'scores': scores,
             'tehais': tehais_mjai
-            }    
+            }
         self.mjai_pending_input_msgs.append(start_kyoku_msg)
         if tsumo_msg:
             self.mjai_pending_input_msgs.append(tsumo_msg)
