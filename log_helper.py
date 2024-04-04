@@ -32,7 +32,7 @@ def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True)
     if file:
         file_name = file_prefix + '_' + dt_string() + '.log'
         log_file_name = utils.sub_file(LOG_DIR, file_name)
-        file_handler = logging.FileHandler(log_file_name)
+        file_handler = logging.FileHandler(log_file_name, encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

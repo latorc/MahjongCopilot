@@ -36,16 +36,17 @@ class Settings:
         
         self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)
         self.auto_random_move:bool = self._get_value("auto_random_move", True, self.valid_bool)
-        self.auto_next_game:bool = self._get_value("auto_next_game", False, self.valid_bool)
-        self.auto_next_level:int = self._get_value("auto_next_level", 0, self.valid_game_level)
-        self.auto_next_mode:int = self._get_value("auto_next_mode", GAME_MODES[0], self.valid_game_mode)
+        self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
+        self.auto_join_level:int = self._get_value("auto_join_level", 0, self.valid_game_level)
+        self.auto_join_mode:int = self._get_value("auto_join_mode", GAME_MODES[0], self.valid_game_mode)
         
         self.save_json()
         
     def load_json(self) -> dict:
         """ Load settings from json file into dict"""
         try:
-            with open(self._json_file, 'r',encoding='utf-8') as file:
+            full  = utils.sub_file(".", self._json_file)
+            with open(full, 'r',encoding='utf-8') as file:
                 settings_dict:dict = json.load(file)
         except Exception as e:
             LOGGER.warning("Error loading settings. Will use defaults. Error: %s", e)

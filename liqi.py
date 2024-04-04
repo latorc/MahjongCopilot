@@ -30,6 +30,7 @@ class LiqiMethod:
     loginBeat                   = '.lq.Lobby.loginBeat'
     fetchAccountActivityData    = '.lq.Lobby.fetchAccountActivityData'
     fetchServerTime             = '.lq.Lobby.fetchServerTime'
+    oauth2Login                 = '.lq.Lobby.oauth2Login'
     checkNetworkDelay           = '.lq.FastTest.checkNetworkDelay'
     syncGame                    = '.lq.FastTest.syncGame'
     finishSyncGame              = '.lq.FastTest.finishSyncGame'

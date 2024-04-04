@@ -8,7 +8,7 @@ import sys
 import time
 import subprocess
 
-VER_NUMBER = "0.2.6"
+VER_NUMBER = "0.3.0"
 MODEL_FOLDER = "models"
 BROWSER_DATA_FOLDER = "browser_data"
 RES_FOLDER = 'resources'
@@ -29,7 +29,7 @@ class UI_STATE(Enum):
     """ UI State for the game"""
     NOT_RUNNING = 0
     MAIN_MENU = 1
-    INGAME = 10
+    IN_GAME = 10
     GAME_ENDING = 20
     
 class ModelFileException(Exception):
