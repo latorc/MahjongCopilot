@@ -10,10 +10,11 @@ from typing import Callable
 import tkinter as tk
 from tkinter import font
 from tkinter import ttk, messagebox
+from tkinter.scrolledtext import ScrolledText
 
 from bot_manager import BotManager, mjai_reaction_2_guide
 import utils
-from utils import RES_FOLDER
+from utils import RES_FOLDER, UI_STATE
 import log_helper
 from log_helper import LOGGER
 from settings import Settings
@@ -32,17 +33,20 @@ def set_style_normal(style:ttk.Style, font_size:int=12):
         relief="raised",
         borderwidth=2
         )
+    
+def font_normal(size:int=12):
+    """ return normal font size"""
+    return font.Font(family="Microsoft YaHei", size=size)
 
 class MainGUI(tk.Tk):
     """ Main GUI Window"""
     def __init__(self, setting:Settings, bot_manager:BotManager):
         super().__init__()
         self.bot_manager = bot_manager
-        self.settings = setting
-        self.lan_strings:LanStrings = self.settings.lan()
+        self.st = setting
 
         icon = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'icon.png'))
-        self.iconphoto(True, icon)        
+        self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
         
         # icon resources:
@@ -65,7 +69,7 @@ class MainGUI(tk.Tk):
         set_style_normal(style)
 
         # Main window properties
-        self.title(self.lan_strings.APP_TITLE)
+        self.title(self.st.lan().APP_TITLE + f" v{utils.VER_NUMBER}")
         self.geometry('750x500')
         self.minsize(750,500)
 
@@ -82,21 +86,23 @@ class MainGUI(tk.Tk):
         cur_row += 1
         # Buttons in toolbar
         self.btn_start_browser = self.toolbar.add_button(
-            self.lan_strings.START_BROWSER, 'majsoul.png', self._on_btn_start_browser_clicked)
+            self.st.lan().START_BROWSER, 'majsoul.png', self._on_btn_start_browser_clicked)
         self.toolbar.add_sep()
-        self.switch_overlay = ToggleSwitch(self.toolbar, self.lan_strings.WEB_OVERLAY, 75, command=self._on_switch_hud_clicked)
+        self.switch_overlay = ToggleSwitch(self.toolbar, self.st.lan().WEB_OVERLAY, 75, command=self._on_switch_hud_clicked)
         self.switch_overlay.pack(side=tk.LEFT, padx=4, pady=4)
-        self.switch_autoplay = ToggleSwitch(self.toolbar, self.lan_strings.AUTOPLAY, 75, command=self._on_switch_autoplay_clicked)
+        self.switch_autoplay = ToggleSwitch(self.toolbar, self.st.lan().AUTOPLAY, 75, command=self._on_switch_autoplay_clicked)
         self.switch_autoplay.pack(side=tk.LEFT, padx=4, pady=4)
+        self.switch_autojoin = ToggleSwitch(self.toolbar, self.st.lan().AUTO_JOIN_GAME, 75, command=self._on_switch_autojoin_clicked)
+        self.switch_autojoin.pack(side=tk.LEFT, padx=4, pady=4)
         self.toolbar.add_sep()
-        self.toolbar.add_button(self.lan_strings.SETTINGS, 'settings.png', self._on_btn_settings_clicked)
-        self.toolbar.add_button(self.lan_strings.OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
-        self.toolbar.add_button(self.lan_strings.HELP, 'help.png', self._on_btn_help_clicked)
+        self.toolbar.add_button(self.st.lan().SETTINGS, 'settings.png', self._on_btn_settings_clicked)
+        self.toolbar.add_button(self.st.lan().OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
+        self.toolbar.add_button(self.st.lan().HELP, 'help.png', self._on_btn_help_clicked)
         self.toolbar.add_sep()
-        self.toolbar.add_button(self.lan_strings.EXIT, 'exit.png', self._on_exit)
+        self.toolbar.add_button(self.st.lan().EXIT, 'exit.png', self._on_exit)
 
         # AI guidance
-        _label = ttk.Label(self.grid_frame, text=self.lan_strings.AI_OUTPUT)
+        _label = ttk.Label(self.grid_frame, text=self.st.lan().AI_OUTPUT)
         _label.grid(row=cur_row, column=0, sticky='ew', padx=5, pady=2)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
         cur_row += 1
@@ -115,7 +121,7 @@ class MainGUI(tk.Tk):
         cur_row += 1
 
         # game info
-        _label = ttk.Label(self.grid_frame, text=self.lan_strings.GAME_INFO)
+        _label = ttk.Label(self.grid_frame, text=self.st.lan().GAME_INFO)
         _label.grid(row=cur_row, column=0, sticky='ew', padx=5, pady=2)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
         cur_row += 1
@@ -149,11 +155,17 @@ class MainGUI(tk.Tk):
             
     def _on_switch_autoplay_clicked(self):
         self.switch_autoplay.switch_mid()
-        if self.bot_manager.is_automation_enabled():
+        if self.st.enable_automation:
             self.bot_manager.disable_automation()
         else:
             self.bot_manager.enable_automation()
-            
+
+    def _on_switch_autojoin_clicked(self):
+        self.switch_autojoin.switch_mid()
+        if self.st.auto_join_game:
+            self.bot_manager.disable_autojoin()
+        else:
+            self.bot_manager.enable_autojoin()
 
     def _on_btn_log_clicked(self):
         # LOGGER.debug('Open log')
@@ -161,7 +173,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
-        settings_window = SettingsWindow(self,self.settings)
+        settings_window = SettingsWindow(self,self.st)
         settings_window.transient(self)
         settings_window.grab_set()
         self.wait_window(settings_window)
@@ -177,22 +189,20 @@ class MainGUI(tk.Tk):
 
     def _on_btn_help_clicked(self):
         # open help dialog        
-        messagebox.showinfo(self.lan_strings.HELP, self.lan_strings.HELP_STR)
+        help_win = HelpWindow(self, self.st)
+        help_win.transient(self)
+        help_win.grab_set()
     
     def _on_exit(self):
         # Exit the app
         # pop up that confirm if the user really wants to quit
-        if messagebox.askokcancel(self.lan_strings.EXIT, self.lan_strings.EIXT_CONFIRM):
-            self.settings.save_json()
+        if messagebox.askokcancel(self.st.lan().EXIT, self.st.lan().EIXT_CONFIRM):
+            self.st.save_json()
             self.bot_manager.stop(False)
             self.quit()
             
     def reload_gui(self):
-        """ Clear UI compontes and rebuid widgets"""
-        lan_code = self.settings.language
-        self.lan_strings = LAN_OPTIONS[lan_code]
-        self.title(self.lan_strings.APP_TITLE)
-        
+        """ Clear UI compontes and rebuid widgets"""       
         for widget in self.winfo_children():
             widget.destroy()
         self._create_widgets()
@@ -205,17 +215,17 @@ class MainGUI(tk.Tk):
         else:
             self.btn_start_browser.config(state=tk.DISABLED)
             
-        # switch overlay
-        if self.bot_manager.is_overlay_enabled():
-            self.switch_overlay.switch_on()
-        else:
-            self.switch_overlay.switch_off()
-            
-        # switch autoplay 
-        if self.bot_manager.is_automation_enabled():
-            self.switch_autoplay.switch_on()
-        else:
-            self.switch_autoplay.switch_off()
+        # update switches' status
+        sw_list = [
+            (self.switch_overlay, self.bot_manager.is_overlay_enabled),
+            (self.switch_autoplay, lambda: self.st.enable_automation),
+            (self.switch_autojoin, lambda: self.st.auto_join_game)
+        ]
+        for sw, func in sw_list:
+            if func():
+                sw.switch_on()
+            else:
+                sw.switch_off()
 
         # Update Reaction
         self.text_ai_guide.config(state=tk.NORMAL)
@@ -223,7 +233,7 @@ class MainGUI(tk.Tk):
         pending_reaction = self.bot_manager.get_pending_reaction()
         # convert this reaction into string
         if pending_reaction:
-            action_str, options = mjai_reaction_2_guide(pending_reaction, 3, self.lan_strings)
+            action_str, options = mjai_reaction_2_guide(pending_reaction, 3, self.st.lan())
             self.text_ai_guide.insert(tk.END, f'{action_str}\n')
             for tile_str, weight in options:
                 self.text_ai_guide.insert(tk.END, f' {tile_str}  {weight*100:4.0f}%\n')
@@ -244,21 +254,21 @@ class MainGUI(tk.Tk):
 
         # Update status bar
         if self.bot_manager.is_running():       # main thread
-            self.status_bar.update_column(0, self.lan_strings.MAIN_THREAD, self.icon_green)
+            self.status_bar.update_column(0, self.st.lan().MAIN_THREAD, self.icon_green)
         else:
-            self.status_bar.update_column(0, self.lan_strings.MAIN_THREAD, self.icon_red)
+            self.status_bar.update_column(0, self.st.lan().MAIN_THREAD, self.icon_red)
 
         if self.bot_manager.is_bot_created():
-            text = self.settings.lan().MODEL + ": " + self.bot_manager.bot.type.value
+            text = self.st.lan().MODEL + ": " + self.bot_manager.bot.type.value
             self.status_bar.update_column(1, text, self.icon_green)
         else:
-            text = self.settings.lan().AWAIT_BOT
+            text = self.st.lan().AWAIT_BOT
             self.status_bar.update_column(1, text, self.icon_red)
 
         if self.bot_manager.browser.is_running():
-            self.status_bar.update_column(2, self.lan_strings.WEB_CLIENT, self.icon_green)
+            self.status_bar.update_column(2, self.st.lan().WEB_CLIENT, self.icon_green)
         else:
-            self.status_bar.update_column(2, self.lan_strings.WEB_CLIENT, self.icon_gray)
+            self.status_bar.update_column(2, self.st.lan().WEB_CLIENT, self.icon_gray)
 
         status_str, icon = self._get_status_text_icon(gi)
         self.status_bar.update_column(3, status_str, icon)
@@ -272,36 +282,41 @@ class MainGUI(tk.Tk):
         
         bot_exception = self.bot_manager.main_thread_exception        
         if isinstance(bot_exception, utils.MITMException):
-            return self.settings.lan().MITM_SERVER_ERROR, self.icon_red
+            return self.st.lan().MITM_SERVER_ERROR, self.icon_red
         elif isinstance(bot_exception, Exception):
-            return self.lan_strings.MAIN_THREAD_ERROR + str(bot_exception), self.icon_red
+            return self.st.lan().MAIN_THREAD_ERROR + str(bot_exception), self.icon_red
         else:   # no exception in bot manager
             pass
         
         game_error:Exception = self.bot_manager.get_game_error()
         if isinstance(game_error, utils.ModelFileException):
-            return self.lan_strings.MODEL_FILE_ERROR, self.icon_red
+            return self.st.lan().MODEL_FILE_ERROR, self.icon_red
         elif isinstance(game_error, Exception):
-            text = self.settings.lan().GAME_ERROR + " " + str(game_error)
+            text = self.st.lan().GAME_ERROR + " " + str(game_error)
             return text, self.icon_red
         else:       # no game error
             pass
             
         if self.bot_manager.is_in_game():
-            info_str = self.lan_strings.GAME_RUNNING
+            info_str = self.st.lan().GAME_RUNNING
 
             if self.bot_manager.is_game_syncing():
-                info_str += " - " + self.lan_strings.SYNCING
+                info_str += " - " + self.st.lan().SYNCING
                 return info_str, self.icon_green
 
             else:   # game in progress
                 if gi and gi.bakaze:
-                    info_str += f" - {self.lan_strings.mjai2str(gi.bakaze)} {gi.kyoku} {self.lan_strings.KYOKU} {gi.honba} {self.lan_strings.HONBA}"
+                    info_str += f" - {self.st.lan().mjai2str(gi.bakaze)} {gi.kyoku} {self.st.lan().KYOKU} {gi.honba} {self.st.lan().HONBA}"
                 else:
-                    info_str += " - " + self.lan_strings.GAME_STARTING
+                    info_str += " - " + self.st.lan().GAME_STARTING
                 return info_str, self.icon_green
         else:
-            info_str = self.lan_strings.READY_FOR_GAME
+            state_dict = {
+                UI_STATE.MAIN_MENU: self.st.lan().MAIN_MENU,
+                UI_STATE.GAME_ENDING: self.st.lan().GAME_ENDING,
+                UI_STATE.NOT_RUNNING: self.st.lan().GAME_NOT_RUNNING,
+            }
+            info_str = self.st.lan().READY_FOR_GAME + " " + state_dict.get(self.bot_manager.automation.ui_state, "")
             return info_str, self.icon_ready
 
 
@@ -480,131 +495,166 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, parent:tk.Frame, setting:Settings):
         super().__init__(parent)
         self.settings = setting
-        self.lan_strings:LanStrings = LAN_OPTIONS[self.settings.language]
-        self.title(self.lan_strings.SETTINGS)
-        self.geometry('600x500')
-        self.minsize(600,500)
+
+        self.geometry('600x550')
+        self.minsize(600,550)
         # self.resizable(False, False)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
-        
+
         self.gui_need_reload:bool = False
         """ Whether a GUI refresh is needed to apply new settings"""
 
         self.model_updated:bool = False
-        
         # Call create_widgets after the window is fully initialized
         self.create_widgets()
 
     def create_widgets(self):
         """ Create widgets for settings dialog"""
+        self.title(self.settings.lan().SETTINGS)
         # Main frame
         main_frame = ttk.Frame(self, padding="20")
         main_frame.pack(expand=True, fill="both")
         main_frame.columnconfigure(0, minsize=150)
-        main_frame.columnconfigure(1, minsize=300)
+        main_frame.columnconfigure(1, minsize=100)
+        main_frame.columnconfigure(2, minsize=100)
+        main_frame.columnconfigure(3, minsize=100)
 
         # Styling
         style = ttk.Style(self)
         set_style_normal(style)
-        cur_row = 0
-
-        # Title:Settings
-        label_settings = ttk.Label(main_frame, text=self.lan_strings.SETTINGS_TIPS)
-        label_settings.grid(row=cur_row, column=1, sticky="w", padx=(0, 10), pady=(5, 0))
-
+        
+        pad_args = {"padx":(5, 5), "pady":(5, 5)}
+        args_label = {"sticky":"e", **pad_args}
+        args_entry = {"sticky":"w", **pad_args}
         # auto launch browser
-        cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.AUTO_LAUNCH_BROWSER)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        cur_row = 0
+        _label = ttk.Label(main_frame, text=self.settings.lan().AUTO_LAUNCH_BROWSER)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.auto_launch_var = tk.BooleanVar(value=self.settings.auto_launch_browser)
-        auto_launch_entry = ttk.Checkbutton(main_frame, variable=self.auto_launch_var)
-        auto_launch_entry.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        auto_launch_entry = ttk.Checkbutton(main_frame, variable=self.auto_launch_var, width=5)
+        auto_launch_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
 
         # Select client size
-        cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.CLIENT_SIZE)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().CLIENT_SIZE)
+        _label.grid(row=cur_row, column=2, **args_label)
         options = ["1920 x 1080", "1600 x 900", "1280 x 720"]
         setting_size = f"{self.settings.browser_width} x {self.settings.browser_height}"
         self.client_size_var = tk.StringVar(value=setting_size)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=15)
-        select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=12)
+        select_menu.grid(row=cur_row, column=3, columnspan=1, **args_entry)
         
         # majsoul url
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.MAJSOUL_URL)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().MAJSOUL_URL)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.ms_url_var = tk.StringVar(value=self.settings.ms_url)
         string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=50)
-        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
         
         # mitm port
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.MITM_PORT)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().MITM_PORT)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.mitm_port_var = tk.StringVar(value=self.settings.mitm_port)
-        number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=15)
-        number_entry.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=12)
+        number_entry.grid(row=cur_row, column=1,columnspan=1,  **args_entry)
         
         # Select language
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.LANGUAGE)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().LANGUAGE)
+        _label.grid(row=cur_row, column=0, **args_label)
         options = [v.LANGUAGE_NAME for v in LAN_OPTIONS.values()]
         self.language_var = tk.StringVar(value=LAN_OPTIONS[self.settings.language].LANGUAGE_NAME)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly",width=15)
-        select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly", width=12)
+        select_menu.grid(row=cur_row, column=1,columnspan=1,  **args_entry)
 
         # Select Model Type
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.MODEL_TYPE)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().MODEL_TYPE)
+        _label.grid(row=cur_row, column=0, **args_label)
         options = [type.value for type in BOT_TYPE]
         self.model_type_var = tk.StringVar(value=self.settings.model_type)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly",width=15)
-        select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly", width=12)
+        select_menu.grid(row=cur_row, column=1,columnspan=1,  **args_entry)
         
         # Select Model File
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.AI_MODEL_FILE)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().AI_MODEL_FILE)
+        _label.grid(row=cur_row, column=0, **args_label)
         options = utils.list_files(utils.MODEL_FOLDER)
         self.model_file_var = tk.StringVar(value=self.settings.model_file)
         select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly", width=30)
-        select_menu.grid(row=cur_row, column=1, sticky="w", pady=(5, 0))
+        select_menu.grid(row=cur_row, column=1, columnspan=3,  **args_entry)
         
         # MJAPI url
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_URL)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().MJAPI_URL)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.mjapi_url_var = tk.StringVar(value=self.settings.mjapi_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var,width=50)
-        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_url_var, width=50)
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
         
         # MJAPI user
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_USER)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().MJAPI_USER)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.mjapi_user_var = tk.StringVar(value=self.settings.mjapi_user)
-        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var,width=15)
-        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))
+        string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var, width=12)
+        string_entry.grid(row=cur_row, column=1,columnspan=1, **args_entry)
         
         # MJAPI secret
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.lan_strings.MJAPI_SECRET)
-        _label.grid(row=cur_row, column=0, sticky="e", padx=(0, 10), pady=(5, 0))
+        _label = ttk.Label(main_frame, text=self.settings.lan().MJAPI_SECRET)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.mjapi_secret_var = tk.StringVar(value=self.settings.mjapi_secret)
         string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_secret_var,width=50)
-        string_entry.grid(row=cur_row, column=1, sticky="ew", pady=(5, 0))        
-
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
+        
+        ### Auto play settings
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.settings.lan().AUTO_PLAY_SETTINGS)
+        _label.grid(row=cur_row, column=0, **args_label)
+        
+        # auto play
+        self.autoplay_var = tk.BooleanVar(value=self.settings.enable_automation)
+        autoplay_entry = ttk.Checkbutton(main_frame, variable=self.autoplay_var, text=self.settings.lan().AUTOPLAY, width=12)
+        autoplay_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
+        
+        # random move
+        self.random_move_var = tk.BooleanVar(value=self.settings.auto_random_move)
+        ran_move_entry = ttk.Checkbutton(main_frame, variable=self.random_move_var, text=self.settings.lan().MOUSE_RANDOM_MOVES, width=12)
+        ran_move_entry.grid(row=cur_row, column=2, columnspan=1, **args_entry)
+        
+        # auto join settings
+        cur_row += 1
+        self.auto_join_var = tk.BooleanVar(value=self.settings.auto_join_game)
+        auto_join_entry = ttk.Checkbutton(main_frame, variable=self.auto_join_var, text = self.settings.lan().AUTO_JOIN_GAME, width=12)
+        auto_join_entry.grid(row=cur_row, column=1,columnspan=1, **args_entry)
+        
+        self.auto_join_level_var = tk.StringVar(value=self.settings.lan().GAME_LEVELS[self.settings.auto_join_level])
+        options = self.settings.lan().GAME_LEVELS
+        next_level = ttk.Combobox(main_frame, textvariable=self.auto_join_level_var, values=options, state="readonly", width=12)
+        next_level.grid(row=cur_row, column=2,columnspan=1,  **args_entry)
+        
+        mode_idx = utils.GAME_MODES.index(self.settings.auto_join_mode)
+        self.auto_join_mode_var = tk.StringVar(value=self.settings.lan().GAME_MODES[mode_idx])
+        options = self.settings.lan().GAME_MODES
+        next_mode = ttk.Combobox(main_frame, textvariable=self.auto_join_mode_var, values=options, state="readonly", width=12)
+        next_mode.grid(row=cur_row, column=3,columnspan=1,  **args_entry)
+        
+        # tips :Settings
+        cur_row += 1
+        label_settings = ttk.Label(main_frame, text=self.settings.lan().SETTINGS_TIPS, width=30)
+        label_settings.grid(row=cur_row, column=1, columnspan=3, **args_entry)
+        
         # Buttons frame
         button_frame = ttk.Frame(self)
         button_frame.pack(side="bottom", fill="x")
-        cancel_button = ttk.Button(button_frame, text=self.lan_strings.CANCEL, command=self._on_cancel)
+        cancel_button = ttk.Button(button_frame, text=self.settings.lan().CANCEL, command=self._on_cancel)
         cancel_button.pack(side="left", padx=20, pady=10)
-        save_button = ttk.Button(button_frame, text=self.lan_strings.SAVE, command=self._on_save)
+        save_button = ttk.Button(button_frame, text=self.settings.lan().SAVE, command=self._on_save)
         save_button.pack(side="right", padx=20, pady=10)
 
     def _on_save(self):
@@ -619,7 +669,7 @@ class SettingsWindow(tk.Toplevel):
         
         mitm_port_new = int(self.mitm_port_var.get())
         if not self.settings.valid_mitm_port(mitm_port_new):
-            messagebox.showerror("⚠", self.lan_strings.MITM_PORT_ERROR_PROMPT)
+            messagebox.showerror("⚠", self.settings.lan().MITM_PORT_ERROR_PROMPT)
             return
         
         # language
@@ -633,8 +683,9 @@ class SettingsWindow(tk.Toplevel):
             self.gui_need_reload = True
         else:
             self.gui_need_reload = False
-            
-        model_type_new = self.model_type_var.get()        
+        
+        # models
+        model_type_new = self.model_type_var.get()
         model_file_new = self.model_file_var.get()
         mjapi_url_new = self.mjapi_url_var.get()
         mjapi_user_new = self.mjapi_user_var.get()
@@ -649,22 +700,70 @@ class SettingsWindow(tk.Toplevel):
         ):
             self.model_updated = True
         
+        # auto play settings
+        autoplay_new = self.autoplay_var.get()
+        auto_random_moves_new = self.random_move_var.get()
+        auto_join_new = self.auto_join_var.get()
+        auto_join_level_new = self.auto_join_level_var.get()    # convert to index
+        auto_join_level_new = self.settings.lan().GAME_LEVELS.index(auto_join_level_new)
+        auto_join_mode_new = self.auto_join_mode_var.get()  # convert to string
+        auto_join_mode_new = self.settings.lan().GAME_MODES.index(auto_join_mode_new)
+        auto_join_mode_new = utils.GAME_MODES[auto_join_mode_new]
+        
+        
         # save settings        
         self.settings.auto_launch_browser = auto_launch_new
         self.settings.browser_width = width_new
         self.settings.browser_height = height_new
         self.settings.mitm_port = mitm_port_new
         self.settings.language = language_new
+        
         self.settings.model_type = model_type_new
         self.settings.model_file = model_file_new
         self.settings.mjapi_url = mjapi_url_new
         self.settings.mjapi_user = mjapi_user_new
         self.settings.mjapi_secret = mjapi_secret_new
+        
+        self.settings.enable_automation = autoplay_new
+        self.settings.auto_random_move = auto_random_moves_new
+        self.settings.auto_join_game = auto_join_new
+        self.settings.auto_join_level = auto_join_level_new
+        self.settings.auto_join_mode = auto_join_mode_new
+        
         self.settings.save_json()
         self.destroy()
 
     def _on_cancel(self):
         LOGGER.debug("Close settings window without saving")
+        self.destroy()
+
+class HelpWindow(tk.Toplevel):
+    """ dialog window for help information """
+    def __init__(self, parent:tk.Frame, st:Settings):
+        super().__init__(parent)
+        self.settings = st
+        self.title(st.lan().HELP)
+        parent_x = parent.winfo_x()
+        parent_y = parent.winfo_y()
+        self.geometry(f'+{parent_x+10}+{parent_y+10}')
+        self.geometry("600x500")  # Set the window size
+        self.resizable(False, False)
+
+        # Scrollable Text Widget for help info
+        self.textbox = ScrolledText(self, wrap=tk.WORD, font=font_normal(12), height=15)
+        self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        self.textbox.tag_configure("title", font=font.Font(family="Microsoft YaHei", size=20, weight="bold"))
+        firstline = st.lan().APP_TITLE + f" v{utils.VER_NUMBER}" + " " + st.lan().HELP + "\n"
+        self.textbox.insert(tk.END, firstline, "title")
+        self.textbox.insert(tk.END, st.lan().HELP_STR)
+        self.textbox.configure(state='disabled')  # Make the text read-only
+
+        # OK Button
+        self.ok_button = ttk.Button(self, text="OK", command=self._on_close)
+        self.ok_button.pack(pady=(10, 10),side=tk.BOTTOM)
+
+    def _on_close(self):
         self.destroy()
 
 

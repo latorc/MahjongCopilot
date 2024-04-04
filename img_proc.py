@@ -1,8 +1,10 @@
+""" image processing and visual analysis for Majsoul game screen"""
+from enum import Enum, auto
 from PIL import Image, ImageChops, ImageStat
 import utils
-from utils import TEMP_FOLDER, RES_FOLDER
+from utils import RES_FOLDER
 from browser import GameBrowser
-
+from log_helper import LOGGER
 def img_avg_diff(base_img:Image.Image, input_file:str, mask_img:Image.Image = None) -> float:
     """ Calculate the average difference between two images.
     given an optional mask file (black indicates ignored pixels).
@@ -48,6 +50,11 @@ def img_avg_diff(base_img:Image.Image, input_file:str, mask_img:Image.Image = No
     return avg_diff
 
 
+class ImgTemp(Enum):
+    """ game UI templates"""
+    main_menu = auto()
+    
+
 class GameVisual:
     """ image analysis for Majsoul game screen"""
     
@@ -55,22 +62,44 @@ class GameVisual:
         self.browser = browser
         if not browser:
             raise ValueError("Browser is None")
+        
+        self.loc_dict = {}
+        """ location dict {loc: (image, mask), ...}"""
+        self.load_imgs()
+        
+    def load_imgs(self) -> None:
+        """ load all images for analysis"""
+        files = [
+            (ImgTemp.main_menu, 'mainmenu.png', 'mainmenu_mask.png')
+        ]
+        for loc, img_file, mask_file in files:
+            img_file = utils.sub_file(RES_FOLDER, img_file)
+            mask_file = utils.sub_file(RES_FOLDER, mask_file)
+            img_mainmenu = Image.open(img_file).convert('RGB')
+            mask_mainmenu = Image.open(mask_file).convert('L')
+            self.loc_dict[loc] = (img_mainmenu, mask_mainmenu)
 
-        file_mainmenu = utils.sub_file(RES_FOLDER, 'mainmenu.png')
-        file_mask = utils.sub_file(RES_FOLDER, 'mainmenu_mask.png')
-        self.img_mainmenu = Image.open(file_mainmenu).convert('RGB')
-        self.img_mask = Image.open(file_mask).convert('L')
-        
-    
-    def test_mainmenu(self, thres:float=30) -> tuple[bool, float]:
-        """ test if the current screen is main menu
+
+    def comp_temp(self, tmp:ImgTemp, thres:float=30) -> tuple[bool, float]:
+        """ compare current screen to template
+        params:
+            tmp (Location): template to compare to
+            thres (float): threshold, lower than which is considered a match
         return:
-            bool: True if the screen is main menu
-            float: average difference between current screen and main menu"""
+            bool: True if the screen is loc
+            float: average difference between current screen and loc template"""
         img_file = self.browser.screen_shot()
-        diff = img_avg_diff(self.img_mainmenu, img_file, self.img_mask)
-        return diff < thres, diff
-        
+        if not img_file:
+            return False, -1
+        base_img, mask = self.loc_dict[tmp]
+        try:
+            diff = img_avg_diff(base_img, img_file, mask)
+            return diff < thres, diff
+        except Exception as e:
+            LOGGER.error("Error in testing location: %s", e, exc_info=True)
+            return False, -1
+
+
 
 if __name__ == "__main__":
     pass

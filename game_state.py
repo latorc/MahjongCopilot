@@ -73,6 +73,7 @@ class GameState:
         self.last_op_step:int = None
         
         #### Internal Status flags
+        self.is_bot_calculating:bool = False    # if bot is calculating reaction
         self.is_ms_syncing:bool = False         # if mjai_bot is running syncing from MS (after disconnection)
         self.is_round_started:bool = False
         """ if any new round has started (so game info is available)"""
@@ -119,11 +120,13 @@ class GameState:
         returns:
             dict: Mjai message in dict format (i.e. AI's reaction) if any. May be None.
         """
-        reaction = self._input_inner(liqi_msg) 
+        self.is_bot_calculating = True
+        reaction = self._input_inner(liqi_msg)
         if reaction is not None:
             # Update last_reaction (not none) and set it to pending
             self.last_reaction = reaction
             self.last_reaction_pending = True
+        self.is_bot_calculating = False
         return reaction
     
     def _input_inner(self, liqi_msg: dict) -> dict | None:        

@@ -107,15 +107,15 @@ class GameBrowser:
                     break
                 
                 try:
-                    action = self._action_queue.get(timeout=1)
+                    action = self._action_queue.get_nowait()
                     action()
-                except queue.Empty:                
+                except queue.Empty:
                     pass
                 except Exception as e:
                     LOGGER.error('Error processing action: %s', e, exc_info=True)
             
             # stop event is set: close browser
-            LOGGER.debug("Closing browser")            
+            LOGGER.debug("Closing browser")
             try:                
                 if self.page.is_closed() is False:
                     self.page.close()
@@ -148,7 +148,7 @@ class GameBrowser:
         else:
             return False
         
-    def is_page_loaded(self):
+    def is_page_normal(self):
         """ return True if page is loaded """
         if self.page:
             if self._page_title:
@@ -172,7 +172,7 @@ class GameBrowser:
         if blocking:
             finish_event.wait()
     
-    def mouse_click1(self, x:int, y:int, delay:float=80, blocking:bool=False):
+    def mouse_click(self, x:int, y:int, delay:float=80, blocking:bool=False):
         """ Queue action: mouse click at (x,y) on viewport
         if block, wait until action is done"""
         finish_event = threading.Event()
@@ -180,10 +180,17 @@ class GameBrowser:
         if blocking:
             finish_event.wait()
     
-    def mouse_move_click(self, x:int, y:int, random_move:bool=True, blocking:bool=False):
+    def mouse_move_click(self, x:int, y:int, random_moves:int=3, blocking:bool=False):
         """ Queue action: mouse click at (x,y) on viewport"""
         finish_event = threading.Event()
-        self._action_queue.put(lambda: self._action_mouse_move_click(x, y, random_move, finish_event))
+        self._action_queue.put(lambda: self._action_mouse_move_click(x, y, random_moves, finish_event))
+        if blocking:
+            finish_event.wait()
+            
+    def mouse_wheel(self, dx:float, dy:float, blocking:bool=False):
+        """ Queue action for mouse wheel"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_wheel(dx, dy, finish_event))
         if blocking:
             finish_event.wait()
         
@@ -228,6 +235,8 @@ class GameBrowser:
     
     def screen_shot(self) -> str:
         """ Take screenshot from browser page and return file name if success, or None if not"""
+        if not self.is_page_normal():
+            return None
         self._action_queue.put(self._action_screen_shot)
         file_name = utils.sub_file(TEMP_FOLDER,'screenshot.png')
         # delete file if exist
@@ -251,15 +260,14 @@ class GameBrowser:
         if self.page:
             self.page.mouse.click(x=x, y=y, delay=delay)
         finish_event.set()
-        
-        
     
         
-    def _action_mouse_move_click(self, px:int, py:int, random_move:bool, finish_event:threading.Event):
+    def _action_mouse_move_click(self, px:int, py:int, random_moves:int, finish_event:threading.Event):
         """ mouse click on page at (x,y)"""
         if self.page:
-            if random_move:     # add random times of random moves
-                for i in range(random.randint(1,6)):
+            if random_moves:     # add random times of random moves
+                random_moves = max(1, min(random_moves,10)) # limit range
+                for i in range(random.randint(1,random_moves)):
                     rx = int(px + random.uniform(-self.width/2, self.width/2))
                     rx = max(0, min(self.width, rx))
                     ry = int(py + random.uniform(-self.height/2, self.height/2))
@@ -269,16 +277,24 @@ class GameBrowser:
                     time.sleep(0.11)
             # LOGGER.debug(f"Clicking on page ({x},{y})")
             self.page.mouse.move(x=px, y=py, steps=random.randint(5,15))
-            time.sleep(0.15)
+            time.sleep(0.11)
             self.page.mouse.click(x=px, y=py, delay=random.randint(50,120))
             time.sleep(0.05)
             # move to a random position in center
             rx = int(random.uniform(0.2,0.8) * self.width)
             ry = int(random.uniform(0.3,0.8) * self.height)
-            self.page.mouse.move(x=rx, y=ry, steps=random.randint(5,15))   # move mouse to center
+            self.page.mouse.move(x=rx, y=ry, steps=random.randint(5,10))   # move mouse to center
         else:
             LOGGER.debug("No page, no click")
         finish_event.set()
+        
+    def _action_mouse_wheel(self, dx:float, dy:float, finish_event:threading.Event):
+        if not self.page:
+            LOGGER.debug("No page, no wheel")
+            return
+        self.page.mouse.wheel(dx, dy)
+        finish_event.set()
+        
     
     def _action_autohu(self):
         """ call autohu function in page"""

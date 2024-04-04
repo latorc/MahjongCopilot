@@ -122,16 +122,10 @@ class LocalMortalBot(Bot):
                 # get the subsequent dahai message,
                 # appeding it to the reach reaction msg as 'reach_dahai' key                
                                   
-                # make a clone of mjai_bot by feeding history msgs + reach msg
-                # then get the reach dahai msg.
-                # TODO better way? in rust code clone the bot?
-                LOGGER.debug("Create bot_reach for reach dahai reaction") 
-                new_engine = mjai.engine.get_engine(self.model_file)
-                mjai_bot_reach = MjaiBot(new_engine, self.seat)
-                for m in self.str_input_history:
-                    mjai_bot_reach.react(m)
+                # TODO make a clone of mjai_bot so reach can be tested to get dahai without affecting the game
+                
                 reach_msg = {'type': MJAI_TYPE.REACH, 'actor': self.seat}
-                reach_dahai_str = mjai_bot_reach.react(json.dumps(reach_msg))
+                reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
                 reach_dahai = json.loads(reach_dahai_str)
                 reaction_convert_meta(reach_dahai)                   
                 reaction['reach_dahai'] = reach_dahai

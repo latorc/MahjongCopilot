@@ -35,33 +35,38 @@ MAJSOUL_DOMAINS = [
     "mahjongsoul.com",  # Japan
     "yo-star.com"       # English
 ]
+
+
 class BotManager:
     """ Bot logic manager"""
     def __init__(self, setting:settings.Settings) -> None:
         self.settings = setting
         self.game_state:game_state.GameState = None
-        self.game_flow_id = None
+
         self.liqi_parser:liqi.LiqiProto = None
         self.mitm_port = self.settings.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
         self.automation = automation.Automation(self.browser, self.settings)
-        
         self.bot:mj_bot.Bot = None
-        
+
         self._thread:threading.Thread = None
         self._stop_event = threading.Event()
-        
-        self.bot_calculating = False    
+
+        self.lobby_flow_id:str = None               # websocket flow Id for lobby
+        self.game_flow_id = None                    # websocket flow that corresponds to the game/match
+
         self._overlay_botleft_text:str = None       # if new text is different, update overlay bot-left
         self._overlay_botleft_last_update:float = 0 # last update time
         self._overlay_reaction:dict = None          # update overlay guidance if new reaction is different
         self._overlay_guide_last_update:float = 0   # last update time
+        self._mouse_last_time:float = 0                 # for mouse icon animation
+        self._mouse_icon:str = ' 🖱️'
         
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
         self.game_exception:Exception = None   # game run time error (but does not break main thread)        
-        self.ui_state:UI_STATE = UI_STATE.NOT_RUNNING   # initially not running
+        
         
     def start(self):
         """ Start bot manager thread"""
@@ -148,15 +153,24 @@ class BotManager:
     def enable_automation(self):
         LOGGER.debug("Bot Manager enabling automation")
         self.settings.enable_automation = True
+        self.automation.check_what_to_do()
         # turn off retry check, so pending action will be done at retry
         
     def disable_automation(self):
         LOGGER.debug("Bot Manager disabling automation")
         self.settings.enable_automation = False
-        self.automation.stop_execution()
+        self.automation.on_automation_disable()
         
-    def is_automation_enabled(self):
-        return self.settings.enable_automation
+    def enable_autojoin(self):
+        LOGGER.debug("Enabling Auto Join")
+        self.settings.auto_join_game = True
+        
+    def disable_autojoin(self):
+        LOGGER.debug("Disabling Auto Join")
+        self.settings.auto_join_game = False
+        if self.automation.is_running_execution():
+            if self.automation._task.name == automation.AutomationTask.NEXT_GAME_TASK_NAME:
+                self.automation.stop_previous()
     
     def create_bot(self):
         """ create Bot object based on settings"""
@@ -170,7 +184,15 @@ class BotManager:
             self.game_exception = e
             
     def is_bot_created(self):
+        """ return true if self.bot is not None"""
         return self.bot is not None
+    
+    def is_bot_calculating(self):
+        """ return true if bot is calculating"""
+        if self.game_state and self.game_state.is_bot_calculating:
+            return True
+        else:
+            return False
     
     def _run(self):
         """ Keep running the main loop (blocking)"""
@@ -206,7 +228,7 @@ class BotManager:
                     LOGGER.error("Error processing msg: %s",e, exc_info=True)
                     self.game_exception = e
                 
-                self._things_to_do_every_loop()
+                self._every_loop_post_proc_msg()
 
             LOGGER.info("Shutting down browser")
             self.browser.stop()
@@ -224,7 +246,7 @@ class BotManager:
             self.main_thread_exception = e
             LOGGER.error("Bot Manager Thread Exception: %s", e, exc_info=True)
                 
-    def _things_to_do_every_loop(self):
+    def _every_loop_post_proc_msg(self):
         # things to do in every loop
         
         # check mitm
@@ -232,7 +254,7 @@ class BotManager:
             raise utils.MITMException("MITM server stopped")
         
         # check overlay
-        if self.browser and self.browser.is_page_loaded():
+        if self.browser and self.browser.is_page_normal():
             if self.settings.enable_overlay:
                 if self.browser.is_overlay_working() == False:
                     LOGGER.debug("Bot manager attempting turning on browser overlay")
@@ -245,16 +267,25 @@ class BotManager:
         
         self._retry_failed_automation() # retry failed automation
         # self._update_overlay_botleft() # update overlay bot-left
+        self.automation.check_what_to_do()
         
     def _process_msg(self, msg:mitm.WSMessage):
         """ process websocket message from mitm server"""
         
         if msg.type == mitm.WS_TYPE.START:
             LOGGER.debug("Websocket Flow started: %s", msg.flow_id)
+            
         elif msg.type == mitm.WS_TYPE.END:
             LOGGER.debug("Websocket Flow ended: %s", msg.flow_id)
             if msg.flow_id == self.game_flow_id:
+                LOGGER.info("Game flow ended. processing end game")
                 self._process_end_game()
+            if msg.flow_id == self.lobby_flow_id:
+                # lobby flow ended
+                LOGGER.info("Lobby flow ended.")
+                self.lobby_flow_id = None
+                self.automation.on_exit_lobby()
+                
         elif msg.type == mitm.WS_TYPE.MESSAGE:
             # process ws message
             try:
@@ -271,31 +302,46 @@ class BotManager:
             if liqi_method in METHODS_TO_IGNORE:
                 pass
             
-            elif liqi_method == liqi.LiqiMethod.authGame and liqi_type == liqi.MsgType.REQ:
+            elif (liqi_type, liqi_method) == (liqi.MsgType.RES, liqi.LiqiMethod.oauth2Login):
+                # lobby login msg
+                if self.lobby_flow_id is None:  # record first time in lobby
+                    LOGGER.info("Lobby oauth2Login msg: %s", liqimsg)
+                    LOGGER.info("Lobby login successful. flow ID = %s", msg.flow_id)
+                    self.lobby_flow_id = msg.flow_id
+                    self.automation.on_lobby_login(liqimsg)
+                else:
+                    LOGGER.warning("Lobby flow %s already started. ignoring new game flow %s", self.lobby_flow_id, msg.flow_id)
+            
+            elif (liqi_type, liqi_method) == (liqi.MsgType.REQ, liqi.LiqiMethod.authGame):
                 # Game Start request msg: found game flow, initialize game state
-                LOGGER.info("Game Started. Game Flow ID=%s", msg.flow_id)
-                self.game_flow_id = msg.flow_id
-                self.game_state = game_state.GameState(self.bot)    # create game state with bot
-                self.game_state.input(liqimsg)      # authGame -> mjai:start_game, no reaction
-                self.game_exception = None
+                if self.game_flow_id is None:
+                    LOGGER.info("authGame msg: %s", liqimsg)
+                    LOGGER.info("Game Started. Game Flow ID=%s", msg.flow_id)
+                    self.game_flow_id = msg.flow_id
+                    self.game_state = game_state.GameState(self.bot)    # create game state with bot
+                    self.game_state.input(liqimsg)      # authGame -> mjai:start_game, no reaction
+                    self.game_exception = None
+                    self.automation.on_enter_game()
+                else:
+                    LOGGER.warning("Game flow %s already started. ignoring new game flow %s", self.game_flow_id, msg.flow_id)
                 
             elif msg.flow_id == self.game_flow_id:
                 # Game Flow Message (in-Game message)
-                # Feed msg to game_state for processing with AI bot               
-                LOGGER.debug('Game msg: %s', liqimsg)
+                # Feed msg to game_state for processing with AI bot
+                LOGGER.debug('Game msg: %s', str(liqimsg))
                 # self._update_overlay_guide()
-                self.bot_calculating = True
                 reaction = self.game_state.input(liqimsg)
-                self.bot_calculating = False
                 # self._update_overlay_guide()
                 if reaction:
                     self._do_automation(reaction)
-                    self.game_exception = None
                 if self.game_state.is_game_ended:
                     self._process_end_game()
+            
+            elif msg.flow_id == self.lobby_flow_id:
+                LOGGER.debug('Lobby msg: %s', liqimsg)
 
             else:
-                LOGGER.debug('Other msg: %s', liqimsg)
+                LOGGER.debug('Other msg (ignored): %s', liqimsg)
     
     def _process_end_game(self):
         # End game processes
@@ -304,6 +350,9 @@ class BotManager:
         if self.browser:    # fix for corner case
             self.browser.overlay_clear_guidance()
         self.game_exception = None
+        self.automation.on_end_game()
+
+            
     
     def _update_overlay_conditions_met(self) -> bool:
         if not self.settings.enable_overlay:
@@ -345,10 +394,15 @@ class BotManager:
         text += '\n' + model_text
         
         # autoplay
-        if self.is_automation_enabled():
+        if self.settings.enable_automation:
             autoplay_text = '✅' + self.settings.lan().AUTOPLAY + ': ' + self.settings.lan().ON
         else:
             autoplay_text = '⬛' + self.settings.lan().AUTOPLAY + ': ' + self.settings.lan().OFF
+        if self.automation.is_running_execution():
+            if time.time()-self._mouse_last_time > 0.5:
+                self._mouse_last_time = time.time()
+                self._mouse_icon = self._mouse_icon[::-1]
+            autoplay_text += " " + self._mouse_icon
         text += '\n' + autoplay_text
         
         # line 4
@@ -358,12 +412,13 @@ class BotManager:
             line = '❌' + self.settings.lan().GAME_ERROR
         elif self.is_game_syncing():
             line = '⏳'+ self.settings.lan().SYNCING
-        elif self.bot_calculating:
+        elif self.is_bot_calculating():
             line = '⏳'+ self.settings.lan().CALCULATING
         elif self.is_in_game():
             line = '▶️' + self.settings.lan().GAME_RUNNING
         else:
             line = '🟢' + self.settings.lan().READY_FOR_GAME
+            
         text += '\n' + line
                     
         # update if there is a change or time elapsed
@@ -372,25 +427,10 @@ class BotManager:
             self._overlay_botleft_text = text
             self._overlay_botleft_last_update = time.time()
         
-    def _automation_conditions_met(self) -> bool:
-        # return True if automation conditions met
-        # False if:
-        # automation not enabled
-        # game state is None (not in game)
-        # browser is not running
-        if not self.settings.enable_automation:
-            return False
-        if self.game_state is None:
-            return False
-        if not self.browser.is_running():
-            return False
-        return True
+    
     
     def _do_automation(self, reaction:dict):
         # auto play given mjai reaction        
-        
-        if not self._automation_conditions_met():
-            return False
         if not reaction:    # no reaction given
             return False
         
@@ -401,9 +441,6 @@ class BotManager:
             
     def _retry_failed_automation(self):
         # retry pending reaction if enabled
-        if not self._automation_conditions_met():
-            return False
-            
         try:
             self.automation.retry_pending_reaction(self.game_state, self.settings.auto_retry_interval)
         except Exception as e:

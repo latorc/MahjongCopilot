@@ -147,6 +147,15 @@ MJAI_TILES_SORTED = [       # for sorting tiles, with aka doras
     "E",  "S",  "W",  "N",  "P",  "F",  "C",  "?"
 ]
 
+MJAI_TILES_19 = [
+    "1m", "9m", "1p", "9p", "1s", "9s",
+    "E", "S", "W", "N", "P", "F", "C"
+]
+
+MJAI_TILES_28 = [
+    "2m", "8m", "2p", "8p", "2s", "8s",
+]
+
 MJAI_WINDS = ['E', 'S', 'W', 'N']
 
 MJAI_TILE_2_UNICODE = {      # https://en.wikipedia.org/wiki/Mahjong_Tiles_(Unicode_block)

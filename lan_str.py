@@ -17,17 +17,16 @@ class LanStrings:
     EIXT_CONFIRM = "Are you sure you want to exit?"
     AI_OUTPUT = 'AI Guidance'
     GAME_INFO = 'Game Info'
-    HELP_STR = f"""
-    
-Mahjong Copilot v{VER_NUMBER}
+    HELP_STR = f"""Mahjong Copilot v{VER_NUMBER}
 
 A Mahjong AI assistant for Majsoul, based on Mortal Mahjong AI. Currently the model only supports 4-person Mahjong game. When you enter a game in Majsoul, AI will give you step-by-step guidance.
 
-- Start Web Client: Start the game in browser with AI assistant. This program uses built-in Chromium browser. First time entering Majsoul will take a while to download game assets.
-- Web Overlay: Show/Hide the AI Guidance overlayed on Web Page.
-- Autoplay: Enable/Disable Autoplay, which automatically operates on the browser to play according to AI guidance.
-- Settings: View and configure settings.
-- Open Log File: Open the log file with system default program.
+- 🔳Start Web Client: Start the game in browser with AI assistant. This program uses built-in Chromium browser. First time entering Majsoul will take a while to download game assets.
+- 🔘Web Overlay: Show/Hide the AI Guidance overlayed on Web Page.
+- 🔘Autoplay: Enable/Disable Autoplay. Autoplay clicks on the browser according to AI guidance.
+- 🔘Autojoin: Auto join next game given settings.
+- 🔳Settings: View and configure settings.
+- 🔳Open Log File: Open the log file with system default program.
     
 Github: https://github.com/latorc/MahjongCopilot
     
@@ -43,7 +42,7 @@ MJAI: https://mjai.app
     SAVE = "Save"
     CANCEL = "Cancel"
     SETTINGS_TIPS = "A restart is needed to apply some settings"
-    AUTO_LAUNCH_BROWSER = "Launch Browser on Start"
+    AUTO_LAUNCH_BROWSER = "Auto Launch Browser"
     MITM_PORT = "MITM Server Port"
     BROWSER_WIDTH = "Web Client Width"
     BROWSER_HEIGHT = "Web Client Height"
@@ -56,26 +55,32 @@ MJAI: https://mjai.app
     MJAPI_USER = "MJAPI User"
     MJAPI_SECRET = "MJAPI Secret"
     MITM_PORT_ERROR_PROMPT = "Invalid MITM Port (must between 1000~65535)"
+    AUTO_PLAY_SETTINGS = "Autoplay Settings"
+    AUTO_JOIN_GAME = "Auto Join"
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
     GAME_MODES = ["4-p East","4-p South","3-p East","3-p South"]
+    MOUSE_RANDOM_MOVES = "Random Moves"
     
     # Status
     MAIN_THREAD  = "Main Thread"
     MITM_SERVICE = "MITM Service"
     WEB_CLIENT = "Web Client"
-    GAME_RUNNING = "Game in Progress"
+    GAME_RUNNING = "Game Running"
     GAME_ERROR = "Game Error!"
     MODEL_FILE_ERROR = "Model File not Found!"
     MITM_SERVER_ERROR = "MITM Service Error!"
     MAIN_THREAD_ERROR = "Main Thread Error!"
     SYNCING = "Syncing..."
     CALCULATING = "Calculating..."
-    READY_FOR_GAME = "Ready for Game"
+    READY_FOR_GAME = "Ready"
     GAME_STARTING = "Game Starting"
     KYOKU = "Kyoku"
     HONBA = "Honba"
     MODEL = "Model"
     AWAIT_BOT = "Model not loaded"
+    MAIN_MENU = "Main Menu"
+    GAME_ENDING = "Game Ending"
+    GAME_NOT_RUNNING = "Game Not Launched"
     
     # Reaction/Actions
     PASS = "Skip"
@@ -131,16 +136,16 @@ class ZHS_Strings(LanStrings):
     EIXT_CONFIRM = "确定退出程序?"
     AI_OUTPUT = 'AI 提示'
     GAME_INFO = '游戏信息'
-    HELP_STR = f"""
-麻将 Copilot v{VER_NUMBER}
+    HELP_STR = f"""麻将 Copilot v{VER_NUMBER}
 
-一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。目前模型只支持四人麻将游戏。当你进入游戏后, AI会对每一步行动进行指导。
+一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。 目前模型只支持四人麻将游戏。 当你进入游戏后, AI会对每一步行动进行指导。
     
-- 启动网页客户端: 在浏览器中启动游戏和AI助手。本程序使用自带的 Chromium 浏览器。首次进入雀魂时, 会因为下载游戏资源而耗时较长。
-- 网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
-- 自动打牌: 打开/关闭自动打牌, 自动点击浏览器根据 AI 提示打牌。
-- 设置: 查看和修改设置选项。
-- 打开日志文件: 用系统默认程序打开日志文件。
+- 🔲启动网页客户端: 在浏览器中启动游戏和AI助手。 本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
+- 🔘网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
+- 🔘自动打牌: 打开/关闭自动打牌, 自动点击浏览器根据 AI 提示打牌。
+- 🔘自动加入: 根据设置的条件, 自动加入下一局游戏
+- 🔲设置: 查看和修改设置选项。
+- 🔲打开日志文件: 用系统默认程序打开日志文件。
     
 本项目 Github: https://github.com/latorc/MahjongCopilot
     
@@ -169,8 +174,11 @@ MJAI: https://mjai.app
     MJAPI_SECRET = "MJAPI 秘密 Secret"
     AUTO_LAUNCH_BROWSER = "自动启动浏览器"
     MITM_PORT_ERROR_PROMPT = "错误的 MITM 服务端口(必须是1000~65535)"
+    AUTO_PLAY_SETTINGS = "自动打牌设置"
+    AUTO_JOIN_GAME = "自动加入"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
+    MOUSE_RANDOM_MOVES = "鼠标移动随机化"
     
     # Status
     MAIN_THREAD  = "主程序"
@@ -189,6 +197,9 @@ MJAI: https://mjai.app
     HONBA = "本场"
     MODEL = "模型"
     AWAIT_BOT = "模型未加载"
+    MAIN_MENU = "游戏主菜单"
+    GAME_ENDING = "游戏结束"
+    GAME_NOT_RUNNING = "游戏未启动"
     
     # Reaction/Actions
     PASS = "跳过"
