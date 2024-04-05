@@ -7,13 +7,13 @@ import threading
 import json
 import libriichi
 import mjai.engine
-import mj_helper
-from mj_helper import MJAI_TYPE
-import utils
-from log_helper import LOGGER
-from settings import Settings
-import mjapi
-from utils import MODEL_FOLDER, BOT_TYPE
+import common.mj_helper as mj_helper
+from common.mj_helper import MJAI_TYPE
+import common.utils as utils
+from common.log_helper import LOGGER
+from common.settings import Settings
+from . import mjapi
+from common.utils import MODEL_FOLDER, BOT_TYPE
 
 # mjai Bot class from rust library
 # pylint: disable=no-member

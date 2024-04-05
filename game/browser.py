@@ -7,9 +7,9 @@ import random
 from pathlib import Path
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
-import utils
-from utils import BROWSER_DATA_FOLDER, TEMP_FOLDER
-from log_helper import LOGGER
+import common.utils as utils
+from common.utils import BROWSER_DATA_FOLDER, TEMP_FOLDER
+from common.log_helper import LOGGER
 
 class GameBrowser:
     """ Wrapper for Playwright browser controlling maj-soul operations"""  
@@ -511,51 +511,3 @@ class GameBrowser:
             LOGGER.debug("No page, no screenshot")
         
 
-if __name__ == '__main__':
-    # Test code for Browser
-    import log_helper
-    log_helper.config_logging('TestBrowser')
-    # Test for Browser
-    MS_URL = 'https://game.maj-soul.com/1/'
-    PROXY = None
-    # PROXY = "http://10.0.0.32:8002"
-    browser = GameBrowser(1280, 720)
-    browser.mouse_move_click(300, 300)
-    browser.start(MS_URL, PROXY)
-    browser.start(MS_URL, PROXY)
-
-    LOGGER.info("browser on: %s", browser.is_running())
-    
-    while True:
-        numbers_input = input("Enter x y :")
-        numbers = numbers_input.split()        
-        try:
-            x,y=0,0
-            x = int(numbers[0])
-            y = int(numbers[1])
-        except Exception as e:
-            pass
-        if x==0 and y==0:
-            break
-        if x==-1:
-            # a = browser.get_viewport_position()
-            # print("viewport: ", a)
-            browser.start_overlay()
-            options = [("立直", 0.95123), ("[发]", 0.03123123), ("[六万]", 0.01111)]
-            browser.overlay_update_guidance("立直,切[六万]","备选项:", options)
-            continue
-        if x == -2:
-            browser.stop_overlay()
-            continue
-        if x == -3:
-            sc = browser.screen_shot()
-            print(sc)
-            continue
-        browser.mouse_move_click(x, y)
-    browser.auto_hu()
-    time.sleep(1)
-    browser.stop()
-    browser.stop()
-    browser.mouse_move_click(300, 300)
-    time.sleep(1)
-    print(f"browser on:{browser.is_running()}")

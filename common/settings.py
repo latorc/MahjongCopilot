@@ -1,12 +1,13 @@
+""" Settings file and options """
+
 import json
-import pathlib
 from typing import Callable
-from log_helper import LOGGER
-from lan_str import LanStr, LAN_OPTIONS
-import utils
-from utils import GAME_MODES
+from .log_helper import LOGGER
+from .lan_str import LanStr, LAN_OPTIONS
+from . import utils
 
 DEFAULT_SETTING_FILE = 'settings.json'
+
 class Settings:
     """ Settings class to load and save settings to json file"""
     def __init__(self, json_file:str=DEFAULT_SETTING_FILE) -> None:
@@ -14,7 +15,7 @@ class Settings:
         self._settings_dict:dict = self.load_json()
         
         # read settings or set default values
-        # variable names must match keys in json, for saving later       
+        # variable names must match keys in json, for saving later
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
@@ -40,7 +41,7 @@ class Settings:
         self.auto_random_move:bool = self._get_value("auto_random_move", True, self.valid_bool)
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
         self.auto_join_level:int = self._get_value("auto_join_level", 1, self.valid_game_level)
-        self.auto_join_mode:int = self._get_value("auto_join_mode", GAME_MODES[0], self.valid_game_mode)
+        self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)
         
         self.save_json()
         
@@ -123,16 +124,7 @@ class Settings:
         
     def valid_game_mode(self, mode:str) -> bool:
         """ return true if game mode is valid"""
-        if mode in GAME_MODES:
+        if mode in utils.GAME_MODES:
             return True
         else:
             return False
-    
-    
-    
-        
-if __name__ == '__main__':
-    # Test code
-    settings = Settings('settings.json')
-    settings.mitm_port = 8999
-    settings.save_json()

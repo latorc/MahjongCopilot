@@ -6,9 +6,9 @@ from pathlib import Path
 from mitmproxy.http import HTTPFlow
 from mitmproxy import options
 from mitmproxy.tools.dump import DumpMaster
-import utils
-from utils import MITM_CONFDIR
-from log_helper import LOGGER
+import common.utils as utils
+from common.utils import MITM_CONFDIR
+from common.log_helper import LOGGER
 
 class WS_TYPE:
     START = 1

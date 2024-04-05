@@ -13,15 +13,15 @@ from tkinter import ttk, messagebox
 from tkinter.scrolledtext import ScrolledText
 
 from bot_manager import BotManager, mjai_reaction_2_guide
-import utils
-from utils import RES_FOLDER, UI_STATE
-import log_helper
-from log_helper import LOGGER
-from settings import Settings
-import mj_helper
-from lan_str import LAN_OPTIONS, LanStr
-from mj_bot import BOT_TYPE
-from updater import Updater, UpdateStatus    
+import common.utils as utils
+from common.utils import RES_FOLDER, UI_STATE
+import common.log_helper as log_helper
+from common.log_helper import LOGGER
+from common.settings import Settings
+import common.mj_helper as mj_helper
+from common.lan_str import LAN_OPTIONS
+from bot.mj_bot import BOT_TYPE
+from updater import Updater, UpdateStatus
 
 
 def set_style_normal(style:ttk.Style, font_size:int=12):
@@ -34,7 +34,7 @@ def set_style_normal(style:ttk.Style, font_size:int=12):
         relief="raised",
         borderwidth=2
         )
-    
+
 def font_normal(size:int=12):
     """ return normal font size"""
     return font.Font(family="Microsoft YaHei", size=size)
@@ -49,14 +49,14 @@ class MainGUI(tk.Tk):
         icon = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
-        
+
         # icon resources:
         self.icon_green = utils.sub_file(RES_FOLDER,'green.png')
         self.icon_red = utils.sub_file(RES_FOLDER,'red.png')
         self.icon_yellow = utils.sub_file(RES_FOLDER,'yellow.png')
         self.icon_gray =utils.sub_file(RES_FOLDER,'gray.png')
         self.icon_ready = utils.sub_file(RES_FOLDER,'ready.png')
-        
+
         # create window widgets
         self._create_widgets()
 
@@ -170,7 +170,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_log_clicked(self):
         # LOGGER.debug('Open log')
-        os.startfile(log_helper.log_file_name)
+        os.startfile(log_helper.LOG_FILE_NAME)
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
@@ -353,35 +353,38 @@ class ToggleSwitch(tk.Frame):
             self.img_label.bind("<Button-1>", self._on_click)
         else:
             self.command = None
-        
+
         # Bind enter and leave events for highlighting
         self.default_background = self.img_label.cget("background")
         self.img_label.bind("<Enter>", self._on_enter)
         self.img_label.bind("<Leave>", self._on_leave)
 
     def switch_on(self):
+        """ switch on the button"""
         if not self.is_on:
             # LOGGER.debug("Turning on switch %s",self.text_label.cget("text"))
             self.is_on = True
             self.img_label.config(image=self.img_on)
-        
+
     def switch_off(self):
+        """ Switch off the button"""
         if self.is_on:
             # LOGGER.debug("Turning off switch %s",self.text_label.cget("text"))
             self.is_on = False
             self.img_label.config(image=self.img_off)
-            
+
     def switch_mid(self):
+        """ Switch to middle state"""
         self.img_label.config(image=self.img_mid)
         
-    def _on_click(self, event=None):
-        self.command()        
+    def _on_click(self, _event=None):
+        self.command()
         
-    def _on_enter(self, event=None):
+    def _on_enter(self, _event=None):
         """Highlight the label when mouse enters."""
         self.img_label.config(background="light blue")
 
-    def _on_leave(self, event=None):
+    def _on_leave(self, _event=None):
         """Remove highlight from the label when mouse leaves."""
         self.img_label.config(background=self.default_background)  # Revert to original style
 
@@ -419,7 +422,7 @@ class ToolBar(tk.Frame):
 
     def _on_button_hover(self, btn:tk.Button):
         # change bg color; display a hover text label
-        self.original_bg = btn.cget("background")
+        btn.original_bg = btn.cget("background")
         btn.configure(background="light blue")
         self._hover_text = tk.Label(self, text=btn.cget("text"),
             bg="lightyellow",highlightbackground="black", highlightthickness=1)
@@ -432,7 +435,7 @@ class ToolBar(tk.Frame):
         )
 
     def _on_button_leave(self, btn:tk.Button):
-        btn.configure(background=self.original_bg)
+        btn.configure(background=btn.original_bg)
         self._hover_text.destroy()
     
 
@@ -843,7 +846,7 @@ class HelpWindow(tk.Toplevel):
                     )
                 self.update_cmd = self.updater.prepare_update
             case UpdateStatus.DOWNLOADING:
-                self.update_str_var.set(lan.DOWNLOADING + f"  {self.updater.dl_perc:.1f}%")
+                self.update_str_var.set(lan.DOWNLOADING + f"  {self.updater.dl_progress}")
             case UpdateStatus.UNZIPPING:
                 self.update_str_var.set(lan.UNZIPPING)
             case UpdateStatus.OK:

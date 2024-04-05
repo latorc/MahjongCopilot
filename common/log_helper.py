@@ -1,14 +1,13 @@
-# Logging helper functions
+""" Logging helper functions """
 import datetime
 import logging
-import pathlib
-import utils
-from utils import LOG_DIR
 import queue
+
+from .utils import LOG_DIR, sub_file
 
 DEFAULT_LOGGER_NAME = 'majsoul_copilot'
 LOGGER = logging.getLogger(DEFAULT_LOGGER_NAME)
-log_file_name:str = None
+LOG_FILE_NAME:str = None
 
 def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True):
     """ Initialize logging format/output. Run once.
@@ -17,8 +16,8 @@ def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True)
         console (bool): if output to console
         file (bool): if output to file
     """
-    global log_file_name
-        
+    global LOG_FILE_NAME
+
     logger = LOGGER
     logger.setLevel(logging.DEBUG)
     formatter = log_formatter()
@@ -31,8 +30,8 @@ def config_logging(file_prefix:str=DEFAULT_LOGGER_NAME, console=True, file=True)
     
     if file:
         file_name = file_prefix + '_' + dt_string() + '.log'
-        log_file_name = utils.sub_file(LOG_DIR, file_name)
-        file_handler = logging.FileHandler(log_file_name, encoding='utf-8')
+        LOG_FILE_NAME = sub_file(LOG_DIR, file_name)
+        file_handler = logging.FileHandler(LOG_FILE_NAME, encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
@@ -56,9 +55,3 @@ class QueueHandler(logging.Handler):
         
     def emit(self, record):
         self.log_queue.put(record)
-        
-if __name__ == "__main__":
-    # Test Code
-    config_logging("Test_log_helper")
-    LOGGER.info("Info log msg")
-    LOGGER.info("Log file name is: %s", log_file_name())

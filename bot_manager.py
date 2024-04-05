@@ -6,21 +6,21 @@ The BotManager class is run in a separate thread, and provide interface methods 
 import time
 import queue
 import threading
-from browser import GameBrowser
+from game.browser import GameBrowser
+from game.game_state import GameState
+from game.automation import Automation, AutomationTask
 import mitm
 import liqi
-import game_state
-import mj_helper
-from mj_helper import MJAI_TYPE, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
+from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
 
-import log_helper
-from log_helper import LOGGER
-import settings
-import automation
-import mj_bot
-from lan_str import LanStr
-import utils
-from utils import UI_STATE
+import common.log_helper as log_helper
+from common.log_helper import LOGGER
+from common.settings import Settings
+from common.mj_helper import GameInfo
+from bot import mj_bot
+from common.lan_str import LanStr
+import common.utils as utils
+from common.utils import UI_STATE
 
 METHODS_TO_IGNORE = [
     liqi.LiqiMethod.checkNetworkDelay,
@@ -39,15 +39,15 @@ MAJSOUL_DOMAINS = [
 
 class BotManager:
     """ Bot logic manager"""
-    def __init__(self, setting:settings.Settings) -> None:
+    def __init__(self, setting:Settings) -> None:
         self.settings = setting
-        self.game_state:game_state.GameState = None
+        self.game_state:GameState = None
 
         self.liqi_parser:liqi.LiqiProto = None
         self.mitm_port = self.settings.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
-        self.automation = automation.Automation(self.browser, self.settings)
+        self.automation = Automation(self.browser, self.settings)
         self.bot:mj_bot.Bot = None
 
         self._thread:threading.Thread = None
@@ -95,7 +95,7 @@ class BotManager:
         else:
             return False
         
-    def get_game_info(self) -> mj_helper.GameInfo:
+    def get_game_info(self) -> GameInfo:
         """ Get gameinfo derived from game_state. can be None"""
         if self.game_state is None:
             return None
@@ -167,7 +167,7 @@ class BotManager:
         LOGGER.debug("Disabling Auto Join")
         self.settings.auto_join_game = False
         if self.automation.is_running_execution():
-            if self.automation._task.name == automation.AutomationTask.NEXT_GAME_TASK_NAME:
+            if self.automation._task.name == AutomationTask.NEXT_GAME_TASK_NAME:
                 self.automation.stop_previous()
     
     def create_bot(self):
@@ -316,7 +316,7 @@ class BotManager:
                     LOGGER.info("authGame msg: %s", liqimsg)
                     LOGGER.info("Game Started. Game Flow ID=%s", msg.flow_id)
                     self.game_flow_id = msg.flow_id
-                    self.game_state = game_state.GameState(self.bot)    # create game state with bot
+                    self.game_state = GameState(self.bot)    # create game state with bot
                     self.game_state.input(liqimsg)      # authGame -> mjai:start_game, no reaction
                     self.game_exception = None
                     self.automation.on_enter_game()
@@ -521,7 +521,7 @@ def mjai_reaction_2_guide(
 if __name__ == "__main__":
     # Test code: a simple CLI to run BotManager
     log_helper.config_logging('TestBotManager')
-    manager = BotManager(settings.Settings())
+    manager = BotManager(Settings())
     manager.start() 
 
     commands = {

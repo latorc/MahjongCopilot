@@ -5,10 +5,10 @@ and interfaces with AI bot to generate reactions.
 from liqi import MsgType
 from liqi import LiqiProto, LiqiMethod, LiqiAction
 
-import mj_helper
-from mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
-from log_helper import LOGGER
-import mj_bot
+import common.mj_helper as mj_helper
+from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
+from common.log_helper import LOGGER
+from bot import mj_bot
 
 NO_EFFECT_METHODS = [
     '.lq.NotifyPlayerLoadGameReady',        # Notify: the game starts
@@ -23,13 +23,14 @@ NO_EFFECT_METHODS = [
     '.lq.NotifyActivityReward',             #
     '.lq.NotifyLeaderboardPoint',           #
     '.lq.FastTest.broadcastInGame',         # emoji?
-    '.lq.NotifyGameBroadcast',              # Notify: emoji? {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast', 'data': {'seat': 2, 'content': '{"emo":7}'}}
+    '.lq.NotifyGameBroadcast',              # Notify: emoji? 
+    # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast', 'data': {'seat': 2, 'content': '{"emo":7}'}}
     '.lq.NotifyPlayerConnectionState',      # 
 ]
 
-class KyokuState:    
+class KyokuState:
+    """ data class for kyoku info, will be reset every newround"""
     def __init__(self) -> None:
-        ### kyuku info - cleared at new round        
         self.bakaze:str = None              # Bakaze (場風)
         self.jikaze :str = None             # jikaze jifu (自风)
         self.kyoku:int = None               # Kyoku (局)
@@ -37,20 +38,20 @@ class KyokuState:
         self.my_tehai:list = None           # list of tehai in mjai format
         self.my_tsumohai:str = None         # tsumohai in mjai format, or None
         self.doras_ms:list[str] = []        # list of doras in ms tile format
-        
+
         ### flags
         self.pending_reach_acc:dict = None  # Pending MJAI reach accepted message
         self.first_round:bool = False       # flag marking if it is the first move in new round
-        self.self_in_reach:bool = False     # if self is in reach state    
-    
+        self.self_in_reach:bool = False     # if self is in reach state
+
 class GameState:
     """ Stores Majsoul game state and processes inputs outputs to/from Bot"""
-    
+
     def __init__(self, bot:mj_bot.Bot) -> None:
         """ 
         params:
             bot (mj_bot.Bot): Bot implemetation"""
-        
+
         self.mjai_bot:mj_bot.Bot = bot         # mjai bot for generating reactions
         if self.mjai_bot is None:
             raise ValueError("Bot is None")

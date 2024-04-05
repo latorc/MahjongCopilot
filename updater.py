@@ -8,8 +8,8 @@ import shutil
 import zipfile
 from enum import Enum,auto
 import requests
-from utils import VER_NUMBER, TEMP_FOLDER
-import utils
+from common.utils import VER_NUMBER, TEMP_FOLDER
+import common.utils as utils
 
 URL_BASE = "https://mjcopilot.com/update/"
 VERSION_FILE = "version"
@@ -37,7 +37,7 @@ class Updater:
     def __init__(self):
         self.timeout_dl:int = 15
         self.web_version:str = '0'
-        self.dl_perc:float = 0               # downloaded percentage
+        self.dl_progress:str = ""               # downloaded percentage
         self.update_status:UpdateStatus = UpdateStatus.NONE
         self.update_exception:Exception = None
 
@@ -85,7 +85,8 @@ class Updater:
                     file.write(chunk)
                     # update progress
                     downloaded += len(chunk)
-                    self.dl_perc = (downloaded / total_length) * 100
+                    pct = downloaded/total_length*100 if total_length > 0 else 0
+                    self.dl_progress = f"{downloaded/1000/1000:.1f}/{total_length/1000/1000:.1f} MB ({pct:.1f}%)"
         return save_file
                     
     def unzip_file(self, fname:str) -> str:
@@ -178,7 +179,7 @@ class Updater:
             """
             # Save it to a shell script
             script_file = utils.sub_file(TEMP_FOLDER, "update.sh")
-            with open(script_file, "w") as f:
+            with open(script_file, "w", encoding='utf-8') as f:
                 f.write(cmd)
             os.chmod(script_file, 0o755)  # Make the script executable
             
@@ -188,34 +189,3 @@ class Updater:
         else:
             # not supported
             pass
-
-
-def test_update():
-    ud = Updater()
-    ud.check_update()
-    for _ in range(10):
-        if ud.web_version:
-            break
-        time.sleep(1)
-    if ud.is_webversion_newer():
-        print(f"New version {ud.web_version} (Local version {VER_NUMBER})")
-    else:
-        print(f"No new version {ud.web_version} (Local version {VER_NUMBER})")
-            
-    ud.prepare_update()
-    while ud.update_status != UpdateStatus.OK:
-        if ud.update_status == UpdateStatus.ERROR:
-            print("ERROR: ", ud.update_exception)
-            break
-        elif ud.update_status == UpdateStatus.DOWNLOADING:
-            print(f"download progress: {ud.dl_perc:.1f}%")
-        elif ud.update_status == UpdateStatus.UNZIPPING:
-            print("unzipping")
-        time.sleep(0.5)
-        
-    print("prepared")
-    ud.start_update()
-    
-    
-if __name__ == "__main__":
-    test_update()

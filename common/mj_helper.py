@@ -254,8 +254,6 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
         tile_list += ["?"]*(13-len_tile_list)
 
     return (tile_list, tsumohai)
- 
-
 
 
 @dataclass
