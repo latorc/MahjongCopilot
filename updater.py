@@ -139,17 +139,16 @@ class Updater:
             update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
             cmd = f"""
             @echo off
-            echo "Updating {exec_name} in 5 seconds..."
+            echo Updating {exec_name} in 5 seconds...
             timeout /t 5
-            echo "killing program {exec_name}..."
+            echo Killing program {exec_name}...
             taskkill /IM {exec_name} /F
             timeout /t 3
-            echo "copying..."
+            echo copying new file...
             set "sourceDir={update_folder}\*"
             set "destDir={root_folder}"
             xcopy %sourceDir% %destDir% /s /e /y
-            echo "Update completed. Restarting {exec_name}..."
-            cd ..
+            echo Update completed. Restarting {exec_name} in 3...
             start {exec_name}
             """
             # save it to a batchfile

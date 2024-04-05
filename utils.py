@@ -8,7 +8,7 @@ import sys
 import time
 import subprocess
 
-VER_NUMBER = "0.3.5"
+VER_NUMBER = "0.4.0"
 MODEL_FOLDER = "models"
 BROWSER_DATA_FOLDER = "browser_data"
 RES_FOLDER = 'resources'
