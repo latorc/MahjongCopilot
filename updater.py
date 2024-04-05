@@ -1,44 +1,56 @@
 """ Updater class"""
 import threading
+import subprocess
 import time
 import sys
 import os
 import shutil
-from enum import Enum
-import requests
 import zipfile
+from enum import Enum,auto
+import requests
 from utils import VER_NUMBER, TEMP_FOLDER
 import utils
-from log_helper import LOGGER
 
 URL_BASE = "https://maco.clandoom.com/build_output/"
 VERSION_FILE = "version"
 UPDATE_FILE = "MahjongCopilot.zip"
 UPDATE_FOLDER = "update"
 
+""" how to release update:
+- Use Pyinstaller to pack to executables.
+- select main executable and files needed (like resources folder), zip into archive
+- Upload to build_output folder
+- Modify version file to reflect new version number"""
 
 class UpdateStatus(Enum):
     NONE = 0
-    DOWNLOADING = 1
-    UNZIPPING = 2
-    OK = 3
-    ERROR = -1
+    CHECKING = auto()
+    NO_UPDATE = auto()
+    NEW_VERSION = auto()
+    DOWNLOADING = auto()
+    UNZIPPING = auto()
+    OK = auto()
+    ERROR = auto()
     
 class Updater:
     """ handles version check and update"""
     def __init__(self):
         self.timeout_dl:int = 15
-        self.web_version:str = None
+        self.web_version:str = '0'
         self.dl_perc:float = 0               # downloaded percentage
         self.update_status:UpdateStatus = UpdateStatus.NONE
         self.update_exception:Exception = None
-        self.check_update()
 
     def check_update(self):
         """ check for update in thread. update web version number"""
         def check_ver():
+            self.update_status = UpdateStatus.CHECKING
             res = requests.get(URL_BASE + VERSION_FILE, timeout=5)
             self.web_version = res.text
+            if self.is_webversion_newer():
+                self.update_status = UpdateStatus.NEW_VERSION
+            else:
+                self.update_status = UpdateStatus.NO_UPDATE
         
         t = threading.Thread(
             target=check_ver,
@@ -88,41 +100,15 @@ class Updater:
         with zipfile.ZipFile(fname, 'r') as zip_ref:
             zip_ref.extractall(extract_path)
         return str(extract_path)
-            
-    def start_update(self):
-        """ generate update script"""
-        
-        if sys.platform == "win32":
-            exec_path = sys.executable
-            exec_name = os.path.basename(exec_path)
-            cmd = f"""
-@echo off
-echo "Updating {exec_name} in 5 seconds..."
-timeout /t 5
-echo "killing program {exec_name}..."
-taskkill /IM {exec_name} /F
-timeout /t 3
-set "sourceDir=.\{UPDATE_FOLDER}\*"
-set "destDir=.."
-xcopy %sourceDir% %destDir% /s /e /y
-
-copy /Y MahjongCopilot.exe ..\
-echo "Update completed. Restarting MahjongCopilot..."
-cd ..
-MahjongCopilot.exe
-pause
-"""
-        elif sys.platform == "darwin":
-            pass
-            
-        else:
-            # not supported
-            pass
-        
-        
                         
     def prepare_update(self):
-        """ Prepare update in thread"""
+        """ Prepare update in thread: download and unzip file"""
+        if sys.platform == "win32":     # check system support
+            pass
+        else:
+            self.update_status = UpdateStatus.ERROR
+            self.update_exception = RuntimeError("Update only supports Windows for now.")
+            return
         
         def update_task():
             try:
@@ -143,6 +129,66 @@ pause
         )
         t.start()
         
+    def start_update(self):
+        """ start update"""
+        
+        if sys.platform == "win32":
+            exec_path = sys.executable
+            exec_name = os.path.basename(exec_path)
+            root_folder = str(utils.sub_folder("."))
+            update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
+            cmd = f"""
+            @echo off
+            echo "Updating {exec_name} in 5 seconds..."
+            timeout /t 5
+            echo "killing program {exec_name}..."
+            taskkill /IM {exec_name} /F
+            timeout /t 3
+            echo "copying..."
+            set "sourceDir={update_folder}\*"
+            set "destDir={root_folder}"
+            xcopy %sourceDir% %destDir% /s /e /y
+            echo "Update completed. Restarting {exec_name}..."
+            cd ..
+            start {exec_name}
+            """
+            # save it to a batchfile
+            batch_file = utils.sub_file(TEMP_FOLDER, "update.bat")
+            with open(batch_file, "w", encoding="utf-8") as f:
+                f.write(cmd)
+            subprocess.Popen(
+                ['cmd.exe', '/c', batch_file],
+                creationflags=subprocess.CREATE_NEW_CONSOLE)
+            sys.exit(0)
+
+        elif sys.platform == "darwin":
+            exec_name = os.path.basename(sys.executable)
+            root_folder = str(utils.sub_folder("."))
+            update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
+            cmd = f"""
+            #!/bin/bash
+            echo "Updating {exec_name} in 5 seconds..."
+            sleep 5
+            echo "Killing program {exec_name}..."
+            pkill -f {exec_name}
+            sleep 3
+            echo "Copying..."
+            cp -R "{update_folder}/"* "{root_folder}/"
+            echo "Update completed. Restarting {exec_name}..."
+            open "{root_folder}/{exec_name}"
+            """
+            # Save it to a shell script
+            script_file = utils.sub_file(TEMP_FOLDER, "update.sh")
+            with open(script_file, "w") as f:
+                f.write(cmd)
+            os.chmod(script_file, 0o755)  # Make the script executable
+            
+            # Execute the script in a new Terminal window
+            subprocess.Popen(["open", "-a", "Terminal.app", script_file])
+            
+        else:
+            # not supported
+            pass
 
 
 def test_update():
@@ -169,6 +215,7 @@ def test_update():
         time.sleep(0.5)
         
     print("prepared")
+    ud.start_update()
     
     
 if __name__ == "__main__":
