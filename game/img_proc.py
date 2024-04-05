@@ -1,10 +1,10 @@
 """ image processing and visual analysis for Majsoul game screen"""
 from enum import Enum, auto
 from PIL import Image, ImageChops, ImageStat
-import utils
-from utils import RES_FOLDER
-from browser import GameBrowser
-from log_helper import LOGGER
+import common.utils as utils
+from common.utils import RES_FOLDER
+from .browser import GameBrowser
+from common.log_helper import LOGGER
 def img_avg_diff(base_img:Image.Image, input_file:str, mask_img:Image.Image = None) -> float:
     """ Calculate the average difference between two images.
     given an optional mask file (black indicates ignored pixels).
@@ -65,9 +65,9 @@ class GameVisual:
         
         self.loc_dict = {}
         """ location dict {loc: (image, mask), ...}"""
-        self.load_imgs()
+        self._load_imgs()
         
-    def load_imgs(self) -> None:
+    def _load_imgs(self) -> None:
         """ load all images for analysis"""
         files = [
             (ImgTemp.main_menu, 'mainmenu.png', 'mainmenu_mask.png')
@@ -98,8 +98,3 @@ class GameVisual:
         except Exception as e:
             LOGGER.error("Error in testing location: %s", e, exc_info=True)
             return False, -1
-
-
-
-if __name__ == "__main__":
-    pass

@@ -10,9 +10,9 @@ from typing import List, Dict
 from pathlib import Path
 
 from google.protobuf.json_format import MessageToDict, ParseDict
-import utils
+import common.utils as utils
 from liqi_proto import liqi_pb2 as pb
-from log_helper import LOGGER
+from common.log_helper import LOGGER
 
 
 class MsgType(Enum):

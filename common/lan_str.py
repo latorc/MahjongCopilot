@@ -1,5 +1,5 @@
 # Language string constants
-from utils import VER_NUMBER
+from .utils import VER_NUMBER
 
 class LanStr:
     """ String constants for default language (English) """
@@ -263,20 +263,3 @@ LAN_OPTIONS:dict[str, LanStr] = {
     'ZHS': LanStrZHS(), 
 }
 """ dict of {language code: LanString instance}"""
-
-
-def check_keys(lan_string_class):
-    # check for each attribute in LanStrings, ZHS_String has override its implementation
-    # list of all variable attributes from class LanStrings
-    variable_attributes = [attr for attr in dir(lan_string_class) if not callable(getattr(lan_string_class, attr)) and not attr.startswith("__")]
-    for key in variable_attributes:
-        if key not in lan_string_class.__dict__ and key in variable_attributes:
-            print(f" {key}")
-            
-if __name__ == "__main__":
-    # Check if any keys are missing in languages (not translated from English)
-    for k,v in LAN_OPTIONS.items():
-        if v.__class__==LanStr:
-            continue
-        print(f"Checking un-translated keys in code={k} (class={v.__class__.__name__}):")
-        check_keys(v.__class__)

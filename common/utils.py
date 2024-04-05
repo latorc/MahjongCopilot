@@ -2,7 +2,6 @@
 # no logging in this file
 
 from enum import Enum
-import __main__
 import pathlib
 import sys
 import time
@@ -34,17 +33,15 @@ class UI_STATE(Enum):
     
 class ModelFileException(Exception):
     """ Exception for model file error"""
-    pass
 
 class MITMException(Exception):
     """ Exception for MITM error"""
-    pass
 
 def sub_folder(folder_name:str) -> pathlib.Path:
     """ return the subfolder Path, create it if not exists"""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = pathlib.Path(sys._MEIPASS).parent
+        base_path = pathlib.Path(sys._MEIPASS).parent   # pylint: disable=W0212,E1101
     except Exception as e:
         base_path = pathlib.Path('.')
         
@@ -82,7 +79,7 @@ def install_root_cert(cert_file:str) -> tuple[bool, str]:
     # Install cert. If the cert exists, system will skip installation
     if sys.platform == "win32":
         result = subprocess.run(['certutil', '-addstore', 'Root', cert_file],
-            capture_output=True, text=True)
+            capture_output=True, text=True, check=False)
 
     elif sys.platform == "darwin":
         # TODO Test on MAC system
@@ -116,23 +113,4 @@ def random_str(length:int) -> str:
     """ Generate random string with specified length"""
     import random
     import string
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))        
-
-if __name__=='__main__':
-    # Test code
-    folder = sub_folder('log')
-    print('subfolder: ',folder)
-    print('sub file: ', sub_file(LOG_DIR,'loglog123.log'))
-    
-    wait_res = wait_for_file("utils.py")
-    print("wait file results:", wait_res)    
-    
-    res, text = install_root_cert("non_exist.cert")
-    print("install cert result:", res)
-    
-    files = list_files('resources',False)
-    print(files)
-    files = list_files('resources',True)
-    for f in files:
-        print(f)
-    
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))

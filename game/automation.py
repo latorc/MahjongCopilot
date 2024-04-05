@@ -1,17 +1,20 @@
 from collections import namedtuple
+from dataclasses import dataclass
 import time
 import random
 import threading
+from abc import ABC
 from typing import Iterator
-from browser import GameBrowser
-from game_state import GameInfo, GameState
-import mj_helper
-from mj_helper import MJAI_TYPE, MSType
-from log_helper import LOGGER
-import img_proc
-from img_proc import ImgTemp
-import settings
-from utils import UI_STATE, GAME_MODES
+from .browser import GameBrowser
+from .game_state import GameInfo, GameState
+from common.mj_helper import MJAI_TYPE, MSType, MJAI_TILES_19, MJAI_TILES_28
+from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
+from common.log_helper import LOGGER
+from common.settings import Settings
+
+from common.utils import UI_STATE, GAME_MODES
+from .img_proc import ImgTemp, GameVisual
+
 
 
 class Positions:
@@ -131,8 +134,120 @@ def cvt_type_mjai_2_ms(mjai_type:str, gi:GameInfo) -> MSType:
         return MSType.zimo
     else:
         return MJAI_2_MS_TYPE[mjai_type]
+    
 
-ActionStep = namedtuple('ActionStep', ['action', 'text'])
+ActionStepTuple = namedtuple('ActionStepTuple', ['action', 'text'])
+
+
+@dataclass
+class ActionStep:
+    """ representing an action step like single click/move/wheel/etc."""
+    text:str
+    """ text description of the action"""
+    
+@dataclass
+class ActionStepMove(ActionStep):
+    """ Move mouse to x,y"""
+    x:float
+    y:float
+    steps:int = 5
+    
+@dataclass
+class ActionStepClick(ActionStep):
+    """ Click mouse at x,y"""
+    x:float
+    y:float
+    delay:float = 80
+    
+@dataclass
+class ActionStepWheel(ActionStep):
+    """ Mouse wheel action"""
+    dx:float
+    dy:float
+
+@dataclass
+class ActionStepDelay(ActionStep):
+    """ Delay action"""
+    delay:float
+
+    
+
+class ActionExecutor(ABC):    
+    def run_step(self, step:ActionStep):
+        """ execute a single step"""
+class ActionExecutorBrowser(ActionExecutor):
+    """ Execute action steps on client"""
+    def __init__(self, browser:GameBrowser):
+        self.browser = browser
+
+    def run_step(self, step:ActionStep):
+        """ run the action step"""
+        if step.text:
+            LOGGER.debug("Executing step: %s", step.text)
+
+        if isinstance(step, ActionStepMove):
+            self.browser.mouse_move(step.x, step.y, step.steps, True)
+        elif isinstance(step, ActionStepClick):
+            self.browser.mouse_click(step.x, step.y, step.delay, True)
+        elif isinstance(step, ActionStepWheel):
+            self.browser.mouse_wheel(step.dx, step.dy, True)
+        elif isinstance(step, ActionStepDelay):
+            time.sleep(step.delay)
+        else:
+            raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
+
+
+class AutomationTaskNew(threading.Thread):
+    def __init__(self, executor:ActionExecutor, name:str):
+        super().__init__(name=name)
+        self.executor = executor
+        
+        self._stop_event = threading.Event()        # set event to stop running
+        self.last_exe_time:float = -1
+        
+    def stop(self, jointhread:bool=False):
+        """ stop the thread"""
+        self._stop_event.set()
+        if jointhread:
+            self.join()
+    
+    def is_running(self):
+        """ return true if thread is running"""
+        if self.is_alive():
+            return True
+        else:
+            return False
+        
+    def start_action_list(self, action_list:list[ActionStep], game_state:GameState = None):
+        """ start running action list in a thread"""
+        if self.is_running():
+            return
+               
+        if game_state:
+            op_step = game_state.last_op_step
+        else:
+            op_step = None
+            
+        def task():
+            for step in action_list:
+                # verify if op_step changed, which indicates there is new liqi action, and old action has expired
+                # for example, when executing Chi, there might be another player Pon before Chi is finished
+                # upon which any action steps related to Chi should be canceled
+                if self._stop_event.is_set():
+                    LOGGER.debug("Cancel execution. Stop event set")
+                    return
+                
+                if game_state:
+                    if op_step != game_state.last_op_step:
+                        LOGGER.debug("Cancel execution. origin step = %d, current step = %d", op_step, game_state.last_op_step)
+                        return
+                                
+                LOGGER.debug("Executing step: %s", step.text)
+                step.action()
+                # record execution info for possible retry
+                self.last_exe_time = time.time()
+            LOGGER.debug("Finished executing task: %s", self.name)
+        
 
 class AutomationTask():
     NEXT_GAME_TASK_NAME = "Join next game"
@@ -163,7 +278,7 @@ class AutomationTask():
         else:
             return False
         
-    def start_action_list(self, action_list:list[ActionStep], game_state:GameState = None):
+    def start_action_list(self, action_list:list[ActionStepTuple], game_state:GameState = None):
         """ start running action list in a thread"""
         if self._thread:
             return
@@ -201,7 +316,7 @@ class AutomationTask():
         )
         self._thread.start()
         
-    def start_action_iter(self, action_iter:Iterator[ActionStep], name:str=None):
+    def start_action_iter(self, action_iter:Iterator[ActionStepTuple], name:str=None):
         """ Start running action steps from iterator in a thread
         Params:
             action_iter(Iterator[ActionStep]): iterator of action steps
@@ -229,14 +344,20 @@ class AutomationTask():
         )
         self._thread.start()
 
+
+
+        
+
+
+
 class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul"""
-    def __init__(self, browser: GameBrowser, setting:settings.Settings):
+    def __init__(self, browser: GameBrowser, setting:Settings):
         if browser is None:
             raise ValueError("Browser is None")
         self.browser = browser
         self.settings = setting
-        self.g_v = img_proc.GameVisual(browser)
+        self.g_v = GameVisual(browser)
         
         self._task:AutomationTask = None        # the task thread
         
@@ -258,9 +379,9 @@ class Automation:
             pai = mjai_action['pai']
             
             # more time for 19>28>others
-            if pai in mj_helper.MJAI_TILES_19:
+            if pai in MJAI_TILES_19:
                 delay += 0.0
-            elif pai in mj_helper.MJAI_TILES_28:
+            elif pai in MJAI_TILES_28:
                 delay += 0.5
             else:
                 delay += 1.0
@@ -285,8 +406,7 @@ class Automation:
             return False
         if not self.browser.is_page_normal():
             return False
-        return True
-    
+        return True    
         
     def automate_action(self, mjai_action:dict, game_state:GameState):
         """ execute action given by the mjai message
@@ -315,20 +435,20 @@ class Automation:
                 game_state.last_reaction_pending = False        # cancel pending state so i won't be retried
                 return False
             LOGGER.info("Automating action '%s', ms step = %d", mjai_type, op_step)            
-            more_steps:list[ActionStep] = self._dahai_action_steps(mjai_action, gi, game_state.kyoku_state.first_round)
+            more_steps:list[ActionStepTuple] = self._dahai_action_steps(mjai_action, gi, game_state.kyoku_state.first_round)
         elif mjai_type in [
             MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
             MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA
             ]:
             LOGGER.info("Automating action '%s', ms step = %d", mjai_type, op_step)
             liqi_operation = game_state.last_operation
-            more_steps:list[ActionStep] = self._button_action_steps(mjai_action, gi, liqi_operation)
+            more_steps:list[ActionStepTuple] = self._button_action_steps(mjai_action, gi, liqi_operation)
         else:
             LOGGER.error("No automation, unrecognized mjai type: %s", mjai_type)
             return
         
         delay = self.get_delay(mjai_action, game_state)  # first action is delay
-        action_steps:list[ActionStep] = [self._get_delay_step(delay)]
+        action_steps:list[ActionStepTuple] = [self._get_delay_step(delay)]
         action_steps.extend(more_steps)
         
         self._task = AutomationTask()
@@ -376,7 +496,7 @@ class Automation:
         self.automate_action(mjai_action, game_state)
         
     
-    def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list[ActionStep]:
+    def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list[ActionStepTuple]:
         """ generate dahai (discard tile) action
         params:
             is_east_first(bool): if currently self is East and it's the first move"""
@@ -428,7 +548,7 @@ class Automation:
         return op_list        
 
     
-    def _button_action_steps(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list[ActionStep]:
+    def _button_action_steps(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list[ActionStepTuple]:
         """Generate button click related actions (chi, pon, kan, etc.)"""       
 
         actions = []
@@ -472,7 +592,7 @@ class Automation:
         elif mstype_from_mjai in [MSType.chi, MSType.pon, MSType.daiminkan, MSType.kakan, MSType.ankan]:            
             # e.g. {'type': 'chi', 'actor': 3, 'target': 2, 'pai': '4m', 'consumed': ['3m', '5mr'], ...}"""
             mjai_consumed = mjai_action['consumed']
-            mjai_consumed = mj_helper.sort_mjai_tiles(mjai_consumed)
+            mjai_consumed = sort_mjai_tiles(mjai_consumed)
             if 'combination' in the_op:
                 combs = the_op['combination']
             else:
@@ -485,11 +605,11 @@ class Automation:
                 # something is wrong. no combination offered in liqi msg
                 LOGGER.warning("mjai type %s, but no combination in liqi operation list", mjai_type)
                 return actions
-            for idx, comb in enumerate(combs):  
+            for idx, comb in enumerate(combs):
                 # for more than one candidate group, click on the matching group
                 # groups in liqi msg are converted to mjai tile format for comparison
-                consumed_liqi = [mj_helper.cvt_ms2mjai(t) for t in comb.split('|')]
-                consumed_liqi = mj_helper.sort_mjai_tiles(consumed_liqi)
+                consumed_liqi = [cvt_ms2mjai(t) for t in comb.split('|')]
+                consumed_liqi = sort_mjai_tiles(consumed_liqi)
                 if mjai_consumed == consumed_liqi:  # match. This is the combination to click on
                     delay = len(combs) * (0.5 + random.random())
                     actions.append(self._get_delay_step(delay))
@@ -533,12 +653,12 @@ class Automation:
         if self.browser:
             self.browser.mouse_wheel(dx, dy, blocking)
     
-    def _get_delay_step(self, delay:float) -> ActionStep:
+    def _get_delay_step(self, delay:float) -> ActionStepTuple:
         """ Generate a delay step"""
         text = f"delay {delay:.1f}s "
-        return ActionStep(lambda: time.sleep(delay), text)
+        return ActionStepTuple(lambda: time.sleep(delay), text)
     
-    def _get_moveclick_step(self, x:float, y:float, what:str, blocking:bool=True) -> ActionStep:
+    def _get_moveclick_step(self, x:float, y:float, what:str, blocking:bool=True) -> ActionStepTuple:
         """Generate a mouse click step
         params:
             x,y: in 16x9 resolution
@@ -550,9 +670,9 @@ class Automation:
             random_moves = random.randint(1,5)
         else:
             random_moves = 0
-        return ActionStep(lambda: self.mouse_move_click(x, y, random_moves, blocking), text)
+        return ActionStepTuple(lambda: self.mouse_move_click(x, y, random_moves, blocking), text)
     
-    def _get_move_step(self, x:float, y:float, random_moves:int=3) -> ActionStep:
+    def _get_move_step(self, x:float, y:float, random_moves:int=3) -> ActionStepTuple:
         """ generate mouse move with random move step
         Params:
             tx, ty: target position in 16x9 resolution"""
@@ -569,13 +689,13 @@ class Automation:
             # move to target
             self.mouse_move(x, y, random.randint(5,10))
             time.sleep(0.1)
-        return ActionStep(move, text)
+        return ActionStepTuple(move, text)
             
             
-        return ActionStep(lambda: self.mouse_move(x, y, random_moves), text)
+        # return ActionStep(lambda: self.mouse_move(x, y, random_moves), text)
     
     def _get_random_move_click_step(
-        self, x:float, y:float, what:str, random_moves:int=3, delay:float=80, blocking:bool=True) -> ActionStep:
+        self, x:float, y:float, what:str, random_moves:int=3, delay:float=80, blocking:bool=True) -> ActionStepTuple:
         """ generate mirror browser move click"""
         # TODO tba
         text = f"clicking {what} (random_moves={random_moves})"
@@ -584,16 +704,16 @@ class Automation:
             # random move and click in one action
             self.mouse_click(x, y, delay, blocking)
             
-        return ActionStep(move_click, text)
+        return ActionStepTuple(move_click, text)
     
-    def _get_wheel_step(self, dx:float, dy:float, times:int, blocking:bool=True) -> ActionStep:
+    def _get_wheel_step(self, dx:float, dy:float, times:int, blocking:bool=True) -> ActionStepTuple:
         """ generate mouse wheel step"""
         text = f"mouse wheel ({dx}, {dy}) x {times}"
         def wheel_action():
             for _ in range(times):
                 self.mouse_wheel(dx, dy, blocking)
                 time.sleep(0.1)                
-        return ActionStep(wheel_action, text)
+        return ActionStepTuple(wheel_action, text)
 
 
     def on_lobby_login(self, liqimsg:dict):
@@ -631,7 +751,7 @@ class Automation:
         self._task.start_action_iter(self._end_game_iter(), "End game to lobby")
         return
         
-    def _end_game_iter(self) -> Iterator[ActionStep]:
+    def _end_game_iter(self) -> Iterator[ActionStepTuple]:
         # generate action steps until main menu tested
         while True:
             res, diff = self.g_v.comp_temp(ImgTemp.main_menu)
@@ -658,7 +778,7 @@ class Automation:
         self._task.start_action_iter(self._next_game_action_iter(), AutomationTask.NEXT_GAME_TASK_NAME)
         return    
     
-    def _next_game_action_iter(self) -> Iterator[ActionStep]:
+    def _next_game_action_iter(self) -> Iterator[ActionStepTuple]:
         # generate action steps for next_game
         # Start from lobby
         while True:
