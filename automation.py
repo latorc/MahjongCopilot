@@ -251,9 +251,9 @@ class Automation:
         
         if mjai_type == MJAI_TYPE.DAHAI:
             # extra time for first round and East
-            if game_state.first_round:
+            if game_state.kyoku_state.first_round:
                 delay += 1
-                if game_state.jikaze  == 'E':
+                if game_state.kyoku_state.jikaze  == 'E':
                     delay += 1.5
             pai = mjai_action['pai']
             
@@ -315,7 +315,7 @@ class Automation:
                 game_state.last_reaction_pending = False        # cancel pending state so i won't be retried
                 return False
             LOGGER.info("Automating action '%s', ms step = %d", mjai_type, op_step)            
-            more_steps:list[ActionStep] = self._dahai_action_steps(mjai_action, gi, game_state.first_round)
+            more_steps:list[ActionStep] = self._dahai_action_steps(mjai_action, gi, game_state.kyoku_state.first_round)
         elif mjai_type in [
             MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
             MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA
