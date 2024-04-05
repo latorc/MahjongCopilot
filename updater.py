@@ -11,7 +11,7 @@ import requests
 from utils import VER_NUMBER, TEMP_FOLDER
 import utils
 
-URL_BASE = "https://maco.clandoom.com/build_output/"
+URL_BASE = "https://mjcopilot.com/update/"
 VERSION_FILE = "version"
 UPDATE_FILE = "MahjongCopilot.zip"
 UPDATE_FOLDER = "update"
