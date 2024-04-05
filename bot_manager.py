@@ -8,19 +8,16 @@ import queue
 import threading
 from game.browser import GameBrowser
 from game.game_state import GameState
-from game.automation import Automation, AutomationTask
+from game.automation import Automation, AutomationTask, UI_STATE
 import mitm
 import liqi
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
-
-import common.log_helper as log_helper
-from common.log_helper import LOGGER
+from common.log_helper import LOGGER, config_logging
 from common.settings import Settings
-from common.mj_helper import GameInfo
-from bot import mj_bot
 from common.lan_str import LanStr
-import common.utils as utils
-from common.utils import UI_STATE
+from common import utils
+from bot import mj_bot
+
 
 METHODS_TO_IGNORE = [
     liqi.LiqiMethod.checkNetworkDelay,
@@ -136,11 +133,9 @@ class BotManager:
         self._overlay_guide_last_update = 0
             
     def disable_overlay(self):
+        """ disable browser overlay"""
         LOGGER.debug("Bot Manager disabling overlay")
         self.settings.enable_overlay = False
-        
-    def is_overlay_enabled(self):
-        return self.settings.enable_overlay
     
     def update_overlay(self):
         """ update the overlay if conditions are met"""
@@ -149,21 +144,24 @@ class BotManager:
             self._update_overlay_botleft()
         
     def enable_automation(self):
+        """ enable automation"""
         LOGGER.debug("Bot Manager enabling automation")
         self.settings.enable_automation = True
         self.automation.check_what_to_do()
-        # turn off retry check, so pending action will be done at retry
         
     def disable_automation(self):
+        """ disable automation"""
         LOGGER.debug("Bot Manager disabling automation")
         self.settings.enable_automation = False
         self.automation.on_automation_disable()
         
     def enable_autojoin(self):
+        """ enable autojoin"""
         LOGGER.debug("Enabling Auto Join")
         self.settings.auto_join_game = True
         
     def disable_autojoin(self):
+        """ disable autojoin"""
         LOGGER.debug("Disabling Auto Join")
         self.settings.auto_join_game = False
         if self.automation.is_running_execution():
@@ -172,7 +170,7 @@ class BotManager:
     
     def create_bot(self):
         """ create Bot object based on settings"""
-        try:            
+        try:
             self.bot = mj_bot.get_bot(self.settings)
             self.game_exception = None
             LOGGER.info("Created bot: %s", self.bot.name)
@@ -180,18 +178,18 @@ class BotManager:
             LOGGER.warning("Failed to create bot: %s", e, exc_info=True)
             self.bot = None
             self.game_exception = e
-            
+
     def is_bot_created(self):
         """ return true if self.bot is not None"""
         return self.bot is not None
-    
+
     def is_bot_calculating(self):
         """ return true if bot is calculating"""
         if self.game_state and self.game_state.is_bot_calculating:
             return True
         else:
             return False
-    
+
     def _run(self):
         """ Keep running the main loop (blocking)"""
         try:
@@ -202,7 +200,7 @@ class BotManager:
                 LOGGER.info("MITM certificate installed")
             else:
                 LOGGER.warning("MITM certificate installation failed (No Admin rights?)")
-            
+
             # Attempt to create bot. wait for the bot (gui may re-create)
             self.create_bot()
             while True:
@@ -210,12 +208,12 @@ class BotManager:
                     break
                 else:
                     time.sleep(0.5)
-            
+
             self.liqi_parser = liqi.LiqiProto()
             if self.settings.auto_launch_browser:
                 self.start_browser()
-            
-            while self._stop_event.is_set() == False:
+
+            while self._stop_event.is_set() is False:
                 # keep processing majsoul game messages forwarded from mitm server
                 try:
                     msg = self.mitm_server.get_message()
@@ -225,7 +223,7 @@ class BotManager:
                 except Exception as e:
                     LOGGER.error("Error processing msg: %s",e, exc_info=True)
                     self.game_exception = e
-                
+
                 self._every_loop_post_proc_msg()
 
             LOGGER.info("Shutting down browser")
@@ -246,15 +244,15 @@ class BotManager:
                 
     def _every_loop_post_proc_msg(self):
         # things to do in every loop
-        
+
         # check mitm
-        if self.mitm_server.is_running() == False:
+        if self.mitm_server.is_running() is False:
             raise utils.MITMException("MITM server stopped")
-        
+
         # check overlay
         if self.browser and self.browser.is_page_normal():
             if self.settings.enable_overlay:
-                if self.browser.is_overlay_working() == False:
+                if self.browser.is_overlay_working() is False:
                     LOGGER.debug("Bot manager attempting turning on browser overlay")
                     self.browser.start_overlay()
                     # self._update_overlay_guide()
@@ -377,7 +375,7 @@ class BotManager:
         
     def _update_overlay_botleft(self):
         # update overlay bottom left text
-        if self._update_overlay_conditions_met() == False:
+        if self._update_overlay_conditions_met() is False:
             return
         
         # maj copilot
@@ -433,12 +431,27 @@ class BotManager:
             LOGGER.error("Failed to automate action for %s: %s", reaction['type'], e, exc_info=True)
             
     def _retry_failed_automation(self):
-        # retry pending reaction if enabled
+        # retry pending reaction if conditions are met
         try:
-            self.automation.retry_pending_reaction(self.game_state, self.settings.auto_retry_interval)
+            if self.automation.is_running_execution():
+                # last action still executing, cancel
+                return False
+            if self.automation.ui_state != UI_STATE.IN_GAME:
+                # only retry when in game
+                return False        
+            if time.time() - self.automation.last_exec_time() < 1.5:
+                # interval not reached, cancel
+                return False
+            if self.game_state is None:
+                return False
+            pend_action = self.game_state.get_pending_reaction()
+            if pend_action is None:
+                return        
+            LOGGER.info("Retry automating pending reaction: %s", pend_action['type'])
+            self.automation.automate_action(pend_action, self.game_state)
+            
         except Exception as e:
             LOGGER.error("Error retrying automation: %s", e, exc_info=True)
-            
 
 
 def mjai_reaction_2_guide(
@@ -490,7 +503,7 @@ def mjai_reaction_2_guide(
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.ANKAN})"
     elif re_type == MJAI_TYPE.REACH: # attach reach dahai options
         reach_dahai_reaction = reaction['reach_dahai']
-        dahai_action_str, dahai_options = mjai_reaction_2_guide(reach_dahai_reaction, 0, lan_str)
+        dahai_action_str, _dahai_options = mjai_reaction_2_guide(reach_dahai_reaction, 0, lan_str)
         action_str = f"{ActionUnicode.REACH}{lan_str.RIICHI}," + dahai_action_str
     elif re_type == MJAI_TYPE.HORA:
         if reaction['actor'] == reaction['target']:
@@ -520,7 +533,7 @@ def mjai_reaction_2_guide(
                 
 if __name__ == "__main__":
     # Test code: a simple CLI to run BotManager
-    log_helper.config_logging('TestBotManager')
+    config_logging('TestBotManager')
     manager = BotManager(Settings())
     manager.start() 
 
@@ -541,10 +554,7 @@ if __name__ == "__main__":
             commands[cmd]()
         else:
             LOGGER.info("Invalid command. Valid commands: %s", commands.keys())
-        if manager.is_running() == False:
+        if manager.is_running() is False:
             break
 
     LOGGER.info("Manager stopped. End")
-
-
-

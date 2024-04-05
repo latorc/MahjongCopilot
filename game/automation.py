@@ -468,33 +468,13 @@ class Automation:
             return True
         else:
             return False
-    
-    def retry_pending_reaction(self, game_state:GameState, min_interval:float=2):
-        """ Retry pending action from game state. if current time > last execution time + min interval"""
-        if not self.can_automation():
-            return False
-        if self.is_running_execution():
-            # last action still executing, quit
-            return False
-        if self.ui_state != UI_STATE.IN_GAME:
-            return False
         
+    def last_exec_time(self):
+        """ return the time of last action execution. return -1 if N/A"""
         if self._task:
-            if time.time() - self._task.last_exe_time < min_interval:
-                # interval not reached, cancel
-                return False
-        
-        if game_state is None:
-            LOGGER.warning("Exit Automation. Game State is none!")
-            return
-
-        mjai_action = game_state.get_pending_reaction()
-        if mjai_action is None:
-            return
-        
-        LOGGER.info("Retry automating pending reaction: %s", mjai_action['type'])
-        self.automate_action(mjai_action, game_state)
-        
+            return self._task.last_exe_time
+        else:
+            return -1        
     
     def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list[ActionStepTuple]:
         """ generate dahai (discard tile) action

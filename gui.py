@@ -89,11 +89,14 @@ class MainGUI(tk.Tk):
         self.btn_start_browser = self.toolbar.add_button(
             self.st.lan().START_BROWSER, 'majsoul.png', self._on_btn_start_browser_clicked)
         self.toolbar.add_sep()
-        self.switch_overlay = ToggleSwitch(self.toolbar, self.st.lan().WEB_OVERLAY, 75, command=self._on_switch_hud_clicked)
+        self.switch_overlay = ToggleSwitch(
+            self.toolbar, self.st.lan().WEB_OVERLAY, 75, command=self._on_switch_hud_clicked)
         self.switch_overlay.pack(side=tk.LEFT, padx=4, pady=4)
-        self.switch_autoplay = ToggleSwitch(self.toolbar, self.st.lan().AUTOPLAY, 75, command=self._on_switch_autoplay_clicked)
+        self.switch_autoplay = ToggleSwitch(
+            self.toolbar, self.st.lan().AUTOPLAY, 75, command=self._on_switch_autoplay_clicked)
         self.switch_autoplay.pack(side=tk.LEFT, padx=4, pady=4)
-        self.switch_autojoin = ToggleSwitch(self.toolbar, self.st.lan().AUTO_JOIN_GAME, 75, command=self._on_switch_autojoin_clicked)
+        self.switch_autojoin = ToggleSwitch(
+            self.toolbar, self.st.lan().AUTO_JOIN_GAME, 75, command=self._on_switch_autojoin_clicked)
         self.switch_autojoin.pack(side=tk.LEFT, padx=4, pady=4)
         self.toolbar.add_sep()
         self.toolbar.add_button(self.st.lan().SETTINGS, 'settings.png', self._on_btn_settings_clicked)
@@ -149,7 +152,7 @@ class MainGUI(tk.Tk):
 
     def _on_switch_hud_clicked(self):
         self.switch_overlay.switch_mid()
-        if not self.bot_manager.is_overlay_enabled():
+        if not self.st.enable_overlay:
             self.bot_manager.enable_overlay()
         else:
             self.bot_manager.disable_overlay()
@@ -218,7 +221,7 @@ class MainGUI(tk.Tk):
             
         # update switches' status
         sw_list = [
-            (self.switch_overlay, self.bot_manager.is_overlay_enabled),
+            (self.switch_overlay, lambda: self.st.enable_overlay),
             (self.switch_autoplay, lambda: self.st.enable_automation),
             (self.switch_autojoin, lambda: self.st.auto_join_game)
         ]
@@ -489,7 +492,9 @@ class StatusBar(tk.Frame):
         if icon_path is not None and label.image_file != icon_path:
             # Load new icon
             new_icon = tk.PhotoImage(file=icon_path)
-            new_icon = new_icon.subsample(int(new_icon.height()/self.font_size/1.3333), int(new_icon.height() / self.font_size / 1.3333))
+            new_icon = new_icon.subsample(
+                int(new_icon.height()/self.font_size/1.3333),
+                int(new_icon.height() / self.font_size / 1.3333))
             label.config(image=new_icon)
             label.image = new_icon      # keep a reference to avoid garbage collection
             label.image_file = icon_path
