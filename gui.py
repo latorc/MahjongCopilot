@@ -21,6 +21,7 @@ from settings import Settings
 import mj_helper
 from lan_str import LAN_OPTIONS, LanStr
 from mj_bot import BOT_TYPE
+from updater import Updater, UpdateStatus    
 
 
 def set_style_normal(style:ttk.Style, font_size:int=12):
@@ -44,7 +45,7 @@ class MainGUI(tk.Tk):
         super().__init__()
         self.bot_manager = bot_manager
         self.st = setting
-
+        self.updater = Updater()
         icon = tk.PhotoImage(file=utils.sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
@@ -173,7 +174,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
-        settings_window = SettingsWindow(self,self.st)
+        settings_window = SettingsWindow(self, self.st)
         settings_window.transient(self)
         settings_window.grab_set()
         self.wait_window(settings_window)
@@ -189,7 +190,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_help_clicked(self):
         # open help dialog        
-        help_win = HelpWindow(self, self.st)
+        help_win = HelpWindow(self, self.st, self.updater)
         help_win.transient(self)
         help_win.grab_set()
     
@@ -760,9 +761,11 @@ class SettingsWindow(tk.Toplevel):
 
 class HelpWindow(tk.Toplevel):
     """ dialog window for help information """
-    def __init__(self, parent:tk.Frame, st:Settings):
+    def __init__(self, parent:tk.Frame, st:Settings, updater:Updater):
         super().__init__(parent)
-        self.settings = st
+        self.st = st            # Settings object
+        self.updater = updater
+        
         self.title(st.lan().HELP)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
@@ -780,10 +783,87 @@ class HelpWindow(tk.Toplevel):
         self.textbox.insert(tk.END, st.lan().HELP_STR)
         self.textbox.configure(state='disabled')  # Make the text read-only
 
-        # OK Button
-        self.ok_button = ttk.Button(self, text="OK", command=self._on_close)
-        self.ok_button.pack(pady=(10, 10),side=tk.BOTTOM)
+        self.box = tk.Frame(self, height=40)
+        self.box.pack(expand=True, fill=tk.X)
+        col_widths = [100,300,100]
+        for idx, width in enumerate(col_widths):
+            self.box.grid_columnconfigure(idx, minsize=width)
+        
+        # Updater
+        self.update_button = ttk.Button(self.box, text=st.lan().CHECK_FOR_UPDATE, state=tk.DISABLED, width=16)
+        self.update_button.grid(row=0, column=0, sticky=tk.NSEW, padx=10, pady=10)
 
+        self.update_str_var = tk.StringVar(value="")
+        self.update_label = ttk.Label(self.box, textvariable=self.update_str_var,width=20)
+        self.update_label.grid(row=0, column=1, sticky=tk.NSEW, padx=10, pady=10)
+        self.update_cmd:Callable = lambda: None
+        
+        # OK Button
+        self.ok_button = ttk.Button(self.box, text="OK", command=self._on_close, width=10)
+        self.ok_button.grid(row=0, column=2, sticky=tk.NSEW, padx=10, pady=10)
+        
+        self._refresh_ui()
+    
+    def _check_for_update(self):
+        LOGGER.info("Checking for update.")
+        self.update_button.configure(state=tk.DISABLED)
+        self.updater.check_update()
+    
+    def _download_update(self):
+        LOGGER.info("Download and unzip update.")
+        self.update_button.configure(state=tk.DISABLED)
+        self.updater.prepare_update()
+        
+    def _start_update(self):
+        LOGGER.info("Starting update process. will kill program and restart.")
+        self.update_button.configure(state=tk.DISABLED)
+        if messagebox.askokcancel(self.st.lan().START_UPDATE, self.st.lan().UPDATE_PREPARED):
+            self.updater.start_update()
+    
+    def _refresh_ui(self):
+        lan = self.st.lan()
+        match self.updater.update_status:
+            case UpdateStatus.NONE:
+                self.update_str_var.set("")
+                self._check_for_update()
+            case UpdateStatus.CHECKING:
+                self.update_str_var.set(lan.CHECKING_UPDATE)
+            case UpdateStatus.NO_UPDATE:
+                self.update_str_var.set(lan.NO_UPDATE_FOUND)
+                self.update_button.configure(
+                    text = lan.CHECKING_UPDATE,
+                    state=tk.NORMAL,
+                    command=self._check_for_update)
+            case UpdateStatus.NEW_VERSION:
+                self.update_str_var.set(lan.UPDATE_AVAILABLE + f" v{self.updater.web_version}")
+                self.update_button.configure(
+                    text=lan.DOWNLOAD_UPDATE,
+                    state=tk.NORMAL,
+                    command=self._download_update
+                    )
+                self.update_cmd = self.updater.prepare_update
+            case UpdateStatus.DOWNLOADING:
+                self.update_str_var.set(lan.DOWNLOADING + f"  {self.updater.dl_perc:.1f}%")
+            case UpdateStatus.UNZIPPING:
+                self.update_str_var.set(lan.UNZIPPING)
+            case UpdateStatus.OK:
+                self.update_str_var.set(lan.UPDATE_PREPARED)
+                self.update_button.configure(
+                    text=lan.START_UPDATE,
+                    state=tk.NORMAL,
+                    command = self.updater.start_update)
+            case UpdateStatus.ERROR:
+                self.update_str_var.set(str(self.updater.update_exception))
+                self.update_button.configure(
+                    text=lan.CHECK_FOR_UPDATE,
+                    state=tk.NORMAL,
+                    command=self._check_for_update)
+            case _:
+                pass
+            
+        self.after(100, self._refresh_ui)
+
+    
     def _on_close(self):
         self.destroy()
 

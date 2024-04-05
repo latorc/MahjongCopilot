@@ -1,10 +1,10 @@
 # Language string constants
-from utils import VER_NUMBER, BOT_TYPE
+from utils import VER_NUMBER
 
 class LanStr:
     """ String constants for default language (English) """
     LANGUAGE_NAME = 'English'
-    
+
     # GUI
     APP_TITLE = 'Mahjong Copilot'
     START_BROWSER = "Start Web Client"
@@ -37,7 +37,16 @@ MJAI: https://mjai.app
 """
     ON = "On"
     OFF = "Off"
-    
+    DOWNLOAD_UPDATE = "Download Update"
+    START_UPDATE = "Update & Restart"
+    CHECK_FOR_UPDATE = "Check Update"
+    CHECKING_UPDATE = "Checking for new update..."
+    UPDATE_AVAILABLE = "New update available"
+    NO_UPDATE_FOUND = "No new update found"
+    DOWNLOADING = "Downloading..."
+    UNZIPPING = "Unzipping..."
+    UPDATE_PREPARED = "Update prepared. Click the button to update and restart."
+
     # Settings
     SAVE = "Save"
     CANCEL = "Cancel"
@@ -158,6 +167,17 @@ MJAI: https://mjai.app
 """
     ON = "开"
     OFF = "关"
+    DOWNLOAD_UPDATE = "下载更新"
+    START_UPDATE = "开始更新"
+    UPDATE_AVAILABLE = "有新的更新可用"
+    
+    CHECK_FOR_UPDATE = "检查更新"
+    CHECKING_UPDATE = "正在检查更新..."
+    NO_UPDATE_FOUND = "未发现更新"
+    UNZIPPING = "解压中..."
+    DOWNLOADING = "下载中..."
+    UPDATE_PREPARED = "更新已准备好。点击按钮更新并重启。"
+    
     
     # Settings
     SAVE = "保存"
