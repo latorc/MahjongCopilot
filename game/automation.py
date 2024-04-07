@@ -262,7 +262,7 @@ class Automation:
         if browser is None:
             raise ValueError("Browser is None")
         self.executor = browser
-        self.settings = setting
+        self.st = setting
         self.g_v = GameVisual(browser)
         
         self._task:AutomationTask = None        # the task thread        
@@ -286,7 +286,7 @@ class Automation:
         """return True if automation conditions met 
         params:
             in_game(bool): True if must in game"""
-        if not self.settings.enable_automation: # automation not enabled
+        if not self.st.enable_automation: # automation not enabled
             return False
         if not self.executor.is_page_normal():  # browser is not running
             return False
@@ -295,8 +295,7 @@ class Automation:
     def get_delay(self, mjai_action:dict, gi:GameInfo):
         """ return the delay based on action type and game info"""
         mjai_type = mjai_action['type']
-        delay = random.uniform(0.5, 1.5)    # base delay
-        
+        delay = random.uniform(self.st.delay_random_lower, self.st.delay_random_upper)    # base delay        
         if mjai_type == MJAI_TYPE.DAHAI:
             # extra time for first round and East
             if gi.is_first_round:
@@ -395,10 +394,10 @@ class Automation:
             else:
                 x = Positions.TEHAI_X[dahai_count] + Positions.TRUMO_SPACE
                 y = Positions.TEHAI_Y
-            steps = self.steps_randomized_move_click(x, y, random.randint(1,3))         
+            steps = self.steps_randomized_move_click(x, y)         
         else:       # tedashi: find the index and discard
             idx = gi.my_tehai.index(dahai)
-            steps = self.steps_randomized_move_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y, random.randint(1,5))
+            steps = self.steps_randomized_move_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
         # move to mid to avoid highlighting a tile 
         delay_step = ActionStepDelay(random.uniform(0.5, 0.1))
         delay_step.ignore_step_change = True
@@ -419,7 +418,7 @@ class Automation:
         kan_combs:list[str] = []
         idx_to_keep = None
         idx_to_del = None
-        for idx, op in op_list:
+        for idx, op in enumerate(op_list):
             op_type = op['type']
             if op_type in (MSType.kakan, MSType.ankan):
                 if op_type== MSType.kakan:
@@ -531,13 +530,13 @@ class Automation:
             random_moves(int): number of random moves before target. None -> use randint"""
         steps = []
         if random_moves is None:
-            random_moves = random.randint(1,5)
+            random_moves = self.st.auto_random_moves
         
         for _i in range(random_moves):   # random moves, within (-0.5, 0.5) of target
-            rx = int(x + random.uniform(-0.5, 0.5))
-            rx = max(0, min(1, rx))
-            ry = int(y + random.uniform(-0.5, 0.5))
-            ry = max(0, min(1, ry))
+            rx = x + 16*random.uniform(-0.5, 0.5)
+            rx = max(0, min(16, rx))
+            ry = y + 9*random.uniform(-0.5, 0.5)
+            ry = max(0, min(9, ry))
             steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(5,15)))
             steps.append(ActionStepDelay(random.uniform(0.05, 0.15)))
         tx, ty = x*self.scaler, y*self.scaler
@@ -593,7 +592,7 @@ class Automation:
         """Automate Game end go back to menu"""  
         if not self.can_automate():
             return False
-        if self.settings.auto_join_game is False:
+        if self.st.auto_join_game is False:
             return False
         self.stop_previous()
 
@@ -613,17 +612,17 @@ class Automation:
             yield ActionStepDelay(random.uniform(1,2))
             
             x,y = Positions.GAMEOVER[0]
-            for step in self.steps_randomized_move_click(x,y,random.randint(1,3)):
+            for step in self.steps_randomized_move_click(x,y):
                 yield step
             
     def automate_join_game(self):
         """ Automate join next game """
         if not self.can_automate():
             return False
-        if self.settings.auto_join_game is False:
+        if self.st.auto_join_game is False:
             return False
         self.stop_previous()
-        desc = f"Join the next game level={self.settings.auto_join_level}, mode={self.settings.auto_join_mode}"
+        desc = f"Join the next game level={self.st.auto_join_level}, mode={self.st.auto_join_mode}"
         self._task = AutomationTask(self.executor, JOIN_GAME, desc)
         self._task.start_action_steps(self._join_game_iter(), None)
         return   
@@ -647,19 +646,19 @@ class Automation:
         yield ActionStepDelay(random.uniform(1.5,2))
         
         # click on level        
-        if self.settings.auto_join_level >= 3:  # jade/throne requires mouse wheel
+        if self.st.auto_join_level >= 3:  # jade/throne requires mouse wheel
             wx,wy = Positions.LEVELS[1]         # wheel at this position
             for step in self.steps_randomized_move(wx,wy):
                 yield step
             for step in self.steps_random_wheels(0, 500):
                 yield step                
-        x,y = Positions.LEVELS[self.settings.auto_join_level]
+        x,y = Positions.LEVELS[self.st.auto_join_level]
         for step in self.steps_randomized_move_click(x,y):
             yield step        
         yield ActionStepDelay(random.uniform(1.5,2))
         
         # click on mode
-        mode_idx = GAME_MODES.index(self.settings.auto_join_mode)
+        mode_idx = GAME_MODES.index(self.st.auto_join_mode)
         x,y = Positions.MODES[mode_idx]
         for step in self.steps_randomized_move_click(x,y):
             yield step    

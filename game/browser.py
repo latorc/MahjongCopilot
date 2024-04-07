@@ -406,7 +406,7 @@ class GameBrowser:
         if self.is_overlay_working() is False:
             return
         font_size = int(self.height/48)
-        box_top = 0.86
+        box_top = 0.885
         box_left = 0
         box_width = 0.115
         box_height = 1- box_top

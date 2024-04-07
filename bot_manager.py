@@ -421,7 +421,7 @@ class BotManager:
             
         text += '\n' + line
         # display fps numbers and limit total width
-        text += f"\nFPS: {self.fps_counter.fps:3.0f} / {self.browser.fps_counter.fps:3.0f}"[:18]
+        # text += f"\nFPS: {self.fps_counter.fps:3.0f} / {self.browser.fps_counter.fps:3.0f}"[:18]
                     
         # update if there is a change or time elapsed. avoid too often to burden browser
         if text != self._overlay_botleft_text or time.time() - self._overlay_botleft_last_update > 1:
