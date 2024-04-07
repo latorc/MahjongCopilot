@@ -117,6 +117,7 @@ class GameBrowser:
                 try:                    
                     action = self._action_queue.get_nowait()
                     action()
+                    # LOGGER.debug("Browser action %s",str(action))
                 except queue.Empty:
                     time.sleep(0.002)
                     pass
@@ -216,10 +217,14 @@ class GameBrowser:
             guide_str(str): AI guide str (recommendation action)
             option_subtitle(str): subtitle for options (display before option list)
             options(list): list of (str, float), indicating action/tile with its probability """
+        if self._last_guide == (guide_str, option_subtitle, options):  # skip if same guide
+            return
         self._action_queue.put(lambda: self._action_overlay_update_guide(guide_str, option_subtitle, options))
     
     def overlay_clear_guidance(self):
         """ Queue action: clear overlay text area"""
+        if self._last_guide is None:  # skip if already cleared
+            return
         self._action_queue.put(self._action_overlay_clear_guide)
     
     def overlay_update_botleft(self, text:str):
@@ -227,6 +232,8 @@ class GameBrowser:
         params:
             text(str): Text, can have linebreak '\n'. None to clear text
         """
+        if text == self._last_botleft_text:     # skip if same text
+            return
         self._action_queue.put(lambda: self._action_overlay_update_botleft(text))
         
     def overlay_clear_botleft(self):
@@ -339,9 +346,6 @@ class GameBrowser:
     def _action_overlay_update_guide(self, line1: str, option_title: str, options: list[tuple[str, float]]):        
         if not self.is_overlay_working():
             return
-        if self._last_guide == (line1, option_title, options):  # skip if same guide
-            return
-        self._last_guide = (line1, option_title, options)
         
         font_size, line_space, min_box_width, initial_box_height, box_top, box_left = self._overlay_text_params()
         if options:
@@ -395,6 +399,7 @@ class GameBrowser:
             }});
         }})();"""
         self.page.evaluate(js_code)
+        self._last_guide = (line1, option_title, options)
     
     def _action_overlay_clear_guide(self):
         """ delete text and the background box"""
@@ -413,13 +418,11 @@ class GameBrowser:
             ctx.clearRect({box_left}, {box_top}, {self.width}-{box_left}, {initial_box_height});
         }});"""
         self.page.evaluate(js_code)
+        self._last_guide = None
         
     def _action_overlay_update_botleft(self, text:str=None):      
         if self.is_overlay_working() is False:
             return
-        if text == self._last_botleft_text:     # skip if same text
-            return
-        self._last_botleft_text = text
         
         font_size = int(self.height/48)
         box_top = 0.885
@@ -469,6 +472,7 @@ class GameBrowser:
             }});            
         }})()"""
         self.page.evaluate(js_code)
+        self._last_botleft_text = text
     
     def _overlay_update_indicators(self, reaction:dict):        
         pass
