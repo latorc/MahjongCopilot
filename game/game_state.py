@@ -594,9 +594,9 @@ class GameState:
         #     return output_reactions[-1]        # return the last reaction
 
         # return None if no operation options provided by Majsoul
-        if data: 
-            if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
-                return None
+        # if data: 
+        #     if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
+        #         return None
         LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs)
         if len(self.mjai_pending_input_msgs) == 1:
             output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])

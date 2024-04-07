@@ -38,8 +38,11 @@ class Settings:
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool)
         
+        self.delay_random_lower:float = self._get_value("delay_random_lower", 1, lambda x: 0 <= x )
+        self.delay_random_upper:float = self._get_value(
+            "delay_random_upper",self.delay_random_lower, lambda x: x >= self.delay_random_lower)
         self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)
-        self.auto_random_move:int = self._get_value("auto_random_move", 3, lambda x: 0 <= x <= 5)
+        self.auto_random_moves:int = self._get_value("auto_random_moves", 3, lambda x: 0 <= x <= 10)
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
         self.auto_join_level:int = self._get_value("auto_join_level", 1, self.valid_game_level)
         self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)
@@ -114,7 +117,7 @@ class Settings:
                 return True
         else:
             return False
-        
+    
     def valid_game_level(self, level:int) -> bool:
         """ return true if game level is valid"""
         if 0 <= level <= 4:
@@ -129,3 +132,5 @@ class Settings:
             return True
         else:
             return False
+        
+    

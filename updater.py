@@ -64,11 +64,14 @@ class Updater:
     def is_webversion_newer(self) -> bool:
         """ check if web version is newer than local version"""
         # convert a.b.c to 000a000b000c
-        if self.web_version:
-            local_v_int = int(''.join(f"{part:0>4}" for part in VER_NUMBER.split(".")))
-            web_v_int = int(''.join(f"{part:0>4}" for part in self.web_version.split(".")))
-            if web_v_int > local_v_int:
-                return True
+        try:
+            if self.web_version:
+                local_v_int = int(''.join(f"{part:0>4}" for part in VER_NUMBER.split(".")))
+                web_v_int = int(''.join(f"{part:0>4}" for part in self.web_version.split(".")))
+                if web_v_int > local_v_int:
+                    return True
+        except:
+            pass
         return False
         
     def download_file(self, fname:str) -> str:

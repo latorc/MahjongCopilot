@@ -4,7 +4,11 @@ set PLAYWRIGHT_BROWSERS_PATH=0
 playwright install chromium
 
 rmdir /s /q dist
-pyinstaller --windowed --name=MahjongCopilot --icon=resources/icon.ico gui.py 
+pyinstaller --windowed --name=MahjongCopilot --icon=resources/icon.ico main.py 
+if errorlevel 1 (
+    echo PyInstaller encountered an error.
+    exit /b 1
+)
 robocopy . .\dist\MahjongCopilot settings.json
 robocopy models dist\MahjongCopilot\models /E
 robocopy resources dist\MahjongCopilot\resources /E
