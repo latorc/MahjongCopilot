@@ -6,6 +6,8 @@ import pathlib
 import sys
 import time
 import subprocess
+import random
+import string
 
 VER_NUMBER = "0.4.0"
 MODEL_FOLDER = "models"
@@ -111,6 +113,32 @@ def list_files(folder:str, full_path:bool=False) -> list[pathlib.Path]:
     
 def random_str(length:int) -> str:
     """ Generate random string with specified length"""
-    import random
-    import string
+
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+class FPSCounter:
+    """ for counting frames and calculate fps"""
+    def __init__(self):
+        self._start_time = time.time()
+        self._frame_count = 0
+        self._fps = 0
+
+    def frame(self):
+        """Indicates that a frame has been rendered or processed. Updates FPS if more than 1 second has passed."""
+        self._frame_count += 1
+        current_time = time.time()
+        elapsed_time = current_time - self._start_time
+
+        if elapsed_time >= 1.0:
+            self._fps = self._frame_count / elapsed_time
+            self._start_time = current_time
+            self._frame_count = 0
+
+    def reset(self):
+        """ reset the counter"""
+        self.__init__()
+        
+    @property
+    def fps(self):
+        """Returns the current frames per second."""
+        return self._fps

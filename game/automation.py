@@ -1,10 +1,9 @@
 from collections import namedtuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import time
 import random
 import threading
-from abc import ABC
-from typing import Iterator
+from typing import Iterable, Iterator
 from .browser import GameBrowser
 from .game_state import GameInfo, GameState
 from common.mj_helper import MJAI_TYPE, MSType, MJAI_TILES_19, MJAI_TILES_28
@@ -142,22 +141,21 @@ ActionStepTuple = namedtuple('ActionStepTuple', ['action', 'text'])
 @dataclass
 class ActionStep:
     """ representing an action step like single click/move/wheel/etc."""
-    text:str
-    """ text description of the action"""
+    ignore_step_change:bool = field(default=False, init=False)
     
 @dataclass
 class ActionStepMove(ActionStep):
     """ Move mouse to x,y"""
     x:float
     y:float
-    steps:int = 5
+    steps:int = field(default=5)    # playwright mouse move steps
     
 @dataclass
 class ActionStepClick(ActionStep):
-    """ Click mouse at x,y"""
+    """ Click mouse left at x,y"""
     x:float
     y:float
-    delay:float = 80
+    delay:float = field(default=80) # delay before button down/up
     
 @dataclass
 class ActionStepWheel(ActionStep):
@@ -169,108 +167,37 @@ class ActionStepWheel(ActionStep):
 class ActionStepDelay(ActionStep):
     """ Delay action"""
     delay:float
-
-    
-
-class ActionExecutor(ABC):    
-    def run_step(self, step:ActionStep):
-        """ execute a single step"""
-class ActionExecutorBrowser(ActionExecutor):
-    """ Execute action steps on client"""
-    def __init__(self, browser:GameBrowser):
-        self.browser = browser
-
-    def run_step(self, step:ActionStep):
-        """ run the action step"""
-        if step.text:
-            LOGGER.debug("Executing step: %s", step.text)
-
-        if isinstance(step, ActionStepMove):
-            self.browser.mouse_move(step.x, step.y, step.steps, True)
-        elif isinstance(step, ActionStepClick):
-            self.browser.mouse_click(step.x, step.y, step.delay, True)
-        elif isinstance(step, ActionStepWheel):
-            self.browser.mouse_wheel(step.dx, step.dy, True)
-        elif isinstance(step, ActionStepDelay):
-            time.sleep(step.delay)
-        else:
-            raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
-
-
-class AutomationTaskNew(threading.Thread):
-    def __init__(self, executor:ActionExecutor, name:str):
-        super().__init__(name=name)
-        self.executor = executor
         
+
+# Design: generate action steps based on mjai action (Automation)
+# action steps are individual steps like delay, mouse click, etc. (ActionStep and derivatives)
+# Then execute the steps in thread (AutomationTask).
+# for in-game actions, verify if the action has expired, and cancel execution if needed
+# for example, Majsoul before you finish "Chi", another player may "Pon"/"Ron"/..., which cancels your "Chi" action
+class AutomationTask:
+    """ Managing automation task and its thread
+    an automation task corresponds to performing a bot reaction on game client (e.g. click dahai on web client)"""
+    def __init__(self, br:GameBrowser, name:str, desc:str=""):
+        """
+        params:
+            br(GameBrowser): browser object
+            name(str): name for the thread and task
+            desc(str): description of the task, for logging and readability"""
+        self.name = name
+        self.desc = desc
+        self.executor = br
         self._stop_event = threading.Event()        # set event to stop running
-        self.last_exe_time:float = -1
+        self.last_exe_time:float = -1               # timestamp for the last actionstep execution
+        
+        self._thread:threading.Thread = None        
         
     def stop(self, jointhread:bool=False):
         """ stop the thread"""
-        self._stop_event.set()
-        if jointhread:
-            self.join()
-    
-    def is_running(self):
-        """ return true if thread is running"""
-        if self.is_alive():
-            return True
-        else:
-            return False
-        
-    def start_action_list(self, action_list:list[ActionStep], game_state:GameState = None):
-        """ start running action list in a thread"""
-        if self.is_running():
-            return
-               
-        if game_state:
-            op_step = game_state.last_op_step
-        else:
-            op_step = None
-            
-        def task():
-            for step in action_list:
-                # verify if op_step changed, which indicates there is new liqi action, and old action has expired
-                # for example, when executing Chi, there might be another player Pon before Chi is finished
-                # upon which any action steps related to Chi should be canceled
-                if self._stop_event.is_set():
-                    LOGGER.debug("Cancel execution. Stop event set")
-                    return
-                
-                if game_state:
-                    if op_step != game_state.last_op_step:
-                        LOGGER.debug("Cancel execution. origin step = %d, current step = %d", op_step, game_state.last_op_step)
-                        return
-                                
-                LOGGER.debug("Executing step: %s", step.text)
-                step.action()
-                # record execution info for possible retry
-                self.last_exe_time = time.time()
-            LOGGER.debug("Finished executing task: %s", self.name)
-        
-
-class AutomationTask():
-    NEXT_GAME_TASK_NAME = "Join next game"
-    """ represeting a thread executing actions"""
-    def __init__(self):
-        self._stop_event = threading.Event()        # set event to stop running
-        self._thread:threading.Thread = None
-        self.last_exe_time:float = -1
-        
-    @property
-    def name(self):
         if self._thread:
-            return self._thread.name
-        else:
-            return None
-        
-    def stop(self, jointhread:bool=False):
-        """ stop the thread"""
-        self._stop_event.set()
-        if jointhread:
-            if self._thread:
+            self._stop_event.set()
+            if jointhread:
                 self._thread.join()
-                
+    
     def is_running(self):
         """ return true if thread is running"""
         if self._thread and self._thread.is_alive():
@@ -278,103 +205,103 @@ class AutomationTask():
         else:
             return False
         
-    def start_action_list(self, action_list:list[ActionStepTuple], game_state:GameState = None):
-        """ start running action list in a thread"""
-        if self._thread:
-            return
-               
-        if game_state:
-            op_step = game_state.last_op_step
+    def run_step(self, step:ActionStep):
+        """ run single action step"""
+        if isinstance(step, ActionStepMove):
+            self.executor.mouse_move(step.x, step.y, step.steps, True)
+        elif isinstance(step, ActionStepClick):
+            self.executor.mouse_click(step.x, step.y, step.delay, True)
+        elif isinstance(step, ActionStepWheel):
+            self.executor.mouse_wheel(step.dx, step.dy, True)
+        elif isinstance(step, ActionStepDelay):
+            time.sleep(step.delay)
         else:
-            op_step = None
-            
-        def run_action_list():
-            for step in action_list:
-                # verify if op_step changed, which indicates there is new liqi action, and old action has expired
-                # for example, when executing Chi, there might be another player Pon before Chi is finished
-                # upon which any action steps related to Chi should be canceled
-                if self._stop_event.is_set():
-                    LOGGER.debug("Cancel execution. Stop event set")
-                    return
-                
-                if game_state:
-                    game_step = game_state.last_op_step
-                    if op_step != game_step:
-                        LOGGER.debug("Cancel execution. origin step = %d, current step = %d", op_step, game_step)
-                        return
-                                
-                LOGGER.debug("Executing step: %s", step.text)
-                step.action()
-                # record execution info for possible retry
-                self.last_exe_time = time.time()
-            LOGGER.debug("Finished executing task: %s", self.name)
+            raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
+        self.last_exe_time = time.time()
         
-        self._thread = threading.Thread(
-            target=run_action_list,
-            name=f"Auto_step_{op_step}",
-            daemon=True
-        )
-        self._thread.start()
-        
-    def start_action_iter(self, action_iter:Iterator[ActionStepTuple], name:str=None):
-        """ Start running action steps from iterator in a thread
-        Params:
-            action_iter(Iterator[ActionStep]): iterator of action steps
-            name: name for the task
-        """
-        if self._thread:
+    def start_action_steps(self, action_list:Iterable[ActionStep], game_state:GameState = None):
+        """ start running action list/iterator in a thread"""
+        if self.is_running():
             return
-        if name is None:
-            name = ""
             
-        def run_iter():
-            for step in action_iter:
+        def task():
+            if game_state:
+                op_step = game_state.last_op_step
+            else:
+                op_step = None
+            LOGGER.debug("Start executing task: %s, %s", self.name, self.desc)    
+            for step in action_list:
                 if self._stop_event.is_set():
-                    LOGGER.debug("Cancel execution. Stop event set")
-                    return
-                LOGGER.debug("Executing step: %s", step.text)
-                step.action()
-                self.last_exe_time = time.time()
+                    LOGGER.debug("Cancel executing %s. Stop event set",self.name)
+                    return                
+                if game_state:  
+                    # check step change
+                    # op step change indicates there is new liqi action, and old action has expired
+                    # for example, when executing Chi, there might be another player Pon before Chi is finished
+                    # upon which any action steps related to Chi should be canceled
+                    new_step = game_state.last_op_step
+                    if op_step != new_step and not step.ignore_step_change:
+                        LOGGER.debug("Cancel executing %s due to step change(%d -> %d)", self.name, op_step, new_step)
+                        return
+                self.run_step(step)
             LOGGER.debug("Finished executing task: %s", self.name)
-            
+        
         self._thread = threading.Thread(
-            target=run_iter,
-            name=name,
+            target=task,
+            name = self.name,
             daemon=True
         )
         self._thread.start()
 
-
-
-        
-
-
+END_GAME = "Auto_EndGame"
+JOIN_GAME = "Auto_JoinGame"
 
 class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul"""
     def __init__(self, browser: GameBrowser, setting:Settings):
         if browser is None:
             raise ValueError("Browser is None")
-        self.browser = browser
+        self.executor = browser
         self.settings = setting
         self.g_v = GameVisual(browser)
         
-        self._task:AutomationTask = None        # the task thread
-        
-        self.ui_state:UI_STATE = UI_STATE.NOT_RUNNING   # Where game UI is at. initially not running
-        
+        self._task:AutomationTask = None        # the task thread        
+        self.ui_state:UI_STATE = UI_STATE.NOT_RUNNING   # Where game UI is at. initially not running    
     
+    def is_running_execution(self):
+        """ if task is still running"""
+        if self._task and self._task.is_running():
+            return True
+        else:
+            return False
         
-    def get_delay(self, mjai_action:dict, game_state:GameState):
+    def stop_previous(self):
+        """ stop previous task execution if it is still running"""
+        if self.is_running_execution():
+            LOGGER.warning("Stopping previous action: %s", self._task.name)
+            self._task.stop()
+            self._task = None
+            
+    def can_automate(self) -> bool:
+        """return True if automation conditions met 
+        params:
+            in_game(bool): True if must in game"""
+        if not self.settings.enable_automation: # automation not enabled
+            return False
+        if not self.executor.is_page_normal():  # browser is not running
+            return False
+        return True
+        
+    def get_delay(self, mjai_action:dict, gi:GameInfo):
         """ return the delay based on action type and game info"""
         mjai_type = mjai_action['type']
         delay = random.uniform(0.5, 1.5)    # base delay
         
         if mjai_type == MJAI_TYPE.DAHAI:
             # extra time for first round and East
-            if game_state.kyoku_state.first_round:
-                delay += 1
-                if game_state.kyoku_state.jikaze  == 'E':
+            if gi.is_first_round:
+                delay += 2
+                if gi.jikaze  == 'E':
                     delay += 1.5
             pai = mjai_action['pai']
             
@@ -394,26 +321,14 @@ class Automation:
             delay += 0.5
         
         return delay
-    
-    def can_automation(self) -> bool:
-        """return True if automation conditions met 
-        params:
-            in_game(bool): True if must in game"""
-        # False if:
-        # automation not enabled
-        # browser is not running
-        if not self.settings.enable_automation:
-            return False
-        if not self.browser.is_page_normal():
-            return False
-        return True    
+     
         
     def automate_action(self, mjai_action:dict, game_state:GameState):
         """ execute action given by the mjai message
         params:
             mjai_action(dict): mjai output action msg
             game_state(GameState): game state object"""
-        if not self.can_automation():
+        if not self.can_automate():
             return False
         if game_state is None or mjai_action is None:
             return False
@@ -422,53 +337,38 @@ class Automation:
         gi = game_state.get_game_info()
         assert gi is not None, "Game info is None"
         op_step = game_state.last_op_step
-        mjai_type = mjai_action['type']        
+        mjai_type = mjai_action['type']
         
-        # Design: generate action steps based on mjai action
-        # action steps are individual steps like delay, mouse click, etc.
-        # Then execute the steps in thread.
-        # verify if the action has expired (Majsoul has new action/operation), and cancel executing if so
+        if 'pai' in mjai_action:
+            pai = f"{mjai_action['pai']}"
+        else:
+            pai = ""        
+        desc = f"Automating action {mjai_type} {pai} (step = {op_step})" 
+        
+        
         if  mjai_type == MJAI_TYPE.DAHAI:
             if gi.reached:
                 # already in reach state. no need to automate dahai
                 LOGGER.info("Skip automating dahai, already in REACH")
                 game_state.last_reaction_pending = False        # cancel pending state so i won't be retried
-                return False
-            LOGGER.info("Automating action '%s', ms step = %d", mjai_type, op_step)            
-            more_steps:list[ActionStepTuple] = self._dahai_action_steps(mjai_action, gi, game_state.kyoku_state.first_round)
-        elif mjai_type in [
-            MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
-            MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA
-            ]:
-            LOGGER.info("Automating action '%s', ms step = %d", mjai_type, op_step)
+                return False                        
+            more_steps:list[ActionStep] = self.steps_action_dahai(mjai_action, gi)
+            
+        elif mjai_type in [MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
+            MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA]:
             liqi_operation = game_state.last_operation
-            more_steps:list[ActionStepTuple] = self._button_action_steps(mjai_action, gi, liqi_operation)
+            more_steps:list[ActionStep] = self.steps_button_action(mjai_action, gi, liqi_operation)
+        
         else:
-            LOGGER.error("No automation, unrecognized mjai type: %s", mjai_type)
+            LOGGER.error("No automation for unrecognized mjai type: %s", mjai_type)
             return
         
-        delay = self.get_delay(mjai_action, game_state)  # first action is delay
-        action_steps:list[ActionStepTuple] = [self._get_delay_step(delay)]
+        delay = self.get_delay(mjai_action, gi)  # first action is delay
+        action_steps:list[ActionStep] = [ActionStepDelay(delay)]
         action_steps.extend(more_steps)
-        
-        self._task = AutomationTask()
-        self._task.start_action_list(action_steps, game_state)
-
-        
-    def stop_previous(self):
-        """ stop previous task execution if it is still running"""
-        if self.is_running_execution():
-            LOGGER.warning("Previous action '%s' is still executing, stopping it", self._task.name)
-            self._task.stop()
-            self._task = None
+        self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
+        self._task.start_action_steps(action_steps, game_state)
     
-    def is_running_execution(self):
-        """ if task is still running"""
-        if self._task and self._task.is_running():
-            return True
-        else:
-            return False
-        
     def last_exec_time(self):
         """ return the time of last action execution. return -1 if N/A"""
         if self._task:
@@ -476,49 +376,62 @@ class Automation:
         else:
             return -1        
     
-    def _dahai_action_steps(self, mjai_action:dict, gi:GameInfo, is_first_round:bool) -> list[ActionStepTuple]:
+    def steps_action_dahai(self, mjai_action:dict, gi:GameInfo) -> list[ActionStepTuple]:
         """ generate dahai (discard tile) action
         params:
-            is_east_first(bool): if currently self is East and it's the first move"""
+            mjai_action(dict): mjai output action msg
+            gi(GameInfo): game info object
+        """
+        
         dahai = mjai_action['pai']
         tsumogiri = mjai_action['tsumogiri']
-        text = f"Dahai [{dahai}]"
         if tsumogiri:   # tsumogiri: discard right most
             dahai_count = len([tile for tile in gi.my_tehai if tile != '?'])
             assert dahai == gi.my_tsumohai, f"tsumogiri but dahai {dahai} != game tsumohai {gi.my_tsumohai}"
-            # 14-tile tehai + no tsumohai treatment for East first round
-            if is_first_round and gi.jikaze  == 'E':
+            # Majsoul on East first round: 14-tile tehai + no tsumohai
+            if gi.is_first_round and gi.jikaze  == 'E':
                 x = Positions.TEHAI_X[dahai_count]
                 y = Positions.TEHAI_Y
             else:
                 x = Positions.TEHAI_X[dahai_count] + Positions.TRUMO_SPACE
                 y = Positions.TEHAI_Y
-            step = self._get_moveclick_step(x,y,text)
-            return [step]
+            steps = self.steps_randomized_move_click(x, y, random.randint(1,3))         
         else:       # tedashi: find the index and discard
             idx = gi.my_tehai.index(dahai)
-            step = self._get_moveclick_step(Positions.TEHAI_X[idx], Positions.TEHAI_Y, text)            
-            return [step]
+            steps = self.steps_randomized_move_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y, random.randint(1,5))
+        # move to mid to avoid highlighting a tile 
+        delay_step = ActionStepDelay(random.uniform(0.5, 0.1))
+        delay_step.ignore_step_change = True
+        steps.append(delay_step)
+        
+        xmid, ymid = random.uniform(0.2,0.8), random.uniform(0.2, 0.8)
+        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(5,15))
+        move_step.ignore_step_change = True        
+        steps.append(move_step)
+        
+        return steps   
+    
     
     def _process_oplist_for_kan(self, mstype_from_mjai, op_list:list) -> list:
         """ Process operation list for kan, and return the new op list"""
         # ankan and kakan use one Kan button, and candidates are merged = [kakan, ankan]
-        # merge kan combinations into one of the kan type, delete the other from operation list
+        # determine the kan type used by mjai        
         kan_combs:list[str] = []
         idx_to_keep = None
         idx_to_del = None
-        for idx in range(len(op_list)):
-            op_type = op_list[idx]['type']
+        for idx, op in op_list:
+            op_type = op['type']
             if op_type in (MSType.kakan, MSType.ankan):
                 if op_type== MSType.kakan:
-                    kan_combs = op_list[idx]['combination'] + kan_combs
+                    kan_combs = op['combination'] + kan_combs
                 elif op_type == MSType.ankan:
-                    kan_combs = kan_combs + op_list[idx]['combination']
+                    kan_combs = kan_combs + op['combination']
                 if op_type == mstype_from_mjai:
                     idx_to_keep = idx
                 else:
                     idx_to_del = idx
         
+        # merge kan combinations into the used kan type, delete the other type from operation list
         if idx_to_keep is None:
             LOGGER.error("No matching type %s found in op list: %s", mstype_from_mjai, op_list)
             return op_list
@@ -528,16 +441,15 @@ class Automation:
         return op_list        
 
     
-    def _button_action_steps(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list[ActionStepTuple]:
-        """Generate button click related actions (chi, pon, kan, etc.)"""       
-
-        actions = []
+    def steps_button_action(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list[ActionStepTuple]:
+        """Generate action steps for button actions (chi, pon, kan, etc.)"""       
         if 'operationList' not in liqi_operation:
-            return actions
+            return []
+        
         op_list:list = liqi_operation['operationList']
         op_list = op_list.copy()
-        op_list.append({'type': 0})     # add None/Pass button
-        op_list.sort(key=lambda x: ACTION_PIORITY[x['type']])   # sort operation list by priority       
+        op_list.append({'type': 0})                             # add None/Pass button
+        op_list.sort(key=lambda x: ACTION_PIORITY[x['type']])   # sort operation list by priority
         
         mjai_type = mjai_action['type']
         mstype_from_mjai = cvt_type_mjai_2_ms(mjai_type, gi)
@@ -546,27 +458,27 @@ class Automation:
             op_list = self._process_oplist_for_kan(mstype_from_mjai, op_list)
         
         # Click on the corresponding button (None, Chii, Pon, etc.)
+        steps = []
         the_op = None
-        for idx, operation in enumerate(op_list):
-            if operation['type'] == mstype_from_mjai:
-                click_what = f"button {idx} ({mjai_type})"
-                step = self._get_moveclick_step(Positions.BUTTONS[idx][0], Positions.BUTTONS[idx][1],click_what)
-                actions.append(step)
-                the_op = operation
+        for idx, op in enumerate(op_list):
+            if op['type'] == mstype_from_mjai:
+                x, y = Positions.BUTTONS[idx]
+                steps += self.steps_randomized_move_click(x,y)
+                the_op = op
                 break
         if the_op is None:
             # no liqi operation but mjai indicates operation. mismatch(e.g. last round no pon)
             LOGGER.error("No matching operation for mjai %s. Op list: %s", mjai_type, op_list)            
-            return actions
+            return steps
 
         # process reach dahai action
         if mstype_from_mjai == MSType.reach:            
             reach_dahai = mjai_action['reach_dahai']
-            delay = 0.5 + 1.0 * random.random()
-            actions.append(self._get_delay_step(delay))
-            dahai_actions = self._dahai_action_steps(reach_dahai, gi, False)
-            actions.extend(dahai_actions)
-            return actions
+            delay = self.get_delay(reach_dahai, gi)
+            steps.append(ActionStepDelay(delay))
+            dahai_steps = self.steps_action_dahai(reach_dahai, gi)
+            steps += dahai_steps
+            return steps
 
         # chi / pon / kan: click candidate
         elif mstype_from_mjai in [MSType.chi, MSType.pon, MSType.daiminkan, MSType.kakan, MSType.ankan]:            
@@ -580,11 +492,11 @@ class Automation:
                 
             if len(combs) == 1:
                 # no need to click. return directly
-                return actions
+                return steps
             elif len(combs) == 0:
                 # something is wrong. no combination offered in liqi msg
                 LOGGER.warning("mjai type %s, but no combination in liqi operation list", mjai_type)
-                return actions
+                return steps
             for idx, comb in enumerate(combs):
                 # for more than one candidate group, click on the matching group
                 # groups in liqi msg are converted to mjai tile format for comparison
@@ -592,109 +504,68 @@ class Automation:
                 consumed_liqi = sort_mjai_tiles(consumed_liqi)
                 if mjai_consumed == consumed_liqi:  # match. This is the combination to click on
                     delay = len(combs) * (0.5 + random.random())
-                    actions.append(self._get_delay_step(delay))
-                    click_what = f"candidate {mjai_consumed}"
-
+                    steps.append(ActionStepDelay(delay))
                     if mstype_from_mjai in [MSType.chi, MSType.pon, MSType.daiminkan]:
                         candidate_idx = int((-(len(combs)/2)+idx+0.5)*2+5)
                         x,y = Positions.CANDIDATES[candidate_idx]
-                        action = self._get_moveclick_step(x,y,click_what)
-
+                        steps += self.steps_randomized_move_click(x,y)
                     elif mstype_from_mjai in [MSType.ankan, MSType.kakan]:
                         candidate_idx = int((-(len(combs)/2)+idx+0.5)*2+3)
                         x,y = Positions.CANDIDATES_KAN[candidate_idx]
-                        action = self._get_moveclick_step(x,y,click_what)
-
-                    actions.append(action)
-                    return actions
-        else:
-            return actions
-
-    def mouse_move_click(self, x, y, random_moves:int=3, blocking:bool=False):
-        """ call browser move n click function with 16x9 resolution"""
-        if self.browser:
-            scalar = self.browser.width/16
-            self.browser.mouse_move_click(x * scalar, y * scalar, random_moves, blocking)
-            
-    def mouse_move(self,x,y,steps:int,blocking:bool=True):
-        """ call browser mouse move. 16x9"""
-        if self.browser:
-            scalar = self.browser.width/16
-            self.browser.mouse_move(x * scalar, y * scalar, steps, blocking)
-    
-    def mouse_click(self, x, y, delay:float, blocking:bool=True):
-        """ call browser mouse click"""
-        if self.browser:
-            scalar = self.browser.width/16
-            self.browser.mouse_click(x * scalar, y * scalar, delay, blocking)
-    
-    def mouse_wheel(self, dx:float, dy:float, blocking:bool=True):
-        """ call browser mouse wheel"""
-        if self.browser:
-            self.browser.mouse_wheel(dx, dy, blocking)
-    
-    def _get_delay_step(self, delay:float) -> ActionStepTuple:
-        """ Generate a delay step"""
-        text = f"delay {delay:.1f}s "
-        return ActionStepTuple(lambda: time.sleep(delay), text)
-    
-    def _get_moveclick_step(self, x:float, y:float, what:str, blocking:bool=True) -> ActionStepTuple:
-        """Generate a mouse click step
-        params:
-            x,y: in 16x9 resolution
-            what(str): describe what is clicked"""
-        text = f"clicking {what}"
+                        steps += self.steps_randomized_move_click(x,y)
+                    return steps
         
-        # Add random moves
-        if self.settings.auto_random_move:
-            random_moves = random.randint(1,5)
+        # no additional clicks for other types
         else:
-            random_moves = 0
-        return ActionStepTuple(lambda: self.mouse_move_click(x, y, random_moves, blocking), text)
+            return steps
     
-    def _get_move_step(self, x:float, y:float, random_moves:int=3) -> ActionStepTuple:
-        """ generate mouse move with random move step
+    @property
+    def scaler(self):
+        """ scaler for 16x9 -> game resolution"""
+        return self.executor.width/16
+    
+    def steps_randomized_move(self, x:float, y:float, random_moves:int=None) -> list[ActionStep]:
+        """ generate list of steps for a randomized mouse move
         Params:
-            tx, ty: target position in 16x9 resolution"""
-        text = f"Mouse move ({x}, {y}) (random={random_moves})"
-        def move():
-            for i in range(random_moves):   # random moves, within (-0.5, 0.5) of target
-                rx = int(x + random.uniform(-0.5, 0.5))
-                rx = max(0, min(1, rx))
-                ry = int(y + random.uniform(-0.5, 0.5))
-                ry = max(0, min(1, ry))
-                self.mouse_move(x=rx, y=ry, steps=random.randint(5,15))
-                time.sleep(0.11)
-            self.mouse_move(x=rx, y=ry, steps=random.randint(5,15))
-            # move to target
-            self.mouse_move(x, y, random.randint(5,10))
-            time.sleep(0.1)
-        return ActionStepTuple(move, text)
-            
-            
-        # return ActionStep(lambda: self.mouse_move(x, y, random_moves), text)
-    
-    def _get_random_move_click_step(
-        self, x:float, y:float, what:str, random_moves:int=3, delay:float=80, blocking:bool=True) -> ActionStepTuple:
-        """ generate mirror browser move click"""
-        # TODO tba
-        text = f"clicking {what} (random_moves={random_moves})"
+            x, y: target position in 16x9 resolution
+            random_moves(int): number of random moves before target. None -> use randint"""
+        steps = []
+        if random_moves is None:
+            random_moves = random.randint(1,5)
         
-        def move_click():
-            # random move and click in one action
-            self.mouse_click(x, y, delay, blocking)
-            
-        return ActionStepTuple(move_click, text)
+        for _i in range(random_moves):   # random moves, within (-0.5, 0.5) of target
+            rx = int(x + random.uniform(-0.5, 0.5))
+            rx = max(0, min(1, rx))
+            ry = int(y + random.uniform(-0.5, 0.5))
+            ry = max(0, min(1, ry))
+            steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(5,15)))
+            steps.append(ActionStepDelay(random.uniform(0.05, 0.15)))
+        tx, ty = x*self.scaler, y*self.scaler
+        steps.append(ActionStepMove(tx, ty, random.randint(5,15)))
+        return steps
     
-    def _get_wheel_step(self, dx:float, dy:float, times:int, blocking:bool=True) -> ActionStepTuple:
-        """ generate mouse wheel step"""
-        text = f"mouse wheel ({dx}, {dy}) x {times}"
-        def wheel_action():
-            for _ in range(times):
-                self.mouse_wheel(dx, dy, blocking)
-                time.sleep(0.1)                
-        return ActionStepTuple(wheel_action, text)
-
+    def steps_randomized_move_click(self, x:float, y:float, random_moves:int=None) -> list[ActionStep]:
+        """ generate list of steps for a randomized mouse move and click
+        Params:
+            x, y: target position in 16x9 resolution
+            random_moves(int): number of random moves before target. None -> use randint"""
+        steps = self.steps_randomized_move(x, y, random_moves)
+        steps.append(ActionStepDelay(random.uniform(0.25, 0.3)))
+        steps.append(ActionStepClick(x*self.scaler, y*self.scaler, random.randint(60, 100)))
+        return steps
+    
+    def steps_random_wheels(self, total_dx:float, total_dy:float) -> list[ActionStep]:
+        """ list of steps for mouse wheel
+        params:
+            total_dx, total_dy: total distance to wheel move"""
+        steps = []
+        times = random.randint(4,7)
+        for i in range(times):
+            dx = total_dx / times
+            dy = total_dy / times
+            steps.append(ActionStepWheel(dx, dy))
+            steps.append(ActionStepDelay(random.uniform(0.05, 0.1)))
+        return steps
 
     def on_lobby_login(self, liqimsg:dict):
         """ lobby login handler"""
@@ -719,81 +590,83 @@ class Automation:
         self.ui_state = UI_STATE.NOT_RUNNING
    
     def automate_end_game(self):
-        """Game end go back to lobby"""  
-        if not self.can_automation():
+        """Automate Game end go back to menu"""  
+        if not self.can_automate():
             return False
         if self.settings.auto_join_game is False:
             return False
         self.stop_previous()
-        
-        LOGGER.info("Automating game end to lobby")
-        self._task = AutomationTask()
-        self._task.start_action_iter(self._end_game_iter(), "End game to lobby")
+
+        self._task = AutomationTask(self.executor, END_GAME, "End game go back to main menu")
+        self._task.start_action_steps(self._end_game_iter(), None)
         return
         
-    def _end_game_iter(self) -> Iterator[ActionStepTuple]:
+    def _end_game_iter(self) -> Iterator[ActionStep]:
         # generate action steps until main menu tested
         while True:
             res, diff = self.g_v.comp_temp(ImgTemp.main_menu)
             if res:
-                LOGGER.debug("Main menu tested true with diff %.1f", diff)
+                LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UI_STATE.MAIN_MENU
                 break
             
-            yield self._get_delay_step(random.uniform(1,3))
+            yield ActionStepDelay(random.uniform(1,2))
             
             x,y = Positions.GAMEOVER[0]
-            yield self._get_moveclick_step(x,y,"click OK until main menu")
+            for step in self.steps_randomized_move_click(x,y,random.randint(1,3)):
+                yield step
             
-    def automate_next_game(self):
-        """ Automate from lobby to next game """
-        if not self.can_automation():
+    def automate_join_game(self):
+        """ Automate join next game """
+        if not self.can_automate():
             return False
         if self.settings.auto_join_game is False:
             return False
         self.stop_previous()
-        
-        LOGGER.info("Automating entering next game")
-        self._task = AutomationTask()
-        self._task.start_action_iter(self._next_game_action_iter(), AutomationTask.NEXT_GAME_TASK_NAME)
-        return    
+        desc = f"Join the next game level={self.settings.auto_join_level}, mode={self.settings.auto_join_mode}"
+        self._task = AutomationTask(self.executor, JOIN_GAME, desc)
+        self._task.start_action_steps(self._join_game_iter(), None)
+        return   
     
-    def _next_game_action_iter(self) -> Iterator[ActionStepTuple]:
-        # generate action steps for next_game
-        # Start from lobby
+    def _join_game_iter(self) -> Iterator[ActionStep]:
+        # generate action steps for joining next game
+        
+        # Wait for main menu
         while True:
             res, diff = self.g_v.comp_temp(ImgTemp.main_menu)
             if res:
-                LOGGER.debug("Main menu tested true with diff %.1f", diff)
+                LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UI_STATE.MAIN_MENU
                 break
-            yield self._get_delay_step(random.uniform(1,3))
+            yield ActionStepDelay(random.uniform(1,2))
         
         # click on competitive
         x,y = Positions.MENUS[0]
-        yield self._get_moveclick_step(x,y, "click menu [0]")
-        yield self._get_delay_step(random.uniform(1.5,3))
+        for step in self.steps_randomized_move_click(x,y):
+            yield step
+        yield ActionStepDelay(random.uniform(1.5,2))
         
-        # click on level
+        # click on level        
+        if self.settings.auto_join_level >= 3:  # jade/throne requires mouse wheel
+            wx,wy = Positions.LEVELS[1]         # wheel at this position
+            for step in self.steps_randomized_move(wx,wy):
+                yield step
+            for step in self.steps_random_wheels(0, 500):
+                yield step                
         x,y = Positions.LEVELS[self.settings.auto_join_level]
-        if self.settings.auto_join_level >= 3: # jade/throne requires mouse wheel
-            wx,wy = Positions.LEVELS[1]     # wheel at this position
-            yield self._get_move_step(wx, wy, random.randint(2,5))            
-            yield self._get_wheel_step(dx=0, dy=random.uniform(0,100), times= random.randint(4,7))
-        
-        yield self._get_moveclick_step(x,y,f"click level [{self.settings.auto_join_level}]")
-        
-        yield self._get_delay_step(random.uniform(1.5,3))
+        for step in self.steps_randomized_move_click(x,y):
+            yield step        
+        yield ActionStepDelay(random.uniform(1.5,2))
         
         # click on mode
         mode_idx = GAME_MODES.index(self.settings.auto_join_mode)
         x,y = Positions.MODES[mode_idx]
-        yield self._get_moveclick_step(x,y,f"click Mode [{self.settings.auto_join_mode}]")
-    
+        for step in self.steps_randomized_move_click(x,y):
+            yield step    
     
     def check_what_to_do(self):
         """ check what task to do next. called on bot thread loop"""
-        if not self.can_automation():
+        if not self.can_automate():
             return
         if self.is_running_execution():
              # don't do anything if previous task is still running
@@ -806,7 +679,7 @@ class Automation:
         if self.ui_state == UI_STATE.NOT_RUNNING:
             pass
         elif self.ui_state == UI_STATE.MAIN_MENU:
-            self.automate_next_game()
+            self.automate_join_game()
         elif self.ui_state == UI_STATE.IN_GAME:
             pass
         elif self.ui_state == UI_STATE.GAME_ENDING:
@@ -815,6 +688,4 @@ class Automation:
     def on_automation_disable(self):
         """ call this when automation is disabled """
         self.stop_previous()
-        
-        
         

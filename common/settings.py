@@ -38,7 +38,7 @@ class Settings:
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool)
         
         self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)
-        self.auto_random_move:bool = self._get_value("auto_random_move", True, self.valid_bool)
+        self.auto_random_move:int = self._get_value("auto_random_move", 3, lambda x: 0 <= x <= 5)
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
         self.auto_join_level:int = self._get_value("auto_join_level", 1, self.valid_game_level)
         self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)

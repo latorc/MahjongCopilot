@@ -3,20 +3,23 @@ This file contains the BotManager class, which manages the bot logic, game state
 It also manages the browser and overlay display
 The BotManager class is run in a separate thread, and provide interface methods for UI
 """
+# pylint: disable=broad-exception-caught
 import time
 import queue
 import threading
 from game.browser import GameBrowser
 from game.game_state import GameState
-from game.automation import Automation, AutomationTask, UI_STATE
+from game.automation import Automation, UI_STATE, END_GAME, JOIN_GAME
 import mitm
 import liqi
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
-from common.log_helper import LOGGER, config_logging
+from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LanStr
 from common import utils
-from bot import mj_bot
+from common.utils import FPSCounter
+from bot import Bot, get_bot
+
 
 
 METHODS_TO_IGNORE = [
@@ -45,10 +48,11 @@ class BotManager:
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
         self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
         self.automation = Automation(self.browser, self.settings)
-        self.bot:mj_bot.Bot = None
+        self.bot:Bot = None
 
         self._thread:threading.Thread = None
         self._stop_event = threading.Event()
+        self.fps_counter = FPSCounter()
 
         self.lobby_flow_id:str = None               # websocket flow Id for lobby
         self.game_flow_id = None                    # websocket flow that corresponds to the game/match
@@ -164,14 +168,15 @@ class BotManager:
         """ disable autojoin"""
         LOGGER.debug("Disabling Auto Join")
         self.settings.auto_join_game = False
+        # stop any join game tasks
         if self.automation.is_running_execution():
-            if self.automation._task.name == AutomationTask.NEXT_GAME_TASK_NAME:
+            if self.automation._task.name == JOIN_GAME:
                 self.automation.stop_previous()
     
     def create_bot(self):
         """ create Bot object based on settings"""
         try:
-            self.bot = mj_bot.get_bot(self.settings)
+            self.bot = get_bot(self.settings)
             self.game_exception = None
             LOGGER.info("Created bot: %s", self.bot.name)
         except Exception as e:
@@ -213,13 +218,15 @@ class BotManager:
             if self.settings.auto_launch_browser:
                 self.start_browser()
 
+            self.fps_counter.reset()
             while self._stop_event.is_set() is False:
                 # keep processing majsoul game messages forwarded from mitm server
+                self.fps_counter.frame()
                 try:
                     msg = self.mitm_server.get_message()
                     self._process_msg(msg)                
                 except queue.Empty:
-                    time.sleep(0.1)
+                    time.sleep(0.01)
                 except Exception as e:
                     LOGGER.error("Error processing msg: %s",e, exc_info=True)
                     self.game_exception = e
@@ -413,6 +420,8 @@ class BotManager:
             line = '🟢' + self.settings.lan().READY_FOR_GAME
             
         text += '\n' + line
+        # display fps numbers and limit total width
+        text += f"\nFPS: {self.fps_counter.fps:3.0f} / {self.browser.fps_counter.fps:3.0f}"[:18]
                     
         # update if there is a change or time elapsed. avoid too often to burden browser
         if text != self._overlay_botleft_text or time.time() - self._overlay_botleft_last_update > 1:
@@ -530,31 +539,3 @@ def mjai_reaction_2_guide(
                 options.append((name_str, q))
         
     return (action_str, options)
-                
-if __name__ == "__main__":
-    # Test code: a simple CLI to run BotManager
-    config_logging('TestBotManager')
-    manager = BotManager(Settings())
-    manager.start() 
-
-    commands = {
-        'sb': manager.start_browser,
-        'hud on': manager.enable_overlay,
-        'hud off': manager.disable_overlay,
-        'auto on': manager.enable_automation,
-        'auto off': manager.disable_automation,
-        'hud text': lambda: manager.browser.overlay_update_botleft("Sample text\n123456"),
-        'hud text clear': manager.browser.overlay_clear_botleft,
-        'quit': lambda: manager.stop(True),
-    }
-    
-    while True:
-        cmd = input("Input command:")
-        if cmd in commands:
-            commands[cmd]()
-        else:
-            LOGGER.info("Invalid command. Valid commands: %s", commands.keys())
-        if manager.is_running() is False:
-            break
-
-    LOGGER.info("Manager stopped. End")

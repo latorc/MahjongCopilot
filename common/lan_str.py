@@ -75,7 +75,7 @@ MJAI: https://mjai.app
     # Status
     MAIN_THREAD  = "Main Thread"
     MITM_SERVICE = "MITM Service"
-    WEB_CLIENT = "Web Client"
+    BROWSER = "Browser"
     GAME_RUNNING = "Game Running"
     GAME_ERROR = "Game Error!"
     MODEL_FILE_ERROR = "Model File not Found!"
@@ -207,7 +207,7 @@ MJAI: https://mjai.app
     # Status
     MAIN_THREAD  = "主程序"
     MITM_SERVICE = "MITM 服务"
-    WEB_CLIENT = "网页客户端"
+    BROWSER = "浏览器"
     GAME_RUNNING = "对局进行中"
     GAME_ERROR = "对局发生错误!"
     MODEL_FILE_ERROR = "无法找到模型文件!"
