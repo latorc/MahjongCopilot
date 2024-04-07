@@ -404,7 +404,7 @@ class Automation:
         steps.append(delay_step)
         
         xmid, ymid = random.uniform(0.2,0.8), random.uniform(0.2, 0.8)
-        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(5,15))
+        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(3,5))
         move_step.ignore_step_change = True        
         steps.append(move_step)
         
@@ -537,10 +537,10 @@ class Automation:
             rx = max(0, min(16, rx))
             ry = y + 9*random.uniform(-0.5, 0.5)
             ry = max(0, min(9, ry))
-            steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(5,15)))
+            steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,5)))
             steps.append(ActionStepDelay(random.uniform(0.05, 0.15)))
         tx, ty = x*self.scaler, y*self.scaler
-        steps.append(ActionStepMove(tx, ty, random.randint(5,15)))
+        steps.append(ActionStepMove(tx, ty, random.randint(3,5)))
         return steps
     
     def steps_randomized_move_click(self, x:float, y:float, random_moves:int=None) -> list[ActionStep]:
@@ -558,7 +558,7 @@ class Automation:
         params:
             total_dx, total_dy: total distance to wheel move"""
         steps = []
-        times = random.randint(4,7)
+        times = random.randint(4,6)
         for i in range(times):
             dx = total_dx / times
             dy = total_dy / times
