@@ -259,8 +259,12 @@ class SettingsWindow(tk.Toplevel):
         # auto play settings
         autoplay_new = self.autoplay_var.get()
         auto_random_moves_new = self.random_moves_var.get()
-        delay_lower_new = self.delay_random_lower_var.get()
-        delay_upper_new = self.delay_random_upper_var.get()
+        try:
+            delay_lower_new = self.delay_random_lower_var.get()
+            delay_upper_new = self.delay_random_upper_var.get()
+        except:
+            messagebox.showerror("⚠", self.st.lan().RANDOM_DELAY_RANGE)
+            return
         delay_lower_new = max([0,delay_lower_new])
         delay_upper_new = max([delay_lower_new, delay_upper_new])
         auto_join_new = self.auto_join_var.get()
