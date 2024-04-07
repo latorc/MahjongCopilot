@@ -265,8 +265,8 @@ class SettingsWindow(tk.Toplevel):
         except:
             messagebox.showerror("⚠", self.st.lan().RANDOM_DELAY_RANGE)
             return
-        delay_lower_new = max([0,delay_lower_new])
-        delay_upper_new = max([delay_lower_new, delay_upper_new])
+        delay_lower_new = max(0,delay_lower_new)
+        delay_upper_new = max(delay_lower_new, delay_upper_new)
         auto_join_new = self.auto_join_var.get()
         auto_join_level_new = self.auto_join_level_var.get()    # convert to index
         auto_join_level_new = self.st.lan().GAME_LEVELS.index(auto_join_level_new)
