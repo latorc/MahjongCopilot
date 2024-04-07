@@ -257,7 +257,7 @@ class MainGUI(tk.Tk):
             self.status_bar.update_column(1, text, self.icon_red)
 
         
-        fps_disp = min([999, self.bot_manager.browser.fps_counter.fps])
+        fps_disp = min(999, self.bot_manager.browser.fps_counter.fps)
         fps_str = f"({fps_disp:3.0f})"
         if self.bot_manager.browser.is_running():
             self.status_bar.update_column(2, self.st.lan().BROWSER+fps_str, self.icon_green)

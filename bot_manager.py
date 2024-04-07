@@ -57,10 +57,10 @@ class BotManager:
         self.lobby_flow_id:str = None               # websocket flow Id for lobby
         self.game_flow_id = None                    # websocket flow that corresponds to the game/match
 
-        self._overlay_botleft_text:str = None       # if new text is different, update overlay bot-left
-        self._overlay_botleft_last_update:float = 0 # last update time
-        self._overlay_reaction:dict = None          # update overlay guidance if new reaction is different
-        self._overlay_guide_last_update:float = 0   # last update time
+        # self._overlay_botleft_text:str = None       # if new text is different, update overlay bot-left
+        # self._overlay_botleft_last_update:float = 0 # last update time
+        # self._overlay_reaction:dict = None          # update overlay guidance if new reaction is different
+        # self._overlay_guide_last_update:float = 0   # last update time
         
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
@@ -226,7 +226,7 @@ class BotManager:
                     msg = self.mitm_server.get_message()
                     self._process_msg(msg)                
                 except queue.Empty:
-                    time.sleep(0.01)
+                    time.sleep(0.002)
                 except Exception as e:
                     LOGGER.error("Error processing msg: %s",e, exc_info=True)
                     self.game_exception = e
@@ -362,28 +362,24 @@ class BotManager:
             return False
         if self.browser is None:
             return False
+        if self.browser.is_page_normal() is False:
+            return False
         return True
         
     def _update_overlay_guide(self):
         # Update overlay guide given pending reaction
         if self.game_state is None:
             return
-        reaction = self.game_state.get_pending_reaction()
-        
-        # update if reaction has changed, or time elapsed
-        if reaction != self._overlay_reaction or time.time() - self._overlay_guide_last_update > 0.5:
-            if reaction:
-                guide, options = mjai_reaction_2_guide(reaction, 3, self.settings.lan())
-                self.browser.overlay_update_guidance(guide, self.settings.lan().OPTIONS_TITLE, options)
-            else:
-                self.browser.overlay_clear_guidance()
-            self._overlay_reaction = reaction
-            self._overlay_guide_last_update = time.time()
+        reaction = self.game_state.get_pending_reaction()        
+
+        if reaction:
+            guide, options = mjai_reaction_2_guide(reaction, 3, self.settings.lan())
+            self.browser.overlay_update_guidance(guide, self.settings.lan().OPTIONS_TITLE, options)
+        else:
+            self.browser.overlay_clear_guidance()
         
     def _update_overlay_botleft(self):
         # update overlay bottom left text
-        if self._update_overlay_conditions_met() is False:
-            return
         
         # maj copilot
         text = '😸' + self.settings.lan().APP_TITLE
@@ -422,12 +418,9 @@ class BotManager:
         text += '\n' + line
         # display fps numbers and limit total width
         # text += f"\nFPS: {self.fps_counter.fps:3.0f} / {self.browser.fps_counter.fps:3.0f}"[:18]
-                    
-        # update if there is a change or time elapsed. avoid too often to burden browser
-        if text != self._overlay_botleft_text or time.time() - self._overlay_botleft_last_update > 1:
-            self.browser.overlay_update_botleft(text)
-            self._overlay_botleft_text = text
-            self._overlay_botleft_last_update = time.time()
+
+        self.browser.overlay_update_botleft(text)
+
     
     def _do_automation(self, reaction:dict):
         # auto play given mjai reaction        
