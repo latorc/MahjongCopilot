@@ -40,7 +40,7 @@ class Settings:
         
         self.delay_random_lower:float = self._get_value("delay_random_lower", 1, lambda x: 0 <= x )
         self.delay_random_upper:float = self._get_value(
-            "delay_random_upper",self.delay_random_lower, lambda x: x >= self.delay_random_lower)
+            "delay_random_upper",max(2, self.delay_random_lower), lambda x: x >= self.delay_random_lower)
         self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)
         self.auto_random_moves:int = self._get_value("auto_random_moves", 3, lambda x: 0 <= x <= 10)
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
