@@ -8,7 +8,7 @@ from liqi import LiqiProto, LiqiMethod, LiqiAction
 import common.mj_helper as mj_helper
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
 from common.log_helper import LOGGER
-from bot import mj_bot
+from bot import Bot
 
 NO_EFFECT_METHODS = [
     '.lq.NotifyPlayerLoadGameReady',        # Notify: the game starts
@@ -47,12 +47,12 @@ class KyokuState:
 class GameState:
     """ Stores Majsoul game state and processes inputs outputs to/from Bot"""
 
-    def __init__(self, bot:mj_bot.Bot) -> None:
+    def __init__(self, bot:Bot) -> None:
         """ 
         params:
-            bot (mj_bot.Bot): Bot implemetation"""
+            bot (Bot): Bot implemetation"""
 
-        self.mjai_bot:mj_bot.Bot = bot         # mjai bot for generating reactions
+        self.mjai_bot:Bot = bot         # mjai bot for generating reactions
         if self.mjai_bot is None:
             raise ValueError("Bot is None")
         self.mjai_pending_input_msgs = []   # input msgs to be fed into bot
@@ -63,7 +63,7 @@ class GameState:
         self.seat = 0                           # seat index
         #seat 0 is chiicha (起家; first dealer; first East)
         #1-2-3 then goes counter-clockwise        
-        self.player_scores:list = None             # player scores
+        self.player_scores:list = None          # player scores
         
         self.kyoku_state:KyokuState = KyokuState()  # kyoku info - cleared every newround
         
@@ -248,12 +248,14 @@ class GameState:
                 'type': MJAI_TYPE.START_GAME,
                 'id': self.seat
             }
-        )
-        return self._react_all()
+        )        
+        self._react_all()
+        return None     # no reaction for start_game     
     
     def ms_new_round(self, liqi_data:dict) -> dict:
         """ Start kyoku """
         self.kyoku_state = KyokuState()
+        self.mjai_pending_input_msgs = []
    
         self.kyoku_state.bakaze = MJAI_WINDS[liqi_data['data']['chang']]
         dora_marker = mj_helper.cvt_ms2mjai(liqi_data['data']['doras'][0])
@@ -313,7 +315,7 @@ class GameState:
             self.mjai_pending_input_msgs.append(tsumo_msg)
         
         self.is_round_started = True
-        return self._react_all()
+        return self._react_all(liqi_data['data'])
     
     def ms_action_prototype(self, liqi_data:dict) -> dict:
         """ process actionPrototype msg, generate mjai msg and have mjai react to it"""        
@@ -352,7 +354,7 @@ class GameState:
                     'pai': tile_mjai
                 }
             )
-            return self._react_all()
+            return self._react_all(liqi_data['data'])
         
         # LiqiAction.DiscardTile -> MJAI_TYPE.DAHAI
         elif liqi_data_name == LiqiAction.DiscardTile:
@@ -392,7 +394,7 @@ class GameState:
                 }
             )
                 
-            return self._react_all()        
+            return self._react_all(liqi_data['data'])        
         
         # LiqiAction.ChiPengGang -> MJAI CHI/PON/DAIMINKAN
         elif liqi_data_name == LiqiAction.ChiPengGang:
@@ -450,7 +452,7 @@ class GameState:
                     )
                 case _:
                     raise ValueError(f"Unknown ChiPengGang type {liqi_data['data']['type']}")
-            return self._react_all()
+            return self._react_all(liqi_data['data'])
                     
         # LiqiAction.AnGangAddGang -> MJAI ANKAN / KAKAN
         elif liqi_data_name == LiqiAction.AnGangAddGang:
@@ -496,7 +498,7 @@ class GameState:
                             'consumed': consumed_mjai
                         }
                     )
-            return self._react_all()
+            return self._react_all(liqi_data['data'])
         
         # (3p Mahjong only) LiqiAction.BaBei -> MJAI NUKIDORA
         elif liqi_data_name == LiqiAction.BaBei:
@@ -514,37 +516,19 @@ class GameState:
                     'pai': 'N'
                 }
             )
-            return self._react_all()
+            return self._react_all(liqi_data['data'])
         
         # LiqiAction.Hule -> MJAI END_KYOKU
-        elif liqi_data_name == LiqiAction.Hule:
-            self.mjai_pending_input_msgs = []
-            self.mjai_pending_input_msgs.append(
-                {
-                    'type': MJAI_TYPE.END_KYOKU
-                }
-            )
-            return self._react_all()
+        elif liqi_data_name in LiqiAction.Hule:
+            return self.ms_end_kyoku()
 
         # LiqiAction.NoTile -> MJAI END_KYOKU
         elif liqi_data_name == LiqiAction.NoTile:
-            self.mjai_pending_input_msgs = []
-            self.mjai_pending_input_msgs.append(
-                {
-                    'type': MJAI_TYPE.END_KYOKU
-                }
-            )
-            return self._react_all()
+            return self.ms_end_kyoku()
 
         # LiqiAction.LiuJu -> MJAI END_KYOKU
         elif liqi_data_name == LiqiAction.LiuJu:
-            self.mjai_pending_input_msgs = []
-            self.mjai_pending_input_msgs.append(
-                {
-                    'type': MJAI_TYPE.END_KYOKU
-                }
-            )
-            return self._react_all()
+            return self.ms_end_kyoku()
 
         # LiqiAction.MJStart: once at new game start 
         elif liqi_data_name == LiqiAction.MJStart:
@@ -554,6 +538,17 @@ class GameState:
         else:
             LOGGER.warning('Unknown liqi_data name %s', liqi_data_name)
             return None
+        
+    def ms_end_kyoku(self) -> dict | None:
+        """ End kyoku and get None as reaction"""
+        self.mjai_pending_input_msgs = []
+        self.mjai_pending_input_msgs.append(
+            {
+                'type': MJAI_TYPE.END_KYOKU
+            }
+        )
+        self._react_all()
+        return None     # no reaction for end_kyoku
     
         
     def ms_game_end_results(self, liqi_data:dict) -> dict:
@@ -569,32 +564,48 @@ class GameState:
         )
         self._react_all()
         self.is_game_ended = True
-        return None
+        return None     # no reaction for end_game
     
     def ms_template(self, liqi_data:dict) -> dict:
         """ template"""
             
-    def _react_all(self) -> dict:
+    def _react_all(self, data=None) -> dict | None:
         """ Feed all pending messages to AI bot and get bot reaction
         ref: https://mjai.app/docs/mjai-protocol
         returns:
             dict: the last reaction(output) from bot, or None
         """
-        output_reactions = []
-        for msg in self.mjai_pending_input_msgs:
-            LOGGER.info("Bot in: %s", msg)
-            reaction = self.mjai_bot.react(msg)
+        # output_reactions = []
+        # for msg in self.mjai_pending_input_msgs:
+        #     LOGGER.info("Bot in: %s", msg)
+        #     reaction = self.mjai_bot.react(msg)
             
-            if reaction is not None:                 
-                LOGGER.info("Bot out: %s", reaction)
-                output_reactions.append(reaction)
+        #     if reaction is not None:                 
+        #         LOGGER.info("Bot out: %s", reaction)
+        #         output_reactions.append(reaction)
         
-        self.mjai_pending_input_msgs = [] # clear intput queue       
+        # self.mjai_pending_input_msgs = [] # clear intput queue       
         
-        if not output_reactions:
-            return None
-        else:        
-            if len(output_reactions) > 1:   # not expected: more than one not-none action
-                LOGGER.error("More than one action: %s", output_reactions[0:-1]) 
-            return output_reactions[-1]        # return the last reaction
+        # if not output_reactions:
+        #     return None
+        # else:        
+        #     if len(output_reactions) > 1:   # not expected: more than one not-none action
+        #         LOGGER.error("More than one action: %s", output_reactions[0:-1]) 
+        #     return output_reactions[-1]        # return the last reaction
 
+        # return None if no operation options provided by Majsoul
+        if data: 
+            if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
+                return None
+        LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs)
+        if len(self.mjai_pending_input_msgs) == 1:
+            output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
+        else:
+            output_reaction = self.mjai_bot.react_batch(self.mjai_pending_input_msgs)
+        self.mjai_pending_input_msgs = [] # clear intput queue
+        
+        if output_reaction is None:
+            return None
+        else:
+            LOGGER.info("Bot out: %s", output_reaction)
+            return output_reaction    

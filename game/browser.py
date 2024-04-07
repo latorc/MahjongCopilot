@@ -8,7 +8,7 @@ from pathlib import Path
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 import common.utils as utils
-from common.utils import BROWSER_DATA_FOLDER, TEMP_FOLDER
+from common.utils import BROWSER_DATA_FOLDER, TEMP_FOLDER, FPSCounter
 from common.log_helper import LOGGER
 
 class GameBrowser:
@@ -21,6 +21,7 @@ class GameBrowser:
         self._action_queue = queue.Queue()       # thread safe queue for actions
         self._stop_event = threading.Event()    # set this event to stop processing actions
         self._browser_thread = None
+        self.fps_counter = FPSCounter()
 
         self.init_vars()
 
@@ -67,8 +68,8 @@ class GameBrowser:
         else:
             proxy_object = None
 
-        LOGGER.info(f'Starting Chromium, viewport={self.width}x{self.height}, proxy={proxy}')
-        with sync_playwright() as playwright:
+        LOGGER.info(f'Starting Chromium, viewport={self.width}x{self.height}, proxy={proxy}')        
+        with sync_playwright() as playwright:            
             try:
                 # Initilize browser
                 chromium = playwright.chromium
@@ -97,8 +98,10 @@ class GameBrowser:
             self.context.on("page", on_page)
             
             self._clear_action_queue()
+            self.fps_counter.reset()
             # keep running actions until stop event is set
             while self._stop_event.is_set() is False:
+                self.fps_counter.frame()
                 # check if page is closed, break and exit
                 try:
                     self._update_page_info()
@@ -179,13 +182,6 @@ class GameBrowser:
         self._action_queue.put(lambda: self._action_mouse_click(x, y, delay, finish_event))
         if blocking:
             finish_event.wait()
-    
-    def mouse_move_click(self, x:int, y:int, random_moves:int=3, blocking:bool=False):
-        """ Queue action: mouse click at (x,y) on viewport"""
-        finish_event = threading.Event()
-        self._action_queue.put(lambda: self._action_mouse_move_click(x, y, random_moves, finish_event))
-        if blocking:
-            finish_event.wait()
             
     def mouse_wheel(self, dx:float, dy:float, blocking:bool=False):
         """ Queue action for mouse wheel"""
@@ -260,33 +256,7 @@ class GameBrowser:
         if self.page:
             self.page.mouse.click(x=x, y=y, delay=delay)
         finish_event.set()
-    
-        
-    def _action_mouse_move_click(self, px:int, py:int, random_moves:int, finish_event:threading.Event):
-        """ mouse click on page at (x,y)"""
-        if self.page:
-            if random_moves:     # add random times of random moves
-                random_moves = max(1, min(random_moves,10)) # limit range
-                for i in range(random.randint(1,random_moves)):
-                    rx = int(px + random.uniform(-self.width/2, self.width/2))
-                    rx = max(0, min(self.width, rx))
-                    ry = int(py + random.uniform(-self.height/2, self.height/2))
-                    ry = max(0, min(self.height, ry))
-                    # LOGGER.debug("moving on page (%d,%d)", rx, ry)
-                    self.page.mouse.move(x=rx, y=ry, steps=random.randint(5,15))
-                    time.sleep(0.11)
-            # LOGGER.debug(f"Clicking on page ({x},{y})")
-            self.page.mouse.move(x=px, y=py, steps=random.randint(5,15))
-            time.sleep(0.11)
-            self.page.mouse.click(x=px, y=py, delay=random.randint(50,120))
-            time.sleep(0.05)
-            # move to a random position in center
-            rx = int(random.uniform(0.2,0.8) * self.width)
-            ry = int(random.uniform(0.3,0.8) * self.height)
-            self.page.mouse.move(x=rx, y=ry, steps=random.randint(5,10))   # move mouse to center
-        else:
-            LOGGER.debug("No page, no click")
-        finish_event.set()
+
         
     def _action_mouse_wheel(self, dx:float, dy:float, finish_event:threading.Event):
         if not self.page:
@@ -436,7 +406,7 @@ class GameBrowser:
         if self.is_overlay_working() is False:
             return
         font_size = int(self.height/48)
-        box_top = 0.885
+        box_top = 0.86
         box_left = 0
         box_width = 0.115
         box_height = 1- box_top

@@ -4,3 +4,8 @@ max-line-length = 120
 
 [MESSAGES CONTROL]
 disable=trailing-whitespace
+
+
+[DESIGN]
+# Adjust the minimum similarity score that triggers a warning
+min-similarity-lines=4
