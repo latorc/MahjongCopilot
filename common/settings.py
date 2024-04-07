@@ -16,6 +16,7 @@ class Settings:
         
         # read settings or set default values
         # variable names must match keys in json, for saving later
+        self.update_url:str = self._get_value("update_url", "update.mjcopilot.com")
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
