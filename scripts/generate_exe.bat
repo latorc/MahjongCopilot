@@ -3,8 +3,8 @@ REM Windows
 set PLAYWRIGHT_BROWSERS_PATH=0
 playwright install chromium
 
-rmdir /s /q dist
-pyinstaller --windowed --name=MahjongCopilot --icon=resources/icon.ico main.py 
+REM rmdir /s /q dist
+pyinstaller --windowed --noconfirm --name=MahjongCopilot --icon=resources/icon.ico main.py 
 if errorlevel 1 (
     echo PyInstaller encountered an error.
     exit /b 1

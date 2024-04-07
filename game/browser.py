@@ -28,12 +28,16 @@ class GameBrowser:
     def init_vars(self):
         """ initialize internal variables"""
         self.context:BrowserContext = None
-        self.page:Page = None        # playwright page, only used by thread
-        self._canvas_id = None      # for overlay
+        self.page:Page = None        # playwright page, only used by thread        
+        
         # for tracking page info
         self._page_title:str = None
-        self._viewport_pos = None
         self._last_update_time:float = 0
+        
+        # overlay info
+        self._canvas_id = None              # for overlay
+        self._last_botleft_text = None
+        self._last_guide = None 
 
     def __del__(self):
         self.stop()
@@ -68,7 +72,7 @@ class GameBrowser:
         else:
             proxy_object = None
 
-        LOGGER.info(f'Starting Chromium, viewport={self.width}x{self.height}, proxy={proxy}')        
+        LOGGER.info('Starting Chromium, viewport=%dx%d, proxy=%s', self.width, self.height, proxy)        
         with sync_playwright() as playwright:            
             try:
                 # Initilize browser
@@ -102,17 +106,19 @@ class GameBrowser:
             # keep running actions until stop event is set
             while self._stop_event.is_set() is False:
                 self.fps_counter.frame()
-                # check if page is closed, break and exit
-                try:
-                    self._update_page_info()
+                try:        # test if page is stil alive
+                    if time.time() - self._last_update_time > 1:
+                        self._page_title = self.page.title()
+                        self._last_update_time = time.time()
                 except Exception as e:
-                    LOGGER.warning('Browser page not found')
+                    LOGGER.warning("Page error %s. exiting.", e)
                     break
-                
-                try:
+                    
+                try:                    
                     action = self._action_queue.get_nowait()
                     action()
                 except queue.Empty:
+                    time.sleep(0.002)
                     pass
                 except Exception as e:
                     LOGGER.error('Error processing action: %s', e, exc_info=True)
@@ -192,15 +198,17 @@ class GameBrowser:
         
     def auto_hu(self):
         """ Queue action: Autohu action"""
-        self._action_queue.put(lambda: self._action_autohu())
+        self._action_queue.put(self._action_autohu)
         
     def start_overlay(self):
         """ Queue action: Start showing the overlay"""
-        self._action_queue.put(lambda: self._action_start_overlay())
+        self._last_botleft_text = None
+        self._last_guide = None
+        self._action_queue.put(self._action_start_overlay)
     
     def stop_overlay(self):
         """ Queue action: Stop showing the overlay"""
-        self._action_queue.put(lambda: self._action_stop_overlay())
+        self._action_queue.put(self._action_stop_overlay)
     
     def overlay_update_guidance(self, guide_str:str, option_subtitle:str, options:list):
         """ Queue action: update text area
@@ -212,7 +220,7 @@ class GameBrowser:
     
     def overlay_clear_guidance(self):
         """ Queue action: clear overlay text area"""
-        self._action_queue.put(lambda: self._action_overlay_clear_guide())
+        self._action_queue.put(self._action_overlay_clear_guide)
     
     def overlay_update_botleft(self, text:str):
         """ update bot-left corner text area
@@ -330,7 +338,11 @@ class GameBrowser:
     
     def _action_overlay_update_guide(self, line1: str, option_title: str, options: list[tuple[str, float]]):        
         if not self.is_overlay_working():
-            return        
+            return
+        if self._last_guide == (line1, option_title, options):  # skip if same guide
+            return
+        self._last_guide = (line1, option_title, options)
+        
         font_size, line_space, min_box_width, initial_box_height, box_top, box_left = self._overlay_text_params()
         if options:
             options_data = [[text, f"{perc*100:4.0f}%"] for text, perc in options]
@@ -402,9 +414,13 @@ class GameBrowser:
         }});"""
         self.page.evaluate(js_code)
         
-    def _action_overlay_update_botleft(self, text:str=None):
+    def _action_overlay_update_botleft(self, text:str=None):      
         if self.is_overlay_working() is False:
             return
+        if text == self._last_botleft_text:     # skip if same text
+            return
+        self._last_botleft_text = text
+        
         font_size = int(self.height/48)
         box_top = 0.885
         box_left = 0
@@ -456,20 +472,6 @@ class GameBrowser:
     
     def _overlay_update_indicators(self, reaction:dict):        
         pass
-        
-    def _update_page_info(self):
-        """ update page title and url"""
-        self._page_title = self.page.title()
-            # self._viewport_pos = self.page.evaluate("""() => {
-            #     return {
-            #         screenX: window.screenX,
-            #         screenY: window.screenY,
-            #         outerWidth: window.outerWidth,
-            #         innerWidth: window.innerWidth,
-            #         outerHeight: window.outerHeight,
-            #         innerHeight: window.innerHeight
-            #     };
-            #     }""")
             
     def _action_screen_shot(self):
         """ take screen shot from browser page"""

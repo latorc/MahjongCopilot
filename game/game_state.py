@@ -572,32 +572,16 @@ class GameState:
     def _react_all(self, data=None) -> dict | None:
         """ Feed all pending messages to AI bot and get bot reaction
         ref: https://mjai.app/docs/mjai-protocol
+        Params:
+            data (dict): liqimsg['data'] / ['data']['data'] 
         returns:
             dict: the last reaction(output) from bot, or None
         """
-        # output_reactions = []
-        # for msg in self.mjai_pending_input_msgs:
-        #     LOGGER.info("Bot in: %s", msg)
-        #     reaction = self.mjai_bot.react(msg)
-            
-        #     if reaction is not None:                 
-        #         LOGGER.info("Bot out: %s", reaction)
-        #         output_reactions.append(reaction)
-        
-        # self.mjai_pending_input_msgs = [] # clear intput queue       
-        
-        # if not output_reactions:
-        #     return None
-        # else:        
-        #     if len(output_reactions) > 1:   # not expected: more than one not-none action
-        #         LOGGER.error("More than one action: %s", output_reactions[0:-1]) 
-        #     return output_reactions[-1]        # return the last reaction
-
-        # return None if no operation options provided by Majsoul
-        # if data: 
-        #     if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
-        #         return None
-        LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs)
+        if data: 
+            if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
+                return None
+        for m in self.mjai_pending_input_msgs:
+            LOGGER.info("Bot in: %s", m)
         if len(self.mjai_pending_input_msgs) == 1:
             output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
         else:
