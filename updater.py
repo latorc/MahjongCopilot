@@ -11,7 +11,6 @@ import requests
 from common.utils import VER_NUMBER, TEMP_FOLDER
 import common.utils as utils
 
-URL_BASE = "https://mjcopilot.com/update/"
 VERSION_FILE = "version"
 UPDATE_FILE = "MahjongCopilot.zip"
 UPDATE_FOLDER = "update"
@@ -34,7 +33,10 @@ class UpdateStatus(Enum):
     
 class Updater:
     """ handles version check and update"""
-    def __init__(self):
+    def __init__(self, url:str):
+        self.urlbase:str = url
+        if not self.urlbase.endswith("/"):
+            self.urlbase += "/"
         self.timeout_dl:int = 15
         self.web_version:str = '0'
         self.dl_progress:str = ""               # downloaded percentage

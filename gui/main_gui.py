@@ -29,7 +29,7 @@ class MainGUI(tk.Tk):
         super().__init__()
         self.bot_manager = bot_manager
         self.st = setting
-        self.updater = Updater()
+        self.updater = Updater(self.st.update_url)
         icon = tk.PhotoImage(file=sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
