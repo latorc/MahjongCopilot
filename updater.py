@@ -47,7 +47,7 @@ class Updater:
         """ check for update in thread. update web version number"""
         def check_ver():
             self.update_status = UpdateStatus.CHECKING
-            res = requests.get(URL_BASE + VERSION_FILE, timeout=5)
+            res = requests.get(self.urlbase + VERSION_FILE, timeout=5)
             self.web_version = res.text
             if self.is_webversion_newer():
                 self.update_status = UpdateStatus.NEW_VERSION
@@ -76,7 +76,7 @@ class Updater:
         returns:
             str: downloaded file path"""        
         save_file = utils.sub_file(TEMP_FOLDER, fname)
-        with requests.get(URL_BASE + fname, stream=True, timeout=self.timeout_dl) as res:
+        with requests.get(self.urlbase + fname, stream=True, timeout=self.timeout_dl) as res:
             res.raise_for_status()
             total_length = int(res.headers.get('content-length', 0))
             downloaded = 0
