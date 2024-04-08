@@ -8,7 +8,7 @@ from mjai.engine import get_engine
 from common.utils import ModelFileException
 from common.mj_helper import MJAI_TYPE
 from common.log_helper import LOGGER
-from .bot import Bot, BOT_TYPE, reaction_convert_meta
+from .bot import Bot, BotType, reaction_convert_meta
 
 # mjai Bot class from rust library
 # pylint: disable=no-member
@@ -20,7 +20,7 @@ class BotMortalLocal(Bot):
         """ params:
         model_file: path to the mortal model file
         """
-        super().__init__(BOT_TYPE.LOCAL, "Local Mortal Bot - " + model_file)
+        super().__init__(BotType.LOCAL, "Local Mortal Bot - " + model_file)
         self.model_file = model_file
         if not Path(self.model_file).exists():
             raise ModelFileException(f"Cannot find model file:{self.model_file}")

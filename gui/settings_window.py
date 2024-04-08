@@ -8,7 +8,7 @@ from common.utils import list_files
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
-from bot.bot import BOT_TYPE
+from bot.bot import BotType
 from .utils import set_style_normal
 
 class SettingsWindow(tk.Toplevel):
@@ -95,7 +95,7 @@ class SettingsWindow(tk.Toplevel):
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MODEL_TYPE)
         _label.grid(row=cur_row, column=0, **args_label)
-        options = [type.value for type in BOT_TYPE]
+        options = [type.value for type in BotType]
         self.model_type_var = tk.StringVar(value=self.st.model_type)
         select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly", width=12)
         select_menu.grid(row=cur_row, column=1,columnspan=1,  **args_entry)

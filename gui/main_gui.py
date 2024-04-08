@@ -13,7 +13,7 @@ from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide
 from common.utils import VER_NUMBER, RES_FOLDER
-from common.utils import UI_STATE, MITMException, ModelFileException, sub_file
+from common.utils import UiState, MITMException, ModelFileException, sub_file
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
 from common.mj_helper import GameInfo, MJAI_TILE_2_UNICODE
@@ -306,9 +306,9 @@ class MainGUI(tk.Tk):
                 return info_str, self.icon_green
         else:
             state_dict = {
-                UI_STATE.MAIN_MENU: self.st.lan().MAIN_MENU,
-                UI_STATE.GAME_ENDING: self.st.lan().GAME_ENDING,
-                UI_STATE.NOT_RUNNING: self.st.lan().GAME_NOT_RUNNING,
+                UiState.MAIN_MENU: self.st.lan().MAIN_MENU,
+                UiState.GAME_ENDING: self.st.lan().GAME_ENDING,
+                UiState.NOT_RUNNING: self.st.lan().GAME_NOT_RUNNING,
             }
             info_str = self.st.lan().READY_FOR_GAME + " - " + state_dict.get(self.bot_manager.automation.ui_state, "")
             return info_str, self.icon_ready

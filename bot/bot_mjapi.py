@@ -7,7 +7,7 @@ from common.utils import random_str
 from common.mj_helper import MJAI_TYPE
 from .mjapi import MJAPI_Client
 
-from .bot import Bot, BOT_TYPE, reaction_convert_meta
+from .bot import Bot, BotType, reaction_convert_meta
 
 
 
@@ -20,7 +20,7 @@ class BotMjapi(Bot):
 
     """ MJAPI based mjai bot"""
     def __init__(self, setting:Settings) -> None:
-        super().__init__(BOT_TYPE.MJAPI, "MJAPI Bot - " + setting.mjapi_url)
+        super().__init__(BotType.MJAPI, "MJAPI Bot - " + setting.mjapi_url)
         self.settings = setting
         self.mjapi = MJAPI_Client(self.settings.mjapi_url)
         self._login_or_reg()

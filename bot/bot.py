@@ -5,7 +5,7 @@ implement wrappers for supportting different bot types
 from abc import ABC, abstractmethod
 
 import common.mj_helper as mj_helper
-from common.utils import BOT_TYPE
+from common.utils import BotType
 
 def reaction_convert_meta(reaction:dict):
     """ add meta_options to reaction """
@@ -21,7 +21,7 @@ class Bot(ABC):
     Reach msg has reach_dahai attached, which is a 'dahai' msg, indicating the dahai action after reach
     msgs have 'meta_options', which is a translation of 'meta' into list of (mjai tile, weight)"""
 
-    def __init__(self, bot_type:BOT_TYPE, name:str="Bot") -> None:
+    def __init__(self, bot_type:BotType, name:str="Bot") -> None:
         self.type = bot_type
         self.name = name
         self._initialized:bool = False
