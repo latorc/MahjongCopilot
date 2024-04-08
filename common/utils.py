@@ -21,11 +21,6 @@ TEMP_FOLDER = 'temp'
 # for automation
 GAME_MODES = ['4E', '4S', '3E', '3S']
 
-class BotType(Enum):
-    """ Model type for bot"""
-    LOCAL = "Local"
-    MJAPI = "MJAPI"
-    
     
 class UiState(Enum):
     """ UI State for the game"""

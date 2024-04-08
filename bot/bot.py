@@ -1,11 +1,17 @@
 """ Bot represents a mjai protocol bot
 implement wrappers for supportting different bot types
 """
-
+from enum import Enum
 from abc import ABC, abstractmethod
 
 import common.mj_helper as mj_helper
-from common.utils import BotType
+
+
+class BotType(Enum):
+    """ Model type for bot"""
+    LOCAL = "Local"
+    MJAPI = "MJAPI"
+
 
 def reaction_convert_meta(reaction:dict):
     """ add meta_options to reaction """
