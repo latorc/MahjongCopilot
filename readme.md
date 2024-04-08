@@ -30,7 +30,6 @@ Features:
    2. 使用在线模型（MJAPI 支持自动注册）
 3. 运行 exe 文件，点击雀魂按钮，在内置浏览器中启动雀魂客户端。
 
-注意：使用自动打牌有风险，可能导致账户被封。请勿一天 24 小时使用自动打牌。
 
 ### To Run
 
@@ -40,7 +39,6 @@ Features:
    2. Use online models (MJAPI supports auto register new users)
 3. Launch exe file. Click on the "Majsoul" button to launch game client in built-in Browser.
 
-Note: Enable autoplay feature at your own risk because it may lead to account suspension. Do not use autoplay for like 24 hours a day.
 
 ### 开发
 
