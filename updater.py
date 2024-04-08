@@ -61,6 +61,7 @@ class Updater:
             except Exception as e:
                 self.update_exception = e
                 self.update_status = UpdateStatus.ERROR
+                LOGGER.error(e)
         
         t = threading.Thread(
             target=check_ver,
@@ -137,6 +138,7 @@ class Updater:
             except Exception as e:
                 self.update_exception = e
                 self.update_status = UpdateStatus.ERROR
+                LOGGER.error(e)
             
         t = threading.Thread(
             target=update_task,
