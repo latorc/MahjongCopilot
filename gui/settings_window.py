@@ -46,7 +46,7 @@ class SettingsWindow(tk.Toplevel):
         style = ttk.Style(self)
         set_style_normal(style)
         
-        pad_args = {"padx":(5, 5), "pady":(5, 5)}
+        pad_args = {"padx":(5, 4), "pady":(5, 4)}
         args_label = {"sticky":"e", **pad_args}
         args_entry = {"sticky":"w", **pad_args}
         # auto launch browser
@@ -164,15 +164,20 @@ class SettingsWindow(tk.Toplevel):
         self.autoplay_var = tk.BooleanVar(value=self.st.enable_automation)
         autoplay_entry = ttk.Checkbutton(main_frame, variable=self.autoplay_var, text=self.st.lan().AUTOPLAY, width=12)
         autoplay_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
+        # randomize choice
+        self.randomized_choice_var = tk.BooleanVar(value=self.st.ai_randomize_choice)
+        random_choice_entry = ttk.Checkbutton(main_frame, variable=self.randomized_choice_var, text=self.st.lan().RANDOM_CHOICE, width=14)
+        random_choice_entry.grid(row=cur_row, column=2, columnspan=1, **args_entry)
         
         # random move
+        cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MOUSE_RANDOM_MOVES)
-        _label.grid(row=cur_row, column=2, **args_label)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.random_moves_var = tk.IntVar(value=self.st.auto_random_moves)
         ran_moves_entry = ttk.Combobox(
             main_frame, textvariable=self.random_moves_var, values=tuple(range(11)), state="readonly", width=12)
         #ttk.Checkbutton(main_frame, variable=self.random_moves_var, text=self.st.lan().MOUSE_RANDOM_MOVES, width=12)
-        ran_moves_entry.grid(row=cur_row, column=3, columnspan=1, **args_entry)
+        ran_moves_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
         
         # random delay lower/upper
         cur_row += 1
@@ -262,6 +267,7 @@ class SettingsWindow(tk.Toplevel):
         
         # auto play settings
         autoplay_new = self.autoplay_var.get()
+        randomized_choice_new = self.randomized_choice_var.get()
         auto_random_moves_new = self.random_moves_var.get()
         try:
             delay_lower_new = self.delay_random_lower_var.get()
@@ -294,6 +300,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.mjapi_model_select = mjapi_model_select_new
         
         self.st.enable_automation = autoplay_new
+        self.st.ai_randomize_choice = randomized_choice_new
         self.st.auto_random_moves = auto_random_moves_new
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
