@@ -6,7 +6,7 @@ import random
 import threading
 from typing import Iterable, Iterator
 
-from common.mj_helper import MJAI_TYPE, MSType, MJAI_TILES_19, MJAI_TILES_28
+from common.mj_helper import MJAI_TYPE, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
 from common.log_helper import LOGGER
 from common.settings import Settings
@@ -332,6 +332,7 @@ class Automation:
             return False
         if game_state is None or mjai_action is None:
             return False
+          
         
         self.stop_previous()
         gi = game_state.get_game_info()
@@ -345,13 +346,16 @@ class Automation:
             pai = ""        
         desc = f"Automating action {mjai_type} {pai} (step = {op_step})" 
         
+        
+        if self.st.ai_randomize_choice:     # randomize choice
+            mjai_action = self.randomize_action(mjai_action, gi) 
         # Dahai action
         if  mjai_type == MJAI_TYPE.DAHAI:       
             if gi.reached:
                 # already in reach state. no need to automate dahai
                 LOGGER.info("Skip automating dahai, already in REACH")
                 game_state.last_reaction_pending = False        # cancel pending state so i won't be retried
-                return False                        
+                return False             
             more_steps:list[ActionStep] = self.steps_action_dahai(mjai_action, gi)
         
         # "button" action
@@ -369,6 +373,52 @@ class Automation:
         action_steps.extend(more_steps)
         self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
         self._task.start_action_steps(action_steps, game_state)
+    
+    def randomize_action(self, action:dict, gi:GameInfo) -> dict:
+        """ Randomize ai choice: pick according to probaility from top 3 options"""
+        # TODO: implement randomization
+        mjai_type = action['type']
+        if mjai_type == MJAI_TYPE.DAHAI:
+            orig_pai = action['pai']
+            options:dict = action['meta_options']            # e.g. {'1m':0.95, 'P':0.045, 'N':0.005, ...}
+            # get dahai options (tile only) from top 3
+            top_ops:list = [(k,v) for k,v in options[:3] if k in MJAI_TILES_SORTED]        
+            #pick from top3 according to probability
+            
+            # 1. Calculate cumulative probabilities
+            cumulative_probs = [top_ops[0][1]]
+            for i in range(1, len(top_ops)):
+                cumulative_probs.append(cumulative_probs[-1] + top_ops[i][1])
+
+            # 2. Pick an option based on a random number
+            rand_prob = random.random()  # Random float: 0.0 <= x < 1.0
+            chosen_pai = orig_pai  # Default in case no option is selected, for safety
+            prob = top_ops[0][1]
+            for i, cum_prob in enumerate(cumulative_probs):
+                if rand_prob < cum_prob:
+                    chosen_pai = top_ops[i][0]  # This is the selected key based on probability
+                    prob = top_ops[i][1]        # the probability
+                    break
+                
+            if chosen_pai == orig_pai:  # return original action if no change                
+                return action
+            
+            # generate new action for changed tile
+            tsumogiri = (chosen_pai == gi.my_tsumohai)
+            new_action = {
+                'type': MJAI_TYPE.DAHAI,
+                'actor': action['actor'],
+                'pai': chosen_pai,
+                'tsumogiri': tsumogiri
+            }
+            msg = f"Randomized dahai: {action['pai']} -> {chosen_pai} ({prob*100:.1f}%)"
+            LOGGER.debug(msg)
+            return new_action
+        # other MJAI types
+        else:
+            return action
+            
+
     
     def last_exec_time(self) -> float:
         """ return the time of last action execution. return -1 if N/A"""
