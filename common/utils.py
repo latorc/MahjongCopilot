@@ -1,5 +1,6 @@
-# Common/utility methods
+""" Common/utility methods
 # no logging in this file
+"""
 
 from enum import Enum
 import pathlib
@@ -9,7 +10,7 @@ import subprocess
 import random
 import string
 
-VER_NUMBER = "0.4.1"
+# read version string from file version
 MODEL_FOLDER = "models"
 BROWSER_DATA_FOLDER = "browser_data"
 RES_FOLDER = 'resources'
@@ -38,6 +39,8 @@ class ModelFileException(Exception):
 
 class MITMException(Exception):
     """ Exception for MITM error"""
+
+
 
 def sub_folder(folder_name:str) -> pathlib.Path:
     """ return the subfolder Path, create it if not exists"""
@@ -113,7 +116,6 @@ def list_files(folder:str, full_path:bool=False) -> list[pathlib.Path]:
     
 def random_str(length:int) -> str:
     """ Generate random string with specified length"""
-
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 class FPSCounter:
