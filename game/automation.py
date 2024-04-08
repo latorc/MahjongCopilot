@@ -300,9 +300,9 @@ class Automation:
         if mjai_type == MJAI_TYPE.DAHAI:
             # extra time for first round and East
             if gi.is_first_round:
-                delay += 2
+                delay += 2.0
                 if gi.jikaze  == 'E':
-                    delay += 2.5
+                    delay += 3.0
             pai = mjai_action['pai']
             
             # more time for 19 < 28 < others
@@ -314,9 +314,9 @@ class Automation:
                 delay += 1.0
                 
         elif mjai_type == MJAI_TYPE.REACH:
-            delay += 1
+            delay += 1.0
         elif mjai_type == MJAI_TYPE.HORA:
-            delay += 0
+            delay += 0.0
         else:       # chi/pon/kan/others
             delay += 0.5
         

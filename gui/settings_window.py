@@ -308,6 +308,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_join_level = auto_join_level_new
         self.st.auto_join_mode = auto_join_mode_new
         
+        LOGGER.info("Saving Settings to file")
         self.st.save_json()
         self.destroy()
 
