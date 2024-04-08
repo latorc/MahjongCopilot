@@ -167,6 +167,7 @@ class Updater:
             set "destDir={root_folder}"
             xcopy %sourceDir% %destDir% /s /e /y
             echo Update completed. Restarting {exec_name} in 3...
+            timeout /t 3
             start {exec_name}
             """
             # save it to a batchfile
