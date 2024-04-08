@@ -9,7 +9,7 @@ import queue
 import threading
 from game.browser import GameBrowser
 from game.game_state import GameState
-from game.automation import Automation, UI_STATE, END_GAME, JOIN_GAME
+from game.automation import Automation, UiState, JOIN_GAME, END_GAME
 import mitm
 import liqi
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
@@ -40,14 +40,14 @@ MAJSOUL_DOMAINS = [
 class BotManager:
     """ Bot logic manager"""
     def __init__(self, setting:Settings) -> None:
-        self.settings = setting
+        self.st = setting
         self.game_state:GameState = None
 
         self.liqi_parser:liqi.LiqiProto = None
-        self.mitm_port = self.settings.mitm_port
+        self.mitm_port = self.st.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
-        self.browser = GameBrowser(self.settings.browser_width, self.settings.browser_height)
-        self.automation = Automation(self.browser, self.settings)
+        self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
+        self.automation = Automation(self.browser, self.st)
         self.bot:Bot = None
 
         self._thread:threading.Thread = None
@@ -88,7 +88,7 @@ class BotManager:
             return True
         else:
             return False
-        
+                
     def is_in_game(self) -> bool:
         """ return True if the bot is currently in a game """
         if self.game_state:
@@ -117,9 +117,9 @@ class BotManager:
         
     def start_browser(self):
         """ Start the browser thread, open browser window """
-        ms_url = self.settings.ms_url
+        ms_url = self.st.ms_url
         proxy = r'http://localhost:' + str(self.mitm_port)
-        self.browser.start(ms_url, proxy, self.settings.browser_width, self.settings.browser_height)
+        self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
         
     def get_pending_reaction(self) -> dict:
         """ returns the pending mjai output reaction (which hasn't been acted on)"""
@@ -132,14 +132,14 @@ class BotManager:
     def enable_overlay(self):
         """ Start the overlay thread"""
         LOGGER.debug("Bot Manager enabling overlay")
-        self.settings.enable_overlay = True
+        self.st.enable_overlay = True
         self._overlay_botleft_last_update = 0
         self._overlay_guide_last_update = 0
             
     def disable_overlay(self):
         """ disable browser overlay"""
         LOGGER.debug("Bot Manager disabling overlay")
-        self.settings.enable_overlay = False
+        self.st.enable_overlay = False
     
     def update_overlay(self):
         """ update the overlay if conditions are met"""
@@ -150,33 +150,35 @@ class BotManager:
     def enable_automation(self):
         """ enable automation"""
         LOGGER.debug("Bot Manager enabling automation")
-        self.settings.enable_automation = True
-        self.automation.check_what_to_do()
+        self.st.enable_automation = True
+        self.automation.decide()
         
     def disable_automation(self):
         """ disable automation"""
         LOGGER.debug("Bot Manager disabling automation")
-        self.settings.enable_automation = False
-        self.automation.on_automation_disable()
+        self.st.enable_automation = False
+        self.automation.stop_previous()
         
     def enable_autojoin(self):
         """ enable autojoin"""
         LOGGER.debug("Enabling Auto Join")
-        self.settings.auto_join_game = True
+        self.st.auto_join_game = True
         
     def disable_autojoin(self):
         """ disable autojoin"""
         LOGGER.debug("Disabling Auto Join")
-        self.settings.auto_join_game = False
-        # stop any join game tasks
+        self.st.auto_join_game = False
+        
+        # stop any lobby tasks
         if self.automation.is_running_execution():
-            if self.automation._task.name == JOIN_GAME:
+            name, _d = self.automation.running_task_info()
+            if name in (JOIN_GAME, END_GAME):
                 self.automation.stop_previous()
     
     def create_bot(self):
         """ create Bot object based on settings"""
         try:
-            self.bot = get_bot(self.settings)
+            self.bot = get_bot(self.st)
             self.game_exception = None
             LOGGER.info("Created bot: %s", self.bot.name)
         except Exception as e:
@@ -215,7 +217,7 @@ class BotManager:
                     time.sleep(0.5)
 
             self.liqi_parser = liqi.LiqiProto()
-            if self.settings.auto_launch_browser:
+            if self.st.auto_launch_browser:
                 self.start_browser()
 
             self.fps_counter.reset()
@@ -258,7 +260,7 @@ class BotManager:
 
         # check overlay
         if self.browser and self.browser.is_page_normal():
-            if self.settings.enable_overlay:
+            if self.st.enable_overlay:
                 if self.browser.is_overlay_working() is False:
                     LOGGER.debug("Bot manager attempting turning on browser overlay")
                     self.browser.start_overlay()
@@ -270,7 +272,8 @@ class BotManager:
         
         self._retry_failed_automation() # retry failed automation
         # self._update_overlay_botleft() # update overlay bot-left
-        self.automation.check_what_to_do()
+        if not self.game_exception:     # skip on game error
+            self.automation.decide()
         
     def _process_msg(self, msg:mitm.WSMessage):
         """ process websocket message from mitm server"""
@@ -358,7 +361,7 @@ class BotManager:
             
     
     def _update_overlay_conditions_met(self) -> bool:
-        if not self.settings.enable_overlay:
+        if not self.st.enable_overlay:
             return False
         if self.browser is None:
             return False
@@ -373,8 +376,8 @@ class BotManager:
         reaction = self.game_state.get_pending_reaction()        
 
         if reaction:
-            guide, options = mjai_reaction_2_guide(reaction, 3, self.settings.lan())
-            self.browser.overlay_update_guidance(guide, self.settings.lan().OPTIONS_TITLE, options)
+            guide, options = mjai_reaction_2_guide(reaction, 3, self.st.lan())
+            self.browser.overlay_update_guidance(guide, self.st.lan().OPTIONS_TITLE, options)
         else:
             self.browser.overlay_clear_guidance()
         
@@ -382,38 +385,38 @@ class BotManager:
         # update overlay bottom left text
         
         # maj copilot
-        text = '😸' + self.settings.lan().APP_TITLE
+        text = '😸' + self.st.lan().APP_TITLE
 
         # Model
         model_text = '🤖'
         if self.is_bot_created():
-            model_text += self.settings.lan().MODEL + ": " + self.bot.type.value
+            model_text += self.st.lan().MODEL + ": " + self.bot.type.value
         else:
-            model_text += self.settings.lan().AWAIT_BOT
+            model_text += self.st.lan().AWAIT_BOT
         text += '\n' + model_text
         
         # autoplay
-        if self.settings.enable_automation:
-            autoplay_text = '✅' + self.settings.lan().AUTOPLAY + ': ' + self.settings.lan().ON
+        if self.st.enable_automation:
+            autoplay_text = '✅' + self.st.lan().AUTOPLAY + ': ' + self.st.lan().ON
         else:
-            autoplay_text = '⬛' + self.settings.lan().AUTOPLAY + ': ' + self.settings.lan().OFF
+            autoplay_text = '⬛' + self.st.lan().AUTOPLAY + ': ' + self.st.lan().OFF
         if self.automation.is_running_execution():
             autoplay_text += " 🖱️"
         text += '\n' + autoplay_text
 
         # line 4
         if self.main_thread_exception:
-            line = '❌' + self.settings.lan().MAIN_THREAD_ERROR
+            line = '❌' + self.st.lan().MAIN_THREAD_ERROR
         elif self.game_exception:
-            line = '❌' + self.settings.lan().GAME_ERROR
+            line = '❌' + self.st.lan().GAME_ERROR
         elif self.is_game_syncing():
-            line = '⏳'+ self.settings.lan().SYNCING
+            line = '⏳'+ self.st.lan().SYNCING
         elif self.is_bot_calculating():
-            line = '⏳'+ self.settings.lan().CALCULATING
+            line = '⏳'+ self.st.lan().CALCULATING
         elif self.is_in_game():
-            line = '▶️' + self.settings.lan().GAME_RUNNING
+            line = '▶️' + self.st.lan().GAME_RUNNING
         else:
-            line = '🟢' + self.settings.lan().READY_FOR_GAME
+            line = '🟢' + self.st.lan().READY_FOR_GAME
             
         text += '\n' + line
         # display fps numbers and limit total width
@@ -438,10 +441,10 @@ class BotManager:
             if self.automation.is_running_execution():
                 # last action still executing, cancel
                 return False
-            if self.automation.ui_state != UI_STATE.IN_GAME:
+            if self.automation.ui_state != UiState.IN_GAME:
                 # only retry when in game
                 return False        
-            if time.time() - self.automation.last_exec_time() < 1.5:
+            if time.time() - self.automation.last_exec_time() < self.st.auto_retry_interval:
                 # interval not reached, cancel
                 return False
             if self.game_state is None:
