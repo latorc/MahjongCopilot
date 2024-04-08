@@ -124,6 +124,10 @@ class SettingsWindow(tk.Toplevel):
         self.mjapi_user_var = tk.StringVar(value=self.st.mjapi_user)
         string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var, width=12)
         string_entry.grid(row=cur_row, column=1,columnspan=1, **args_entry)
+        # MJAPI usage
+        _label = ttk.Label(main_frame, text=f"{self.st.lan().MJAPI_USAGE}: {self.st.mjapi_usage}")
+        _label.grid(row=cur_row, column=2, **args_label)
+        
         
         # MJAPI secret
         cur_row += 1

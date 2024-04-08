@@ -5,7 +5,7 @@ from common.settings import Settings
 from common.log_helper import LOGGER
 from common.utils import random_str
 from common.mj_helper import MJAI_TYPE
-from .mjapi import MJAPI_Client
+from .mjapi import MjapiClient
 
 from .bot import Bot, BotType, reaction_convert_meta
 
@@ -21,45 +21,52 @@ class BotMjapi(Bot):
     """ MJAPI based mjai bot"""
     def __init__(self, setting:Settings) -> None:
         super().__init__(BotType.MJAPI, "MJAPI Bot - " + setting.mjapi_url)
-        self.settings = setting
-        self.mjapi = MJAPI_Client(self.settings.mjapi_url)
+        self.st = setting
+        self.mjapi = MjapiClient(self.st.mjapi_url)
         self._login_or_reg()
         self.id = -1
         self.ignore_next_turn_self_reach:bool = False
         
     def _login_or_reg(self):
-        if not self.settings.mjapi_user:
-            self.settings.mjapi_user = random_str(6)
-            LOGGER.info("Set random mjapi username:%s", self.settings.mjapi_user)        
+        if not self.st.mjapi_user:
+            self.st.mjapi_user = random_str(6)
+            LOGGER.info("Set random mjapi username:%s", self.st.mjapi_user)        
         try:
-            self.mjapi.login(self.settings.mjapi_user, self.settings.mjapi_secret)
+            self.mjapi.login(self.st.mjapi_user, self.st.mjapi_secret)
         except Exception as e:
             LOGGER.warning("Error login: %s", e)            
             # try register            
-            res_reg = self.mjapi.register(self.settings.mjapi_user)
-            self.settings.mjapi_secret = res_reg['secret']
-            self.settings.save_json()
-            LOGGER.info("Registered new user [%s] with MJAPI. User name and secret saved to settings.", self.settings.mjapi_user)
-            self.mjapi.login(self.settings.mjapi_user, self.settings.mjapi_secret)
+            res_reg = self.mjapi.register(self.st.mjapi_user)
+            self.st.mjapi_secret = res_reg['secret']
+            self.st.save_json()
+            LOGGER.info("Registered new user [%s] with MJAPI. User name and secret saved to settings.", self.st.mjapi_user)
+            self.mjapi.login(self.st.mjapi_user, self.st.mjapi_secret)
 
         model_list = self.mjapi.list_models()
         if not model_list:
             raise RuntimeError("No models available in MJAPI")
-        self.settings.mjapi_models = model_list
-        if self.settings.mjapi_model_select in model_list:
+        self.st.mjapi_models = model_list
+        if self.st.mjapi_model_select in model_list:
             # OK
             pass
         else:
             LOGGER.debug(
                 "mjapi selected model %s N/A, using last one from available list %s",
-                self.settings.mjapi_model_select, model_list[-1])
-            self.settings.mjapi_model_select = model_list[-1]
-        self.model_name = self.settings.mjapi_model_select
-        LOGGER.info("Login to MJAPI successful with user: %s, model_name=%s", self.settings.mjapi_user, self.model_name)
+                self.st.mjapi_model_select, model_list[-1])
+            self.st.mjapi_model_select = model_list[-1]
+        self.model_name = self.st.mjapi_model_select
+        self.st.mjapi_usage = self.mjapi.get_usage()
+        self.st.save_json()
+        LOGGER.info("Login to MJAPI successful with user: %s, model_name=%s", self.st.mjapi_user, self.model_name)
 
     def __del__(self):
-        self.mjapi.stop_bot()
-        self.mjapi.logout()
+        LOGGER.debug("Deleting bot %s", self.name)
+        if self.initialized:
+            self.mjapi.stop_bot()
+        if self.mjapi.token:    # update usage and logout on deleting
+            self.st.mjapi_usage = self.mjapi.get_usage()
+            self.st.save_json()
+            self.mjapi.logout()
 
     def _init_bot_impl(self):
         self.mjapi.start_bot(self.seat, BotMjapi.bound, self.model_name)
