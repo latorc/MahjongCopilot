@@ -9,7 +9,7 @@ import subprocess
 import random
 import string
 
-VER_NUMBER = "0.4.0"
+VER_NUMBER = "0.4.1"
 MODEL_FOLDER = "models"
 BROWSER_DATA_FOLDER = "browser_data"
 RES_FOLDER = 'resources'
