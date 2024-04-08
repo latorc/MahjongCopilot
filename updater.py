@@ -1,7 +1,6 @@
 """ Updater class"""
 import threading
 import subprocess
-import time
 import sys
 import os
 import shutil
@@ -10,6 +9,7 @@ from enum import Enum,auto
 import requests
 from common.utils import TEMP_FOLDER
 import common.utils as utils
+from common.log_helper import LOGGER
 
 VERSION_FILE = "version"
 UPDATE_FILE = "MahjongCopilot.zip"
@@ -52,6 +52,7 @@ class Updater:
             self.update_status = UpdateStatus.CHECKING
             res = requests.get(self.urlbase + VERSION_FILE, timeout=5)
             self.web_version = res.text
+            LOGGER.debug("Local version=%s, Web version=%s", self.local_version, self.web_version)
             if self.is_webversion_newer():
                 self.update_status = UpdateStatus.NEW_VERSION
             else:
@@ -69,7 +70,7 @@ class Updater:
         # convert a.b.c to 000a000b000c
         try:
             if self.web_version:
-                local_v_int = int(''.join(f"{part:0>4}" for part in VER_NUMBER.split(".")))
+                local_v_int = int(''.join(f"{part:0>4}" for part in self.local_version.split(".")))
                 web_v_int = int(''.join(f"{part:0>4}" for part in self.web_version.split(".")))
                 if web_v_int > local_v_int:
                     return True
