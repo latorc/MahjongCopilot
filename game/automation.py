@@ -1,19 +1,20 @@
+""" Game automation algorithm"""
 from collections import namedtuple
 from dataclasses import dataclass, field
 import time
 import random
 import threading
 from typing import Iterable, Iterator
-from .browser import GameBrowser
-from .game_state import GameInfo, GameState
+
 from common.mj_helper import MJAI_TYPE, MSType, MJAI_TILES_19, MJAI_TILES_28
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
 from common.log_helper import LOGGER
 from common.settings import Settings
-
 from common.utils import UI_STATE, GAME_MODES
-from .img_proc import ImgTemp, GameVisual
 
+from .img_proc import ImgTemp, GameVisual
+from .browser import GameBrowser
+from .game_state import GameInfo, GameState
 
 
 class Positions:

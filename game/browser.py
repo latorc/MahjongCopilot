@@ -1,8 +1,8 @@
+""" Game Broswer class for controlling maj-soul web client operations"""
 import logging
 import time
 import threading
 import queue
-import random
 
 from pathlib import Path
 from playwright._impl._errors import TargetClosedError
@@ -120,7 +120,6 @@ class GameBrowser:
                     # LOGGER.debug("Browser action %s",str(action))
                 except queue.Empty:
                     time.sleep(0.002)
-                    pass
                 except Exception as e:
                     LOGGER.error('Error processing action: %s', e, exc_info=True)
             
@@ -485,5 +484,3 @@ class GameBrowser:
             self.page.screenshot(path=save_file)
         else:
             LOGGER.debug("No page, no screenshot")
-        
-
