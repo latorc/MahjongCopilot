@@ -123,11 +123,13 @@ class Updater:
         def update_task():
             try:
                 self.update_status = UpdateStatus.DOWNLOADING
+                LOGGER.debug("Downloading update: %s", UPDATE_FILE)
                 fname = self.download_file(UPDATE_FILE)
                 self.update_status = UpdateStatus.UNZIPPING
                 self.unzip_file(fname)
                 # self.start_update()
                 self.update_status = UpdateStatus.OK
+                LOGGER.debug("Update prepared, status OK")
             except Exception as e:
                 self.update_exception = e
                 self.update_status = UpdateStatus.ERROR
