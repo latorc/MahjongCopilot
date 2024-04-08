@@ -1,49 +1,116 @@
 <mxfile host="65bd71144e">
     <diagram id="_koei3eWDU1PvnlzhrJU" name="Page-1">
-        <mxGraphModel dx="894" dy="293" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="894" dy="458" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="2" value="Playwright Browser&lt;br&gt;(Thread)&lt;br&gt;Majsoul Web Client" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="449" y="170" width="120" height="70" as="geometry"/>
-                </mxCell>
-                <mxCell id="3" value="MITM Proxy&lt;br&gt;(Thread)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=15;" parent="1" vertex="1">
-                    <mxGeometry x="260" y="185" width="120" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="4" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="3" target="2" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="410" y="300" as="sourcePoint"/>
-                        <mxPoint x="460" y="250" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="5" value="game&lt;br&gt;data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="4" vertex="1" connectable="0">
-                    <mxGeometry x="-0.294" y="-2" relative="1" as="geometry">
-                        <mxPoint x="7" y="-22" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="33" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="3" target="9" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="34" value="protobuf msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="33" vertex="1" connectable="0">
-                    <mxGeometry x="-0.6528" y="-1" relative="1" as="geometry">
-                        <mxPoint x="-32" y="-4" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
                 <mxCell id="7" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0.875;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryPerimeter=0;" parent="1" source="3" target="56" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="250" y="280" as="sourcePoint"/>
-                        <mxPoint x="200" y="205" as="targetPoint"/>
+                        <mxPoint x="300" y="280" as="sourcePoint"/>
+                        <mxPoint x="250" y="205" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="8" value="game data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="7" vertex="1" connectable="0">
                     <mxGeometry x="0.2532" y="-2" relative="1" as="geometry">
-                        <mxPoint x="19" y="-11" as="offset"/>
+                        <mxPoint x="1031" y="312" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="21" value="" style="endArrow=classic;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" parent="1" source="69" target="2" edge="1">
+                <mxCell id="74" value="game&lt;br&gt;msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="7">
+                    <mxGeometry x="0.4746" y="-1" relative="1" as="geometry">
+                        <mxPoint x="7" y="-17" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="25" value="GUI&lt;br&gt;(tkinter)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="280" width="130" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.56;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="54" target="25" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="440" y="240" as="sourcePoint"/>
-                        <mxPoint x="440" y="240" as="targetPoint"/>
+                        <mxPoint x="490" y="325" as="sourcePoint"/>
+                        <mxPoint x="460" y="260" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="48" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="190" y="389.5" as="sourcePoint"/>
+                        <mxPoint x="266" y="389.5" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="49" value="mjai msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="48" vertex="1" connectable="0">
+                    <mxGeometry x="0.1837" y="2" relative="1" as="geometry">
+                        <mxPoint x="-12" y="-15" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="50" value="" style="swimlane;startSize=0;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="331" width="160" height="118" as="geometry">
+                        <mxRectangle x="40" y="360" width="50" height="40" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="52" value="MJAI Bot Implement" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="50" vertex="1">
+                    <mxGeometry x="30" width="130" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="72" value="Mortal Local Model&lt;br&gt;MJAPI Online Model&lt;br&gt;..." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="50">
+                    <mxGeometry x="15" y="39" width="130" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="54" value="" style="swimlane;startSize=0;" parent="1" vertex="1">
+                    <mxGeometry x="240" y="140" width="330" height="320" as="geometry">
+                        <mxRectangle x="230" y="260" width="50" height="40" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="70" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="54" source="46" target="69" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="46" value="GameState&lt;br&gt;(game logics)" style="rounded=1;whiteSpace=wrap;html=1;" parent="54" vertex="1">
+                    <mxGeometry x="26" y="220" width="110" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="Liqi Proto Parser" style="rounded=1;whiteSpace=wrap;html=1;" parent="54" vertex="1">
+                    <mxGeometry x="25" y="129" width="110" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="" style="endArrow=classic;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="54" source="9" target="46" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="31" y="-100" as="sourcePoint"/>
+                        <mxPoint x="81" y="-150" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="14" value="Majsoul liqi msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="13" vertex="1" connectable="0">
+                    <mxGeometry x="-0.4589" relative="1" as="geometry">
+                        <mxPoint x="-15" y="-1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="55" value="Mahjong Copilot - Bot Manager" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="54" vertex="1">
+                    <mxGeometry x="137" y="2" width="190" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="69" value="Automation&lt;br&gt;(mjai output -&amp;gt; game input action)" style="rounded=1;whiteSpace=wrap;html=1;" parent="54" vertex="1">
+                    <mxGeometry x="190" y="220" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="MITM Proxy" style="rounded=1;whiteSpace=wrap;html=1;arcSize=15;" parent="54" vertex="1">
+                    <mxGeometry x="21" y="44" width="120" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="54" source="3" target="9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="34" value="websocket msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="33" vertex="1" connectable="0">
+                    <mxGeometry x="-0.6528" y="-1" relative="1" as="geometry">
+                        <mxPoint x="-18" y="4" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="2" value="Playwright Browser&lt;br&gt;Majsoul Client" style="rounded=1;whiteSpace=wrap;html=1;" parent="54" vertex="1">
+                    <mxGeometry x="191" y="35" width="120" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="54" source="3" target="2" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="221" y="60" as="sourcePoint"/>
+                        <mxPoint x="213.31999999999994" y="53.52999999999997" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="5" value="game&lt;br&gt;msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="4" vertex="1" connectable="0">
+                    <mxGeometry x="-0.294" y="-2" relative="1" as="geometry">
+                        <mxPoint x="7" y="-22" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="21" value="" style="endArrow=classic;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" parent="54" source="69" target="2" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="251" as="sourcePoint"/>
+                        <mxPoint x="221" y="125" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="24" value="action" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="21" vertex="1" connectable="0">
@@ -51,76 +118,8 @@
                         <mxPoint x="16" y="3" as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="25" value="GUI&lt;br&gt;(Thread)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="490" y="390" width="140" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="26" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1.009;exitY=0.845;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="54" target="25" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="440" y="325" as="sourcePoint"/>
-                        <mxPoint x="410" y="260" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="48" value="" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1.018;exitY=0.418;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="50" target="46" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="200" y="350" as="sourcePoint"/>
-                        <mxPoint x="230" y="320" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="49" value="mjai msg&lt;br&gt;(json)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="48" vertex="1" connectable="0">
-                    <mxGeometry x="0.1837" y="2" relative="1" as="geometry">
-                        <mxPoint x="-12" y="-15" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="50" value="" style="swimlane;startSize=0;" parent="1" vertex="1">
-                    <mxGeometry x="10" y="360" width="130" height="100" as="geometry">
-                        <mxRectangle x="40" y="360" width="50" height="40" as="alternateBounds"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="37" value="Mortal&lt;br&gt;Model" style="rounded=1;whiteSpace=wrap;html=1;" parent="50" vertex="1">
-                    <mxGeometry x="10" y="40" width="120" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="67" value="" style="edgeStyle=none;html=1;" parent="50" source="52" target="37" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="68" value="" style="edgeStyle=none;html=1;" parent="50" source="52" target="37" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="52" value="MJAI Bot" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="50" vertex="1">
-                    <mxGeometry x="60" width="70" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="54" value="" style="swimlane;startSize=0;" parent="1" vertex="1">
-                    <mxGeometry x="200" y="260" width="250" height="200" as="geometry">
-                        <mxRectangle x="230" y="260" width="50" height="40" as="alternateBounds"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="70" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="54" source="46" target="69">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="46" value="GameState&lt;br&gt;main game logics" style="rounded=1;whiteSpace=wrap;html=1;" parent="54" vertex="1">
-                    <mxGeometry x="10" y="124" width="110" height="52" as="geometry"/>
-                </mxCell>
-                <mxCell id="9" value="Liqi Proto Parser" style="rounded=1;whiteSpace=wrap;html=1;" parent="54" vertex="1">
-                    <mxGeometry x="10" y="40" width="110" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="13" value="" style="endArrow=classic;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="54" source="9" target="46" edge="1">
-                    <mxGeometry width="50" height="50" relative="1" as="geometry">
-                        <mxPoint x="20" y="-120" as="sourcePoint"/>
-                        <mxPoint x="70" y="-170" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="14" value="majsoul msg&lt;br&gt;(json)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="13" vertex="1" connectable="0">
-                    <mxGeometry x="-0.4589" relative="1" as="geometry">
-                        <mxPoint x="-10" y="8" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="55" value="Bot Manager&lt;br&gt;(Thread)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="54" vertex="1">
-                    <mxGeometry x="160" width="90" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="69" value="Automation" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="54">
-                    <mxGeometry x="140" y="116" width="90" height="60" as="geometry"/>
-                </mxCell>
                 <mxCell id="56" value="Majsoul&lt;br&gt;Game Server" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="172.5" width="162.5" height="65" as="geometry"/>
+                    <mxGeometry x="27.5" y="162.5" width="162.5" height="95" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
