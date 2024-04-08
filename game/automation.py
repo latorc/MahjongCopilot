@@ -602,7 +602,7 @@ class Automation:
     def _end_game_iter(self) -> Iterator[ActionStep]:
         # generate action steps for exiting a match until main menu tested
         while True:
-            res, diff = self.g_v.comp_temp(ImgTemp.main_menu)
+            res, diff = self.g_v.comp_temp(ImgTemp.MAIN_MENU)
             if res:     # stop on main menu
                 LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UiState.MAIN_MENU
@@ -630,7 +630,7 @@ class Automation:
         # generate action steps for joining next game
         
         while True:     # Wait for main menu
-            res, diff = self.g_v.comp_temp(ImgTemp.main_menu)
+            res, diff = self.g_v.comp_temp(ImgTemp.MAIN_MENU)
             if res:
                 LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UiState.MAIN_MENU

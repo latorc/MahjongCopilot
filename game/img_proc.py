@@ -1,22 +1,25 @@
 """ image processing and visual analysis for Majsoul game screen"""
 from enum import Enum, auto
+import io
 from PIL import Image, ImageChops, ImageStat
 import common.utils as utils
 from common.utils import RES_FOLDER
-from .browser import GameBrowser
 from common.log_helper import LOGGER
-def img_avg_diff(base_img:Image.Image, input_file:str, mask_img:Image.Image = None) -> float:
+from .browser import GameBrowser
+
+
+def img_avg_diff(base_img:Image.Image, input_img:Image.Image, mask_img:Image.Image = None) -> float:
     """ Calculate the average difference between two images.
     given an optional mask file (black indicates ignored pixels).
     input image will be resized to mask size, or size of base_img if mask N/A
     Params:
-        base_img (str): path to the base image.
-        input_img (str): path to the image to compare to base
-        mask_path (str): path to the mask image (optional), only white (value=0) area are compared.
+        base_img (Image): base image PIL format .
+        input_img (Image): image to compare to base, PIL format 
+        mask_img (Image): mask image (optional), only non-black area are compared.
     Return:
         float: average pixel difference (only unmasked area)
     """
-    input_img = Image.open(input_file).convert('RGB')
+    # input_img = Image.open(input_file).convert('RGB')
     # resize input to mask or base img
     if mask_img:
         img_size = mask_img.size
@@ -45,56 +48,59 @@ def img_avg_diff(base_img:Image.Image, input_file:str, mask_img:Image.Image = No
     if non_ignored_pixels:
         avg_diff = sum(stat.mean) / len(stat.mean)
     else:
-        avg_diff = 0
-    
+        avg_diff = 0    
     return avg_diff
 
 
 class ImgTemp(Enum):
-    """ game UI templates"""
-    main_menu = auto()
+    """ game image templates"""
+    MAIN_MENU = auto()
     
 
 class GameVisual:
-    """ image analysis for Majsoul game screen"""
+    """ image analysis for game screen"""
     
     def __init__(self, browser:GameBrowser) -> None:
         self.browser = browser
         if not browser:
             raise ValueError("Browser is None")
         
-        self.loc_dict = {}
-        """ location dict {loc: (image, mask), ...}"""
+        self.temp_dict = {}
+        """ image template dict {ImgTemp: (image_file, mask_file), ...}"""
         self._load_imgs()
         
     def _load_imgs(self) -> None:
-        """ load all images for analysis"""
+        """ load all template images"""
         files = [
-            (ImgTemp.main_menu, 'mainmenu.png', 'mainmenu_mask.png')
+            (ImgTemp.MAIN_MENU, 'mainmenu.png', 'mainmenu_mask.png')
         ]
         for loc, img_file, mask_file in files:
             img_file = utils.sub_file(RES_FOLDER, img_file)
             mask_file = utils.sub_file(RES_FOLDER, mask_file)
             img_mainmenu = Image.open(img_file).convert('RGB')
             mask_mainmenu = Image.open(mask_file).convert('L')
-            self.loc_dict[loc] = (img_mainmenu, mask_mainmenu)
+            self.temp_dict[loc] = (img_mainmenu, mask_mainmenu)
 
 
     def comp_temp(self, tmp:ImgTemp, thres:float=30) -> tuple[bool, float]:
         """ compare current screen to template
         params:
-            tmp (Location): template to compare to
-            thres (float): threshold, lower than which is considered a match
+            tmp (ImgTemp): template img to compare to
+            thres (float): threshold, diff lower than which is considered a match
         return:
-            bool: True if the screen is loc
+            bool: True if the current screen matches the template
             float: average difference between current screen and loc template"""
-        img_file = self.browser.screen_shot()
-        if not img_file:
+        img_bytes = self.browser.screen_shot()
+        if img_bytes is None:
             return False, -1
-        base_img, mask = self.loc_dict[tmp]
+        img_io = io.BytesIO(img_bytes)
+        img_input = Image.open(img_io).convert('RGB')
+        # if not img_file:
+        #     return False, -1
+        base_img, mask = self.temp_dict[tmp]
         try:
-            diff = img_avg_diff(base_img, img_file, mask)
+            diff = img_avg_diff(base_img, img_input, mask)
             return diff < thres, diff
         except Exception as e:
-            LOGGER.error("Error in testing location: %s", e, exc_info=True)
+            LOGGER.error("Error in testing template %s: %s", tmp.name, e, exc_info=True)
             return False, -1

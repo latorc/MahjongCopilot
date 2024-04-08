@@ -4,11 +4,11 @@ import time
 import threading
 import queue
 
-from pathlib import Path
+from io import BytesIO
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
-import common.utils as utils
-from common.utils import BROWSER_DATA_FOLDER, TEMP_FOLDER, FPSCounter
+from common import utils
+from common.utils import BROWSER_DATA_FOLDER, FPSCounter
 from common.log_helper import LOGGER
 
 class GameBrowser:
@@ -243,20 +243,34 @@ class GameBrowser:
     #     pass
     
     
-    def screen_shot(self) -> str:
+    def screen_shot(self) -> bytes | None:
         """ Take screenshot from browser page and return file name if success, or None if not"""
         if not self.is_page_normal():
             return None
-        self._action_queue.put(self._action_screen_shot)
-        file_name = utils.sub_file(TEMP_FOLDER,'screenshot.png')
-        # delete file if exist
-        if Path(file_name).exists():
-            Path(file_name).unlink()
-        res = utils.wait_for_file(file_name,5)
-        if res:
-            return file_name
-        else:
+        res_queue = queue.Queue()
+        try:
+            self._action_queue.put(lambda: self._action_screen_shot(res_queue))
+            res:BytesIO = res_queue.get(True,5)
+        except queue.Empty:
             return None
+        except Exception as e:
+            LOGGER.error("Error taking screenshot: %s", e, exc_info=True)
+            return None
+        
+        if res is None:
+            return None
+        else:
+            return res        
+        
+        # file_name = utils.sub_file(TEMP_FOLDER,'screenshot.png')
+        # # delete file if exist
+        # if Path(file_name).exists():
+        #     Path(file_name).unlink()
+        # res = utils.wait_for_file(file_name,5)
+        # if res:
+        #     return file_name
+        # else:
+        #     return None
         
     
     def _action_mouse_move(self, x:int, y:int, steps:int, finish_event:threading.Event):
@@ -476,11 +490,19 @@ class GameBrowser:
     def _overlay_update_indicators(self, reaction:dict):        
         pass
             
-    def _action_screen_shot(self):
-        """ take screen shot from browser page"""
+    def _action_screen_shot(self, res_queue:queue.Queue):
+        """ take screen shot from browser page
+        Params:
+            res_queue: queue for saving the image buff data"""
         if self.page:
-            
-            save_file = utils.sub_folder(TEMP_FOLDER)/"screenshot.png"
-            self.page.screenshot(path=save_file)
+            try:
+                # save_file = utils.sub_folder(TEMP_FOLDER)/"screenshot.png"
+                # self.page.screenshot(path=save_file)
+                ss_bytes:BytesIO = self.page.screenshot(timeout=5000)
+                res_queue.put(ss_bytes)
+            except Exception as e:
+                LOGGER.error("Error taking screenshot: %s", e, exc_info=True)
+                res_queue.put(None)
         else:
+            res_queue.put(None)
             LOGGER.debug("No page, no screenshot")

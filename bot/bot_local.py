@@ -3,13 +3,15 @@
 from pathlib import Path
 import threading
 import json
-import libriichi
 from mjai.engine import get_engine
 from common.utils import ModelFileException
 from common.mj_helper import MJAI_TYPE
 from common.log_helper import LOGGER
-from .bot import Bot, BotType, reaction_convert_meta
-
+from .bot import Bot, BotType
+try:
+    import libriichi
+except:
+    import riichi as libriichi
 # mjai Bot class from rust library
 # pylint: disable=no-member
 MjaiBot = libriichi.mjai.Bot
