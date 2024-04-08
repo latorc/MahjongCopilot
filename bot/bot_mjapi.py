@@ -84,9 +84,6 @@ class BotMjapi(Bot):
     def react(self, input_msg:dict, recurse=True) -> dict | None:
         # input_msg['can_act'] = True
         msg_type = input_msg['type']
-        if msg_type in [MJAI_TYPE.START_GAME, MJAI_TYPE.END_GAME, MJAI_TYPE.END_KYOKU]:
-            # ignore no effect msgs
-            return None
         if self.ignore_next_turn_self_reach:
             if  msg_type == MJAI_TYPE.REACH and input_msg['actor'] == self.seat:
                 LOGGER.debug("Ignoring repetitive self reach msg, reach msg already sent to AI last turn")
