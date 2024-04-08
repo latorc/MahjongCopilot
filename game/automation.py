@@ -302,7 +302,7 @@ class Automation:
             if gi.is_first_round:
                 delay += 2
                 if gi.jikaze  == 'E':
-                    delay += 1.5
+                    delay += 2.5
             pai = mjai_action['pai']
             
             # more time for 19 < 28 < others
@@ -548,7 +548,7 @@ class Automation:
             x, y: target position in 16x9 resolution
             random_moves(int): number of random moves before target. None -> use settings"""
         steps = self.steps_randomized_move(x, y, random_moves)
-        steps.append(ActionStepDelay(random.uniform(0.25, 0.3)))
+        steps.append(ActionStepDelay(random.uniform(0.3, 0.4)))
         steps.append(ActionStepClick(x*self.scaler, y*self.scaler, random.randint(60, 100)))
         return steps
     
