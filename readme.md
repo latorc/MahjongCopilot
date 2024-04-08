@@ -1,6 +1,9 @@
 # 麻将 Copilot / Mahjong Copilot
 
-麻将的 AI 助手，基于 mjai (Mortal模型)实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂四人麻将。
+麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂四人麻将。
+
+Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 4-person mode games.
+
 ![](assets/shot3_lower.png)
 
 特性：
@@ -9,8 +12,6 @@
 - 自动打牌，自动加入游戏
 - 多语言支持
 - 支持本地 Mortal 模型和在线模型
-
-Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 4-person mode games.
 
 Features:
 
