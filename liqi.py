@@ -23,6 +23,8 @@ class MsgType(Enum):
     """ Client to server request, 0x02 + msg_id(2 bytes) + protobuf"""
     RES = 3
     """ Server to client response, 0x03 + msg_id(2 bytes) + protobuf"""
+    def __repr__(self):
+        return f"{self.name}({self.value})"
 
 class LiqiMethod:
     """ method string constants"""

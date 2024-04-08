@@ -12,18 +12,21 @@ class Settings:
     """ Settings class to load and save settings to json file"""
     def __init__(self, json_file:str=DEFAULT_SETTING_FILE) -> None:
         self._json_file = json_file
-        self._settings_dict:dict = self.load_json()
-        
+        self._settings_dict:dict = self.load_json()        
         # read settings or set default values
         # variable names must match keys in json, for saving later
-        self.update_url:str = self._get_value("update_url", "https://update.mjcopilot.com", self.valid_url)
+        
+        # UI settings
+        self.update_url:str = self._get_value("update_url", "https://update.mjcopilot.com", self.valid_url) # not shown
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 10999)
         self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)
+        self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool) # not shown
         
+        # AI Model settings
         self.model_type:str = self._get_value("model_type", "Local")
         """ model type: local, mjapi"""
         # for local model
@@ -34,15 +37,14 @@ class Settings:
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
         self.mjapi_models:list = self._get_value("mjapi_models",[])
         self.mjapi_model_select:str = self._get_value("mjapi_model_select","")
-        self.mjapi_usage:int = self._get_value("mjapi_usage", None)
+        self.mjapi_usage:int = self._get_value("mjapi_usage", None)        
         
+        # Automation settings
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
-        self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool)
-        
         self.delay_random_lower:float = self._get_value("delay_random_lower", 1, lambda x: 0 <= x )
         self.delay_random_upper:float = self._get_value(
             "delay_random_upper",max(2, self.delay_random_lower), lambda x: x >= self.delay_random_lower)
-        self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)
+        self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)  # not shown
         self.auto_random_moves:int = self._get_value("auto_random_moves", 3, lambda x: 0 <= x <= 10)
         self.ai_randomize_choice:bool = self._get_value("ai_randomize_choice", False, self.valid_bool)
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
@@ -50,6 +52,7 @@ class Settings:
         self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)
         
         self.save_json()
+        LOGGER.info("Settings initialized and saved to %s", self._json_file)
         
     def load_json(self) -> dict:
         """ Load settings from json file into dict"""
@@ -70,7 +73,6 @@ class Settings:
                             if not key.startswith('_') and not callable(value)}
         with open(self._json_file, 'w', encoding='utf-8') as file:
             json.dump(settings_to_save, file, indent=4, separators=(', ', ': '))
-        LOGGER.debug("Settings saved.")
     
     def _get_value(self, key:str, default_value:any, validator:Callable[[any],bool]=None) -> any:
         """ Get value from settings dictionary, or return default_value if error"""
