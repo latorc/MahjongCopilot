@@ -102,7 +102,7 @@ class BotMjapi(Bot):
                 reaction = self.mjapi.act(self.id, input_msg)
                 err = None
                 break
-            except BaseException as e:
+            except Exception as e:
                 err = e
                 time.sleep(BotMjapi.retry_interval)
         if err:
@@ -146,7 +146,7 @@ class BotMjapi(Bot):
                 reaction = self.mjapi.batch(batch_data)
                 err = None
                 break
-            except BaseException as e:
+            except Exception as e:
                 err = e
                 time.sleep(BotMjapi.retry_interval)
         if err:
