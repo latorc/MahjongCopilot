@@ -12,7 +12,7 @@ from tkinter import font
 from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide
-from common.utils import VER_NUMBER, RES_FOLDER
+from common.utils import RES_FOLDER
 from common.utils import UiState, MITMException, ModelFileException, sub_file
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
@@ -54,7 +54,7 @@ class MainGUI(tk.Tk):
         set_style_normal(style)
 
         # Main window properties
-        self.title(self.st.lan().APP_TITLE + f" v{VER_NUMBER}")
+        self.title(self.st.lan().APP_TITLE)
         self.geometry('750x500')
         self.minsize(750,500)
 

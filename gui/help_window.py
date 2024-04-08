@@ -31,7 +31,7 @@ class HelpWindow(tk.Toplevel):
         self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
         
         self.textbox.tag_configure("title", font=font.Font(family="Microsoft YaHei", size=20, weight="bold"))
-        firstline = st.lan().APP_TITLE + " " + st.lan().HELP + "\n"
+        firstline = st.lan().APP_TITLE + f" v{self.updater.local_version}" + "\n"
         self.textbox.insert(tk.END, firstline, "title")
         self.textbox.insert(tk.END, st.lan().HELP_STR)
         self.textbox.configure(state='disabled')  # Make the text read-only

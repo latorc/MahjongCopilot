@@ -8,7 +8,7 @@ import shutil
 import zipfile
 from enum import Enum,auto
 import requests
-from common.utils import VER_NUMBER, TEMP_FOLDER
+from common.utils import TEMP_FOLDER
 import common.utils as utils
 
 VERSION_FILE = "version"
@@ -38,6 +38,9 @@ class Updater:
         if not self.urlbase.endswith("/"):
             self.urlbase += "/"
         self.timeout_dl:int = 15
+        # read version number from file "version"
+        with open(utils.sub_file(".", VERSION_FILE), 'r', encoding='utf-8') as f:
+            self.local_version = str(f.read()).strip()
         self.web_version:str = '0'
         self.dl_progress:str = ""               # downloaded percentage
         self.update_status:UpdateStatus = UpdateStatus.NONE

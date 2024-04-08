@@ -10,6 +10,7 @@ if errorlevel 1 (
     exit /b 1
 )
 robocopy . .\dist\MahjongCopilot settings.json
+robocopy .\update .\dist\MahjongCopilot version
 robocopy models dist\MahjongCopilot\models /E
 robocopy resources dist\MahjongCopilot\resources /E
 robocopy liqi_proto dist\MahjongCopilot\liqi_proto /E
