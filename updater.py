@@ -49,14 +49,18 @@ class Updater:
     def check_update(self):
         """ check for update in thread. update web version number"""
         def check_ver():
-            self.update_status = UpdateStatus.CHECKING
-            res = requests.get(self.urlbase + VERSION_FILE, timeout=5)
-            self.web_version = res.text
-            LOGGER.debug("Local version=%s, Web version=%s", self.local_version, self.web_version)
-            if self.is_webversion_newer():
-                self.update_status = UpdateStatus.NEW_VERSION
-            else:
-                self.update_status = UpdateStatus.NO_UPDATE
+            try:
+                self.update_status = UpdateStatus.CHECKING
+                res = requests.get(self.urlbase + VERSION_FILE, timeout=5)
+                self.web_version = res.text
+                LOGGER.debug("Local version=%s, Web version=%s", self.local_version, self.web_version)
+                if self.is_webversion_newer():
+                    self.update_status = UpdateStatus.NEW_VERSION
+                else:
+                    self.update_status = UpdateStatus.NO_UPDATE
+            except Exception as e:
+                self.update_exception = e
+                self.update_status = UpdateStatus.ERROR
         
         t = threading.Thread(
             target=check_ver,
