@@ -243,13 +243,6 @@ class GameState:
             return None
         self.seat = seatList.index(self.account_id)
         self.mjai_bot.init_bot(self.seat)
-        self.mjai_pending_input_msgs.append(
-            {
-                'type': MJAI_TYPE.START_GAME,
-                'id': self.seat
-            }
-        )        
-        self._react_all()
         return None     # no reaction for start_game     
     
     def ms_new_round(self, liqi_data:dict) -> dict:
@@ -542,12 +535,6 @@ class GameState:
     def ms_end_kyoku(self) -> dict | None:
         """ End kyoku and get None as reaction"""
         self.mjai_pending_input_msgs = []
-        self.mjai_pending_input_msgs.append(
-            {
-                'type': MJAI_TYPE.END_KYOKU
-            }
-        )
-        self._react_all()
         return None     # no reaction for end_kyoku
     
         
@@ -557,12 +544,6 @@ class GameState:
             # process end result
             pass
         
-        self.mjai_pending_input_msgs.append(
-            {
-                'type': MJAI_TYPE.END_GAME
-            }
-        )
-        self._react_all()
         self.is_game_ended = True
         return None     # no reaction for end_game
     
