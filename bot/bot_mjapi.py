@@ -74,7 +74,7 @@ class BotMjapi(Bot):
 
     def _process_reaction(self, reaction, recurse):
         if reaction:
-            reaction_convert_meta(reaction)
+            pass
         else:
             return None
 

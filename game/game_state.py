@@ -8,7 +8,7 @@ from liqi import LiqiProto, LiqiMethod, LiqiAction
 import common.mj_helper as mj_helper
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
 from common.log_helper import LOGGER
-from bot import Bot
+from bot import Bot, reaction_convert_meta
 
 NO_EFFECT_METHODS = [
     '.lq.NotifyPlayerLoadGameReady',        # Notify: the game starts
@@ -580,11 +580,11 @@ class GameState:
         if data: 
             if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
                 return None
-        for m in self.mjai_pending_input_msgs:
-            LOGGER.info("Bot in: %s", m)
         if len(self.mjai_pending_input_msgs) == 1:
+            LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs[0])
             output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
         else:
+            LOGGER.info("Bot in (batch):\n%s", '\n'.join(str(m) for m in self.mjai_pending_input_msgs))
             output_reaction = self.mjai_bot.react_batch(self.mjai_pending_input_msgs)
         self.mjai_pending_input_msgs = [] # clear intput queue
         
@@ -592,4 +592,5 @@ class GameState:
             return None
         else:
             LOGGER.info("Bot out: %s", output_reaction)
-            return output_reaction    
+            reaction_convert_meta(output_reaction)
+            return output_reaction

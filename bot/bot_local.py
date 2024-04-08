@@ -53,7 +53,6 @@ class BotMortalLocal(Bot):
             if react_str is None:
                 return None
             reaction = json.loads(react_str)
-            reaction_convert_meta(reaction)
             # Special treatment for self reach output msg
             # mjai only outputs dahai msg after the reach msg
             if reaction['type'] == MJAI_TYPE.REACH and reaction['actor'] == self.seat:  # Self reach
@@ -65,7 +64,6 @@ class BotMortalLocal(Bot):
                 reach_msg = {'type': MJAI_TYPE.REACH, 'actor': self.seat}
                 reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
                 reach_dahai = json.loads(reach_dahai_str)
-                reaction_convert_meta(reach_dahai)
                 reaction['reach_dahai'] = reach_dahai
                 self.ignore_next_turn_self_reach = True     # ignore very next reach msg
             return reaction
