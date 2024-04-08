@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="_koei3eWDU1PvnlzhrJU" name="Page-1">
-        <mxGraphModel dx="894" dy="458" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="4470" dy="2290" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -10,12 +10,7 @@
                         <mxPoint x="250" y="205" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="8" value="game data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="7" vertex="1" connectable="0">
-                    <mxGeometry x="0.2532" y="-2" relative="1" as="geometry">
-                        <mxPoint x="1031" y="312" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="74" value="game&lt;br&gt;msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="7">
+                <mxCell id="74" value="game&lt;br&gt;msg" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="7" vertex="1" connectable="0">
                     <mxGeometry x="0.4746" y="-1" relative="1" as="geometry">
                         <mxPoint x="7" y="-17" as="offset"/>
                     </mxGeometry>
@@ -48,7 +43,7 @@
                 <mxCell id="52" value="MJAI Bot Implement" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="50" vertex="1">
                     <mxGeometry x="30" width="130" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="72" value="Mortal Local Model&lt;br&gt;MJAPI Online Model&lt;br&gt;..." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="50">
+                <mxCell id="72" value="Mortal Local Model&lt;br&gt;MJAPI Online Model&lt;br&gt;..." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="50" vertex="1">
                     <mxGeometry x="15" y="39" width="130" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="54" value="" style="swimlane;startSize=0;" parent="1" vertex="1">
