@@ -400,7 +400,9 @@ class Automation:
                     prob = top_ops[i][1]        # the probability
                     break
                 
-            if chosen_pai == orig_pai:  # return original action if no change                
+            if chosen_pai == orig_pai:  # return original action if no change
+                msg = f"Randomized dahai: {action['pai']} No change ({prob*100:.1f}%)"
+                LOGGER.debug(msg)                
                 return action
             
             # generate new action for changed tile
@@ -713,7 +715,7 @@ class Automation:
         for step in self.steps_randomized_move_click(x,y):
             yield step    
     
-    def decide(self):
+    def decide_lobby_action(self):
         """ decide what "lobby action" to execute based on current state."""
         if not self.can_automate():
             return

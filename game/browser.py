@@ -235,16 +235,16 @@ class GameBrowser:
             return
         self._action_queue.put(lambda: self._action_overlay_update_botleft(text))
         
-    def overlay_clear_botleft(self):
-        """ clear overlay bot-left texts"""
-        self._action_queue.put(lambda: self._action_overlay_update_botleft(None))
+    # def overlay_clear_botleft(self):
+    #     """ clear overlay bot-left texts"""
+    #     self._action_queue.put(lambda: self._action_overlay_update_botleft(None))
     
     # def draw_bars(self, bars:list[float]): 
     #     pass
     
     
     def screen_shot(self) -> bytes | None:
-        """ Take screenshot from browser page and return file name if success, or None if not"""
+        """ Take broswer page screenshot and return buff if success, or None if not"""
         if not self.is_page_normal():
             return None
         res_queue = queue.Queue()
@@ -260,60 +260,32 @@ class GameBrowser:
         if res is None:
             return None
         else:
-            return res        
-        
-        # file_name = utils.sub_file(TEMP_FOLDER,'screenshot.png')
-        # # delete file if exist
-        # if Path(file_name).exists():
-        #     Path(file_name).unlink()
-        # res = utils.wait_for_file(file_name,5)
-        # if res:
-        #     return file_name
-        # else:
-        #     return None
-        
+            return res
     
     def _action_mouse_move(self, x:int, y:int, steps:int, finish_event:threading.Event):
         """ move mouse to (x,y) with steps, and set finish_event when done"""
-        if self.page:
-            self.page.mouse.move(x=x, y=y, steps=steps)
+        self.page.mouse.move(x=x, y=y, steps=steps)
         finish_event.set()
         
     def _action_mouse_click(self, x:int, y:int, delay:float, finish_event:threading.Event):
         """ mouse click on page at (x,y)"""
-        if self.page:
-            self.page.mouse.click(x=x, y=y, delay=delay)
+        self.page.mouse.click(x=x, y=y, delay=delay)
         finish_event.set()
-
         
     def _action_mouse_wheel(self, dx:float, dy:float, finish_event:threading.Event):
-        if not self.page:
-            LOGGER.debug("No page, no wheel")
-            return
         self.page.mouse.wheel(dx, dy)
-        finish_event.set()
-        
+        finish_event.set()        
     
     def _action_autohu(self):
         """ call autohu function in page"""
-        if self.page:
-            # LOGGER.debug(f"Setting AutoHu")
-            self.page.evaluate("() => view.DesktopMgr.Inst.setAutoHule(true)") 
-        else:
-            LOGGER.debug("No page, no autohu")
+        self.page.evaluate("() => view.DesktopMgr.Inst.setAutoHule(true)")
         
     def _action_start_overlay(self):
         """ Display overlay on page. Will ignore if already exist, or page is None"""
-        # random 8-byte alpha-numeric string
-        
-        if self._canvas_id:     # if exist, skip and return
+                
+        if self.is_overlay_working():   # skip if overlay already working
             return
-        if self.page is None:
-            return
-        # LOGGER.debug("browser Start overlay")
-        self._canvas_id = utils.random_str(8)
-        font_size = int(self.height/48)
-        prompt:str = "Mahjong Copilot"
+        self._canvas_id = utils.random_str(8) # random 8-byte alpha-numeric string
         js_code = f"""(() => {{
             // Create a canvas element and add it to the document body
             const canvas = document.createElement('canvas');
@@ -332,11 +304,10 @@ class GameBrowser:
         self.page.evaluate(js_code)
         
     def _action_stop_overlay(self):
-        """ Remove overlay from page. Will ignore if page is None, or overlay not on"""
+        """ Remove overlay from page"""
         
         if self.is_overlay_working() is False:
             return
-        # LOGGER.debug("browser Stop overlay")
         js_code = f"""(() => {{
             const canvas = document.getElementById('{self._canvas_id}');
             if (canvas) {{
@@ -346,6 +317,7 @@ class GameBrowser:
         self.page.evaluate(js_code)
         self._canvas_id = None
         self._botleft_text = None
+        self._last_guide = None
     
     def _overlay_text_params(self):
         font_size = int(self.height/45)  # e.g., 22
@@ -490,19 +462,19 @@ class GameBrowser:
     def _overlay_update_indicators(self, reaction:dict):        
         pass
             
-    def _action_screen_shot(self, res_queue:queue.Queue):
+    def _action_screen_shot(self, res_queue:queue.Queue, time_ms:int=5000):
         """ take screen shot from browser page
         Params:
             res_queue: queue for saving the image buff data"""
-        if self.page:
+        if self.is_page_normal():
             try:
                 # save_file = utils.sub_folder(TEMP_FOLDER)/"screenshot.png"
                 # self.page.screenshot(path=save_file)
-                ss_bytes:BytesIO = self.page.screenshot(timeout=5000)
+                ss_bytes:BytesIO = self.page.screenshot(timeout=time_ms)
                 res_queue.put(ss_bytes)
             except Exception as e:
                 LOGGER.error("Error taking screenshot: %s", e, exc_info=True)
                 res_queue.put(None)
         else:
             res_queue.put(None)
-            LOGGER.debug("No page, no screenshot")
+            LOGGER.debug("Page not loaded, no screenshot")
