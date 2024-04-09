@@ -15,7 +15,7 @@ class Settings:
         self._settings_dict:dict = self.load_json()        
         # read settings or set default values
         # variable names must match keys in json, for saving later
-        
+        ("update_url", "https://update.mjcopilot.com", self.valid_url)
         # UI settings
         self.update_url:str = self._get_value("update_url", "https://update.mjcopilot.com", self.valid_url) # not shown
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
@@ -32,7 +32,7 @@ class Settings:
         # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
         # for mjapi
-        self.mjapi_url:str = self._get_value("mjapi_url", "https://begins-malta-bbc-huntington.trycloudflare.com")
+        self.mjapi_url:str = self._get_value("mjapi_url", "https://mjai.7xcnnw11phu.eu.org")
         self.mjapi_user:str = self._get_value("mjapi_user", "")
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
         self.mjapi_models:list = self._get_value("mjapi_models",[])

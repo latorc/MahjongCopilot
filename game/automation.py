@@ -453,7 +453,7 @@ class Automation:
             idx = gi.my_tehai.index(dahai)
             steps = self.steps_randomized_move_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
         # move to mid to avoid highlighting a tile. Ignore step change (even during other players' turns)
-        delay_step = ActionStepDelay(random.uniform(0.3, 0.6))
+        delay_step = ActionStepDelay(random.uniform(0.25, 0.5))
         delay_step.ignore_step_change = True
         steps.append(delay_step)
         
@@ -600,7 +600,7 @@ class Automation:
             x, y: target position in 16x9 resolution
             random_moves(int): number of random moves before target. None -> use settings"""
         steps = self.steps_randomized_move(x, y, random_moves)
-        steps.append(ActionStepDelay(random.uniform(0.3, 0.4)))
+        steps.append(ActionStepDelay(random.uniform(0.45, 0.55)))
         steps.append(ActionStepClick(x*self.scaler, y*self.scaler, random.randint(60, 100)))
         return steps
     

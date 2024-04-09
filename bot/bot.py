@@ -64,7 +64,3 @@ class Bot(ABC):
         last_reaction = self.react(input_list[-1])
         return last_reaction
 
-
-        
-        
-        
