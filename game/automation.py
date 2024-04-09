@@ -300,9 +300,9 @@ class Automation:
         if mjai_type == MJAI_TYPE.DAHAI:
             # extra time for first round and East
             if gi.is_first_round:
-                delay += 2.0
+                delay += 1.5
                 if gi.jikaze  == 'E':   # extra time for sort animation on kyoku start
-                    delay += 3.5
+                    delay += 3
             pai = mjai_action['pai']
             
             # more time for 19 < 28 < others
