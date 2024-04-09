@@ -3,6 +3,7 @@
 麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂四人麻将。
 
 Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 4-person mode games.
+
 [下载和使用说明 / Download&Instructions](#instructions)
 
 ![](assets/shot3_lower.png)
@@ -21,11 +22,14 @@ Features:
 - Multi-language support
 - Supports Mortal local models and online models
 
-## 使用方法 / Instructions
+
 
 <a id="instructions"></a>
 
+## 使用方法 / Instructions
+
 ### 运行方法
+
 
 1. 从 Release 中下载压缩包并解压。 [Release](https://github.com/latorc/MahjongCopilot/releases)
 2. 配置 AI 模型：
