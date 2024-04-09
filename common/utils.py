@@ -10,6 +10,9 @@ import subprocess
 import random
 import string
 
+# Constants
+WEBSITE = "https://mjcopilot.com"
+
 # read version string from file version
 MODEL_FOLDER = "models"
 BROWSER_DATA_FOLDER = "browser_data"

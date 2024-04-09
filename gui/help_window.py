@@ -1,6 +1,7 @@
 """ Help Window"""
 
 from typing import Callable
+import webbrowser
 import tkinter as tk
 from tkinter import font
 from tkinter import ttk, messagebox
@@ -8,6 +9,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from common.log_helper import LOGGER
 from common.settings import Settings
+from common.utils import WEBSITE
 from updater import Updater, UpdateStatus
 from .utils import font_normal
 
@@ -54,6 +56,13 @@ class HelpWindow(tk.Toplevel):
         # OK Button
         self.ok_button = ttk.Button(self.box, text="OK", command=self._on_close, width=10)
         self.ok_button.grid(row=0, column=2, sticky=tk.NSEW, padx=10, pady=10)
+        
+        # Link
+        def open_link():
+            webbrowser.open(WEBSITE + r'/?tab=readme-ov-file#%E9%BA%BB%E5%B0%86-copilot--mahjong-copilot')
+        label = tk.Label(self, text=WEBSITE, fg="blue", cursor="hand2")
+        label.pack(padx=5, pady=5, side=tk.LEFT)
+        label.bind("<Button-1>", lambda event: open_link())
         
         self._refresh_ui()
     

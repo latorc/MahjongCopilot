@@ -41,7 +41,7 @@ class KyokuState:
 
         ### flags
         self.pending_reach_acc:dict = None  # Pending MJAI reach accepted message
-        self.first_round:bool = False       # flag marking if it is the first move in new round
+        self.first_round:bool = True        # flag marking if it is the first move in new round
         self.self_in_reach:bool = False     # if self is in reach state
 
 class GameState:

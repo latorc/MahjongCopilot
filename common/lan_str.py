@@ -16,8 +16,7 @@ class LanStr:
     EIXT_CONFIRM = "Are you sure you want to exit?"
     AI_OUTPUT = 'AI Guidance'
     GAME_INFO = 'Game Info'
-    HELP_STR = """Mahjong Copilot
-
+    HELP_STR = """
 A Mahjong AI assistant for Majsoul, based on Mortal Mahjong AI. Currently the model only supports 4-person Mahjong game. When you enter a game in Majsoul, AI will give you step-by-step guidance.
 
 🔳 Start Web Client: Start the game in browser with AI assistant. This program uses built-in Chromium browser. First time entering Majsoul will take a while to download game assets.
@@ -26,13 +25,15 @@ A Mahjong AI assistant for Majsoul, based on Mortal Mahjong AI. Currently the mo
 🔘 Autojoin: Auto join next game given settings.
 🔳 Settings: View and configure settings.
 🔳 Open Log File: Open the log file with system default program.
-    
+
+Project Website (Download & Help): https://mjcopilot.com     
 Github: https://github.com/latorc/MahjongCopilot
     
 Credits:
-Mortal: https://github.com/Equim-chan/Mortal
-Akagi: https://github.com/shinkuan/Akagi
-MJAI: https://mjai.app
+· Mortal: https://github.com/Equim-chan/Mortal
+· Akagi: https://github.com/shinkuan/Akagi
+· Mahjong Soul API: https://github.com/MahjongRepository/mahjong_soul_api
+· MJAI: https://mjai.app
 """
     ON = "On"
     OFF = "Off"
@@ -149,23 +150,24 @@ class LanStrZHS(LanStr):
     EIXT_CONFIRM = "确定退出程序?"
     AI_OUTPUT = 'AI 提示'
     GAME_INFO = '游戏信息'
-    HELP_STR = """麻将 Copilot
-
+    HELP_STR = """
 一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。 目前模型只支持四人麻将游戏。 当你进入游戏后, AI会对每一步行动进行指导。
     
-🔳 启动网页客户端: 在浏览器中启动游戏和AI助手。 本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
+🔳 启动网页客户端: 在浏览器中启动游戏和AI助手。本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
 🔘 网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
 🔘 自动打牌: 打开/关闭自动打牌, 自动点击浏览器根据 AI 提示打牌。
 🔘 自动加入: 根据设置的条件, 自动加入下一局游戏
 🔳 设置: 查看和修改设置选项。
 🔳 打开日志文件: 用系统默认程序打开日志文件。
     
-本项目 Github: https://github.com/latorc/MahjongCopilot
+本项目网址 (下载和帮助): https://mjcopilot.com 
+Github: https://github.com/latorc/MahjongCopilot
     
 鸣谢:
-Mortal: https://github.com/Equim-chan/Mortal
-Akagi: https://github.com/shinkuan/Akagi
-MJAI: https://mjai.app
+· Mortal: https://github.com/Equim-chan/Mortal
+· Akagi: https://github.com/shinkuan/Akagi
+· Mahjong Soul API: https://github.com/MahjongRepository/mahjong_soul_api
+· MJAI: https://mjai.app
 """
     ON = "开"
     OFF = "关"
