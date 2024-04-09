@@ -151,7 +151,7 @@ class BotManager:
         """ enable automation"""
         LOGGER.debug("Bot Manager enabling automation")
         self.st.enable_automation = True
-        self.automation.decide()
+        self.automation.decide_lobby_action()
         
     def disable_automation(self):
         """ disable automation"""
@@ -273,7 +273,7 @@ class BotManager:
         self._retry_failed_automation() # retry failed automation
         # self._update_overlay_botleft() # update overlay bot-left
         if not self.game_exception:     # skip on game error
-            self.automation.decide()
+            self.automation.decide_lobby_action()
         
     def _process_msg(self, msg:mitm.WSMessage):
         """ process websocket message from mitm server"""
