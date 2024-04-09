@@ -438,6 +438,8 @@ class BotManager:
     def _retry_failed_automation(self):
         # retry pending reaction if conditions are met
         try:
+            if not self.st.enable_automation:
+                return False
             if self.automation.is_running_execution():
                 # last action still executing, cancel
                 return False
