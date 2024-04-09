@@ -158,17 +158,17 @@ class Updater:
             cmd = f"""
             @echo off
             echo Updating {exec_name} in 5 seconds...
-            timeout /t 5
+            timeout /t 5 /nobreak
             echo Killing program {exec_name}...
             taskkill /IM {exec_name} /F
-            timeout /t 3
+            timeout /t 3 /nobreak
             echo copying new file...
             set "sourceDir={update_folder}\*"
             set "destDir={root_folder}"
             xcopy %sourceDir% %destDir% /s /e /y
-            echo Update completed. Restarting {exec_name} in 3...
-            timeout /t 3
+            echo Update completed. Restarting {exec_name} and finishing in 3 seconds...            
             start {exec_name}
+            timeout /t 3 /nobreak
             """
             # save it to a batchfile
             batch_file = utils.sub_file(TEMP_FOLDER, "update.bat")
