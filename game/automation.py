@@ -1,5 +1,11 @@
-""" Game automation algorithm"""
-from collections import namedtuple
+""" Game automation classes and algorithm"""
+# Design: generate action steps based on mjai action (Automation)
+# action steps are individual steps like delay, mouse click, etc. (ActionStep and derivatives)
+# Screen positions are in 16x9 resolution, and are translated to client resolution in execution
+# Then execute the steps in thread (AutomationTask). It calls the executor (browser for now) to carry out the actions.
+# for in-game actions, verify on every ActionStep if the action has expired, and cancel execution if needed
+# for example, Majsoul before you finish "Chi", another player may "Pon"/"Ron"/..., which cancels your "Chi" action
+
 from dataclasses import dataclass, field
 import time
 import random
@@ -71,26 +77,26 @@ class Positions:
     idx_kan = int((-(len/2)+idx+0.5)*2+3)"""
     
     GAMEOVER = [
-        (14.35, 8.12),    # 点击确定按钮，此坐标位于大厅的"商家"和"寻觅"按钮之间
-        (6.825, 6.8),     # 点击好感度礼物
+        (14.35, 8.12),    # OK button 确定按钮
+        (6.825, 6.8),     # 点击好感度礼物?
     ]
     MENUS = [
-        (11.5, 2.75),   #段位场
+        (11.5, 2.75),   # Ranked 段位场
     ]
     
     LEVELS = [
-        (11.5, 3.375),  # 铜之间
-        (11.5, 4.825),  # 银之间
-        (11.5, 6.15),   # 金之间
-        (11.5, 5.425),  # 玉之间    滚轮    
-        (11.5, 6.825),  # 王座之间  滚轮
+        (11.5, 3.375),  # Bronze 铜之间
+        (11.5, 4.825),  # Silver 银之间
+        (11.5, 6.15),   # Gold 金之间
+        (11.5, 5.425),  # Jade 玉之间    滚轮    
+        (11.5, 6.825),  # Throne 王座之间  滚轮
     ]
     
     MODES = [
-        (11.6, 3.325), # 四人东
-        (11.6, 4.675), # 四人南
-        (11.6, 6.1),   # 三人东
-        (11.6, 7.35),  # 三人南
+        (11.6, 3.325), # 4E 四人东
+        (11.6, 4.675), # 4S 四人南
+        (11.6, 6.1),   # 3E 三人东
+        (11.6, 7.35),  # 3S 三人南
     ]
 
 
@@ -137,7 +143,7 @@ def cvt_type_mjai_2_ms(mjai_type:str, gi:GameInfo) -> MSType:
     
 @dataclass
 class ActionStep:
-    """ representing an action step like single click/move/wheel/etc."""
+    """ representing an atomic action step like single click/move/wheel/etc."""
     ignore_step_change:bool = field(default=False, init=False)
     
 @dataclass
@@ -165,13 +171,6 @@ class ActionStepDelay(ActionStep):
     """ Delay action"""
     delay:float
         
-
-# Design: generate action steps based on mjai action (Automation)
-# action steps are individual steps like delay, mouse click, etc. (ActionStep and derivatives)
-# Screen positions are in 16x9 resolution, and are translated to client resolution in execution
-# Then execute the steps in thread (AutomationTask).
-# for in-game actions, verify if the action has expired, and cancel execution if needed
-# for example, Majsoul before you finish "Chi", another player may "Pon"/"Ron"/..., which cancels your "Chi" action
 class AutomationTask:
     """ Managing automation task and its thread
     an automation task corresponds to performing a bot reaction on game client (e.g. click dahai on web client)"""
@@ -217,7 +216,7 @@ class AutomationTask:
             raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
         self.last_exe_time = time.time()
         
-    def start_action_steps(self, action_list:Iterable[ActionStep], game_state:GameState = None):
+    def start_action_steps(self, action_steps:Iterable[ActionStep], game_state:GameState = None):
         """ start running action list/iterator in a thread"""
         if self.is_running():
             return
@@ -228,7 +227,7 @@ class AutomationTask:
             else:
                 op_step = None
             LOGGER.debug("Start executing task: %s, %s", self.name, self.desc)    
-            for step in action_list:
+            for step in action_steps:
                 if self._stop_event.is_set():
                     LOGGER.debug("Cancel executing %s. Stop event set",self.name)
                     return                
@@ -253,7 +252,9 @@ END_GAME = "Auto_EndGame"
 JOIN_GAME = "Auto_JoinGame"
 
 class Automation:
-    """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul"""
+    """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul.
+    Screen positions are calculated using pre-defined constants in 16x9 resolution,
+    and are translated to client resolution before execution"""
     def __init__(self, browser: GameBrowser, setting:Settings):
         if browser is None:
             raise ValueError("Browser is None")
@@ -323,11 +324,13 @@ class Automation:
         return delay
      
         
-    def automate_action(self, mjai_action:dict, game_state:GameState):
+    def automate_action(self, mjai_action:dict, game_state:GameState) -> bool:
         """ execute action given by the mjai message
         params:
             mjai_action(dict): mjai output action msg
-            game_state(GameState): game state object"""
+            game_state(GameState): game state object
+        Returns:
+            bool: True means automation kicks off. False means not automating."""
         if not self.can_automate():
             return False
         if game_state is None or mjai_action is None:
@@ -366,17 +369,17 @@ class Automation:
         
         else:
             LOGGER.error("No automation for unrecognized mjai type: %s", mjai_type)
-            return
+            return False
         
         delay = self.get_delay(mjai_action, gi)  # initial delay
         action_steps:list[ActionStep] = [ActionStepDelay(delay)]
         action_steps.extend(more_steps)
         self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
         self._task.start_action_steps(action_steps, game_state)
+        return True
     
     def randomize_action(self, action:dict, gi:GameInfo) -> dict:
         """ Randomize ai choice: pick according to probaility from top 3 options"""
-        # TODO: implement randomization
         mjai_type = action['type']
         if mjai_type == MJAI_TYPE.DAHAI:
             orig_pai = action['pai']
@@ -406,7 +409,7 @@ class Automation:
                 return action
             
             # generate new action for changed tile
-            tsumogiri = (chosen_pai == gi.my_tsumohai)
+            tsumogiri = chosen_pai == gi.my_tsumohai
             new_action = {
                 'type': MJAI_TYPE.DAHAI,
                 'actor': action['actor'],
@@ -419,7 +422,6 @@ class Automation:
         # other MJAI types
         else:
             return action
-            
 
     
     def last_exec_time(self) -> float:
@@ -452,18 +454,24 @@ class Automation:
         else:       # tedashi: find the index and discard
             idx = gi.my_tehai.index(dahai)
             steps = self.steps_randomized_move_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
-        # move to mid to avoid highlighting a tile. Ignore step change (even during other players' turns)
-        delay_step = ActionStepDelay(random.uniform(0.25, 0.5))
-        delay_step.ignore_step_change = True
+        # move to screen center to avoid highlighting a tile.
+        steps += self.steps_move_to_center(True)
+        
+        return steps
+    
+    def steps_move_to_center(self, ignore_step_change:bool=False) -> list[ActionStep]: 
+        """ get action steps for moving the mouse to screen center""" 
+        # Ignore step change (even during other players' turns) 
+        steps = []
+        delay_step = ActionStepDelay(random.uniform(0.2, 0.3))
+        delay_step.ignore_step_change = ignore_step_change
         steps.append(delay_step)
         
-        xmid, ymid = random.uniform(0.2,0.8), random.uniform(0.2, 0.8)
+        xmid, ymid = random.uniform(0.25, 0.75), random.uniform(0.25, 0.75)
         move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(1,3))
-        move_step.ignore_step_change = True        
+        move_step.ignore_step_change = ignore_step_change
         steps.append(move_step)
-        
-        return steps   
-    
+        return steps
     
     def _process_oplist_for_kan(self, mstype_from_mjai, op_list:list) -> list:
         """ Process operation list for kan, and return the new op list"""
@@ -510,7 +518,7 @@ class Automation:
         if mstype_from_mjai in [MSType.ankan, MSType.kakan]:
             op_list = self._process_oplist_for_kan(mstype_from_mjai, op_list)
         
-        # Click on the corresponding button (None, Chii, Pon, etc.)
+        # Find the button coords and click (None, Chii, Pon, etc.)
         steps = []
         the_op = None
         for idx, op in enumerate(op_list):
@@ -523,7 +531,7 @@ class Automation:
             LOGGER.error("for mjai %s liqi msg has no op list. Op list: %s", mjai_type, op_list)            
             return steps
 
-        # for reach, process subsequent reach dahai action
+        # Reach: process subsequent reach dahai action
         if mstype_from_mjai == MSType.reach:            
             reach_dahai = mjai_action['reach_dahai']
             delay = self.get_delay(reach_dahai, gi)
@@ -589,7 +597,7 @@ class Automation:
             ry = y + 9*random.uniform(-0.5, 0.5)
             ry = max(0, min(9, ry))
             steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,5)))
-            steps.append(ActionStepDelay(random.uniform(0.05, 0.15)))
+            steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
         tx, ty = x*self.scaler, y*self.scaler
         steps.append(ActionStepMove(tx, ty, random.randint(3,6)))
         return steps
@@ -600,7 +608,7 @@ class Automation:
             x, y: target position in 16x9 resolution
             random_moves(int): number of random moves before target. None -> use settings"""
         steps = self.steps_randomized_move(x, y, random_moves)
-        steps.append(ActionStepDelay(random.uniform(0.45, 0.55)))
+        steps.append(ActionStepDelay(random.uniform(0.4, 0.5)))
         steps.append(ActionStepClick(x*self.scaler, y*self.scaler, random.randint(60, 100)))
         return steps
     
@@ -615,7 +623,7 @@ class Automation:
             dx = total_dx / times
             dy = total_dy / times
             steps.append(ActionStepWheel(dx, dy))
-            steps.append(ActionStepDelay(random.uniform(0.05, 0.1)))
+            steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
         return steps
 
     def on_lobby_login(self, _liqimsg:dict):
@@ -660,7 +668,7 @@ class Automation:
                 self.ui_state = UiState.MAIN_MENU
                 break
             
-            yield ActionStepDelay(random.uniform(1,2))
+            yield ActionStepDelay(random.uniform(2,3))
             
             x,y = Positions.GAMEOVER[0]
             for step in self.steps_randomized_move_click(x,y):
@@ -687,13 +695,13 @@ class Automation:
                 LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UiState.MAIN_MENU
                 break
-            yield ActionStepDelay(random.uniform(1, 2))
+            yield ActionStepDelay(random.uniform(0.5, 1))
         
-        # click on competitive
+        # click on Ranked Mode
         x,y = Positions.MENUS[0]
         for step in self.steps_randomized_move_click(x,y):
             yield step
-        yield ActionStepDelay(random.uniform(1, 2))
+        yield ActionStepDelay(random.uniform(0.5, 1.5))
         
         # click on level        
         if self.st.auto_join_level >= 3:  # jade/throne requires mouse wheel
@@ -707,7 +715,7 @@ class Automation:
         x,y = Positions.LEVELS[self.st.auto_join_level]
         for step in self.steps_randomized_move_click(x,y):
             yield step        
-        yield ActionStepDelay(random.uniform(1, 2))
+        yield ActionStepDelay(random.uniform(0.5, 1.5))
         
         # click on mode
         mode_idx = GAME_MODES.index(self.st.auto_join_mode)
