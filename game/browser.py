@@ -12,7 +12,8 @@ from common.utils import BROWSER_DATA_FOLDER, FPSCounter
 from common.log_helper import LOGGER
 
 class GameBrowser:
-    """ Wrapper for Playwright browser controlling maj-soul operations"""  
+    """ Wrapper for Playwright browser controlling maj-soul operations
+    Browser runs in a thread, and actions are queued to be processed by the thread"""  
 
     def __init__(self, width:int, height:int):
         """ Set browser with viewport size (width, height)"""
@@ -235,13 +236,6 @@ class GameBrowser:
             return
         self._action_queue.put(lambda: self._action_overlay_update_botleft(text))
         
-    # def overlay_clear_botleft(self):
-    #     """ clear overlay bot-left texts"""
-    #     self._action_queue.put(lambda: self._action_overlay_update_botleft(None))
-    
-    # def draw_bars(self, bars:list[float]): 
-    #     pass
-    
     
     def screen_shot(self) -> bytes | None:
         """ Take broswer page screenshot and return buff if success, or None if not"""
@@ -459,8 +453,12 @@ class GameBrowser:
         self.page.evaluate(js_code)
         self._last_botleft_text = text
     
-    def _overlay_update_indicators(self, reaction:dict):        
-        pass
+    def _overlay_update_indicators(self, bars:list):
+        """ Update the indicators on overlay """
+        # TODO
+        for x,y,height in bars:
+            pass
+
             
     def _action_screen_shot(self, res_queue:queue.Queue, time_ms:int=5000):
         """ take screen shot from browser page
