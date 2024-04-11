@@ -164,7 +164,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
-        settings_window = SettingsWindow(self, self.st)
+        settings_window = SettingsWindow(self, self.st,self.bot_manager)
         settings_window.transient(self)
         settings_window.grab_set()
         self.wait_window(settings_window)

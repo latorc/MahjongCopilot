@@ -11,13 +11,15 @@ from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
 from bot.bot import BotType
 from .utils import set_style_normal
+from bot_manager import BotManager
 
 class SettingsWindow(tk.Toplevel):
     """ Settings dialog window"""
-    def __init__(self, parent:tk.Frame, setting:Settings):
+    def __init__(self, parent:tk.Frame, setting:Settings, bot_manager:BotManager):
         super().__init__(parent)
         self.st = setting
-
+        self.bot_manager = bot_manager
+    
         self.geometry('600x600')
         self.minsize(600,600)
         # self.resizable(False, False)
@@ -255,16 +257,13 @@ class SettingsWindow(tk.Toplevel):
         print(account_var_new)
         if account_var_new == "":
             return
+        self.bot_manager.stop_browser()
         account_manager.saveUserAccount(account_var_new)
         LOGGER.info(str("Saving Account"+account_var_new+" to database"))
 
         self.account_var = tk.StringVar(value=account_var_new)
         self.select_menu_account['values']=account_manager.listUser()
         print("select_menu_values",self.select_menu_account['values'])
-        # select_menu = ttk.Combobox(main_frame, textvariable=self.account_var, values=options, width=10)
-        # select_menu.set(account_var_new)
-        # print("select_menu.values=",select_menu['values'])
-        # select_menu.set(select_menu.values[0])
         self.select_menu_account.set(account_var_new)
         self.select_menu_account.update()
         return
