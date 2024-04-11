@@ -518,7 +518,7 @@ class Automation:
             idx = gi.my_tehai.index(dahai)
             steps = self.steps_randomized_move(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
         
-        # click / drag
+        # click / drag 50/50
         if self.st.auto_random_move and random.random()< 0.5:
             steps += self.steps_mouse_drag_to_center()
         else:
@@ -649,7 +649,7 @@ class Automation:
                 rx = max(0, min(16, rx))
                 ry = y + 9*random.uniform(-0.5, 0.5)
                 ry = max(0, min(9, ry))
-                steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,5)))
+                steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,6)))
                 steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
         # then move to target
         tx, ty = x*self.scaler, y*self.scaler
@@ -692,7 +692,7 @@ class Automation:
         steps.append(delay_step)
         
         xmid, ymid = 16 * random.uniform(0.25, 0.75), 9 * random.uniform(0.25, 0.75)
-        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(3,7))
+        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(3,6))
         move_step.ignore_step_change = ignore_step_change
         steps.append(move_step)
         return steps
