@@ -26,7 +26,7 @@ class MjapiClient:
             return self._process_res(res, raise_error)
         except requests.RequestException as e:
             if raise_error:
-                raise RuntimeError(f"Request error {res.status_code}") from e
+                raise e
             else:
                 return None
     
@@ -38,7 +38,7 @@ class MjapiClient:
             return self._process_res(res, raise_error)
         except requests.RequestException as e:
             if raise_error:
-                raise RuntimeError(f"Request error {res.status_code}") from e
+                raise e
             else:
                 return None
         
