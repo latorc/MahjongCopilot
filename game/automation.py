@@ -76,6 +76,24 @@ class Positions:
     """ kakan/ankan candidates (combinations) positions
     idx_kan = int((-(len/2)+idx+0.5)*2+3)"""
     
+    EMOJI_BUTTON = (5, 5)
+    EMOJIS = [
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+        (5, 5), 
+    ]
+    """ emoji positions
+    0 1 2
+    3 4 5
+    6 7 8"""
+    
+    
     GAMEOVER = [
         (14.35, 8.12),    # OK button 确定按钮
         (6.825, 6.8),     # 点击好感度礼物?
@@ -155,11 +173,17 @@ class ActionStepMove(ActionStep):
     
 @dataclass
 class ActionStepClick(ActionStep):
-    """ Click mouse left at x,y"""
-    x:float
-    y:float
+    """ Click mouse left at current position"""
     delay:float = field(default=80) # delay before button down/up
+
+@dataclass
+class ActionStepMouseDown(ActionStep):
+    """ Mouse down action"""
     
+@dataclass
+class ActionStepMouseUp(ActionStep):
+    """ Mouse up action"""
+
 @dataclass
 class ActionStepWheel(ActionStep):
     """ Mouse wheel action"""
@@ -207,7 +231,11 @@ class AutomationTask:
         if isinstance(step, ActionStepMove):
             self.executor.mouse_move(step.x, step.y, step.steps, True)
         elif isinstance(step, ActionStepClick):
-            self.executor.mouse_click(step.x, step.y, step.delay, True)
+            self.executor.mouse_click(step.delay, True)
+        elif isinstance(step, ActionStepMouseDown):
+            self.executor.mouse_down(True)
+        elif isinstance(step, ActionStepMouseUp):
+            self.executor.mouse_up(True)
         elif isinstance(step, ActionStepWheel):
             self.executor.mouse_wheel(step.dx, step.dy, True)
         elif isinstance(step, ActionStepDelay):
@@ -226,7 +254,8 @@ class AutomationTask:
                 op_step = game_state.last_op_step
             else:
                 op_step = None
-            LOGGER.debug("Start executing task: %s, %s", self.name, self.desc)    
+            msg = f"Start executing task: {self.name}, {self.desc}"
+            LOGGER.debug(msg)
             for step in action_steps:
                 if self._stop_event.is_set():
                     LOGGER.debug("Cancel executing %s. Stop event set",self.name)
@@ -282,16 +311,21 @@ class Automation:
     def stop_previous(self):
         """ stop previous task execution if it is still running"""
         if self.is_running_execution():
-            LOGGER.warning("Stopping previous action: %s", self._task.name)
+            LOGGER.info("Stopping previous action: %s", self._task.name)
             self._task.stop()
             self._task = None
             
-    def can_automate(self) -> bool:
+    def can_automate(self, cancel_on_running:bool=False, limit_state:UiState=None) -> bool:
         """return True if automation conditions met """
         if not self.st.enable_automation: # automation not enabled
             return False
         if not self.executor.is_page_normal():  # browser is not running
             return False
+        if cancel_on_running and self.is_running_execution():   # cancel if previous task is running
+            return False
+        if limit_state and self.ui_state != limit_state:        # cancel if current state != limit_state
+            return False       
+            
         return True
         
     def get_delay(self, mjai_action:dict, gi:GameInfo):
@@ -303,7 +337,7 @@ class Automation:
             if gi.is_first_round:
                 delay += 1.5
                 if gi.jikaze  == 'E':   # extra time for sort animation on kyoku start
-                    delay += 2.0
+                    delay += 3.5
             pai = mjai_action['pai']
             
             # more time for 19 < 28 < others
@@ -334,21 +368,13 @@ class Automation:
         if not self.can_automate():
             return False
         if game_state is None or mjai_action is None:
-            return False
-          
+            return False          
         
         self.stop_previous()
         gi = game_state.get_game_info()
         assert gi is not None, "Game info is None"
         op_step = game_state.last_op_step
-        mjai_type = mjai_action['type']
-        
-        if 'pai' in mjai_action:
-            pai = f"{mjai_action['pai']}"
-        else:
-            pai = ""        
-        desc = f"Automating action {mjai_type} {pai} (step = {op_step})" 
-        
+        mjai_type = mjai_action['type']        
         
         if self.st.ai_randomize_choice:     # randomize choice
             mjai_action = self.randomize_action(mjai_action, gi) 
@@ -374,12 +400,17 @@ class Automation:
         delay = self.get_delay(mjai_action, gi)  # initial delay
         action_steps:list[ActionStep] = [ActionStepDelay(delay)]
         action_steps.extend(more_steps)
+        pai = mjai_action.get('pai',"")      
+        desc = f"Automating action {mjai_type} {pai} (step = {op_step}, delay={delay:.2f}s)" 
         self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
         self._task.start_action_steps(action_steps, game_state)
         return True
     
     def randomize_action(self, action:dict, gi:GameInfo) -> dict:
         """ Randomize ai choice: pick according to probaility from top 3 options"""
+        n = self.st.ai_randomize_choice     # randomize strength. 0 = no random, 5 = according to probability
+        if n == 0:
+            return action
         mjai_type = action['type']
         if mjai_type == MJAI_TYPE.DAHAI:
             orig_pai = action['pai']
@@ -387,26 +418,30 @@ class Automation:
             # get dahai options (tile only) from top 3
             top_ops:list = [(k,v) for k,v in options[:3] if k in MJAI_TILES_SORTED]        
             #pick from top3 according to probability
+            power = 1 / (0.2 * n)
+            sum_probs = sum([v**power for k,v in top_ops])
+            top_ops_powered = [(k, v**power/sum_probs) for k,v in top_ops]
             
             # 1. Calculate cumulative probabilities
-            cumulative_probs = [top_ops[0][1]]
-            for i in range(1, len(top_ops)):
-                cumulative_probs.append(cumulative_probs[-1] + top_ops[i][1])
+            cumulative_probs = [top_ops_powered[0][1]]
+            for i in range(1, len(top_ops_powered)):
+                cumulative_probs.append(cumulative_probs[-1] + top_ops_powered[i][1])
 
             # 2. Pick an option based on a random number
             rand_prob = random.random()  # Random float: 0.0 <= x < 1.0
             chosen_pai = orig_pai  # Default in case no option is selected, for safety
-            prob = top_ops[0][1]
+            prob = top_ops_powered[0][1]
             for i, cum_prob in enumerate(cumulative_probs):
                 if rand_prob < cum_prob:
-                    chosen_pai = top_ops[i][0]  # This is the selected key based on probability
-                    prob = top_ops[i][1]        # the probability
+                    chosen_pai = top_ops_powered[i][0]  # This is the selected key based on probability
+                    prob = top_ops_powered[i][1]        # the probability
+                    orig_prob = top_ops[i][1]
                     break
                 
             if chosen_pai == orig_pai:  # return original action if no change
-                msg = f"Randomized dahai: {action['pai']} No change ({prob*100:.1f}%)"
-                LOGGER.debug(msg)                
-                return action
+                change_str = f"{action['pai']} Unchanged"
+            else:
+                change_str = f"{action['pai']} -> {chosen_pai}"
             
             # generate new action for changed tile
             tsumogiri = chosen_pai == gi.my_tsumohai
@@ -416,7 +451,7 @@ class Automation:
                 'pai': chosen_pai,
                 'tsumogiri': tsumogiri
             }
-            msg = f"Randomized dahai: {action['pai']} -> {chosen_pai} ({prob*100:.1f}%)"
+            msg = f"Randomized dahai: {change_str} ([{n}] {orig_prob*100:.1f}% -> {prob*100:.1f}%)"
             LOGGER.debug(msg)
             return new_action
         # other MJAI types
@@ -430,6 +465,34 @@ class Automation:
             return self._task.last_exe_time
         else:
             return -1        
+    
+    def automate_send_emoji(self, idx:int):
+        """ Send emoji"""
+        if not self.can_automate(True, UiState.IN_GAME):
+            return
+        x,y = Positions.EMOJI_BUTTON
+        steps = self.steps_randomized_move_click(x,y)
+        steps.append(ActionStepDelay(random.uniform(0.25, 0.35)))
+        x,y = Positions.EMOJIS[idx]
+        steps += self.steps_randomized_move_click(x,y)
+        self._task = AutomationTask(self.executor, f"SendEmoji{idx}", f"Send emoji {idx}")
+        self._task.start_action_steps(steps, None)
+    
+    def idle_move_mouse(self, prob:float):
+        """ move mouse around to avoid AFK. according to probability"""
+        if not self.can_automate(True, UiState.IN_GAME):
+            return False
+        if not self.st.auto_idle_move:
+            return
+
+        roll = random.random()
+        if prob > roll:
+            action_steps = self.steps_move_to_center(False)
+            action_steps += self.steps_move_to_center(False)
+            action_steps += self.steps_move_to_center(False)
+            self._task = AutomationTask(self.executor, "IdleMove", "Move mouse around in other's turn")
+            self._task.start_action_steps(action_steps, None)
+        
     
     def steps_action_dahai(self, mjai_action:dict, gi:GameInfo) -> list[ActionStep]:
         """ generate steps for dahai (discard tile) action
@@ -450,28 +513,20 @@ class Automation:
             else:
                 x = Positions.TEHAI_X[dahai_count] + Positions.TRUMO_SPACE
                 y = Positions.TEHAI_Y
-            steps = self.steps_randomized_move_click(x, y)         
+            steps = self.steps_randomized_move(x, y)         
         else:       # tedashi: find the index and discard
             idx = gi.my_tehai.index(dahai)
-            steps = self.steps_randomized_move_click(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
-        # move to screen center to avoid highlighting a tile.
-        steps += self.steps_move_to_center(True)
+            steps = self.steps_randomized_move(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
         
+        # click / drag
+        if self.st.auto_random_move and random.random()< 0.5:
+            steps += self.steps_mouse_drag_to_center()
+        else:
+            steps += self.steps_mouse_click()
+            steps += self.steps_move_to_center(True)  # move to screen center to avoid highlighting a tile.
         return steps
     
-    def steps_move_to_center(self, ignore_step_change:bool=False) -> list[ActionStep]: 
-        """ get action steps for moving the mouse to screen center""" 
-        # Ignore step change (even during other players' turns) 
-        steps = []
-        delay_step = ActionStepDelay(random.uniform(0.2, 0.3))
-        delay_step.ignore_step_change = ignore_step_change
-        steps.append(delay_step)
-        
-        xmid, ymid = random.uniform(0.25, 0.75), random.uniform(0.25, 0.75)
-        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(1,3))
-        move_step.ignore_step_change = ignore_step_change
-        steps.append(move_step)
-        return steps
+    
     
     def _process_oplist_for_kan(self, mstype_from_mjai, op_list:list) -> list:
         """ Process operation list for kan, and return the new op list"""
@@ -582,34 +637,64 @@ class Automation:
         """ scaler for 16x9 -> game resolution"""
         return self.executor.width/16
     
-    def steps_randomized_move(self, x:float, y:float, random_moves:int=None) -> list[ActionStep]:
+    def steps_randomized_move(self, x:float, y:float) -> list[ActionStep]:
         """ generate list of steps for a randomized mouse move
         Params:
             x, y: target position in 16x9 resolution
             random_moves(int): number of random moves before target. None -> use settings"""
         steps = []
-        if random_moves is None:
-            random_moves = self.st.auto_random_moves
-        
-        for _i in range(random_moves):   # random moves, within (-0.5, 0.5) x screen size of target
-            rx = x + 16*random.uniform(-0.5, 0.5)
-            rx = max(0, min(16, rx))
-            ry = y + 9*random.uniform(-0.5, 0.5)
-            ry = max(0, min(9, ry))
-            steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,5)))
-            steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
+        if self.st.auto_random_move:  # random moves, within (-0.5, 0.5) x screen size of target      
+            for _i in range(3):
+                rx = x + 16*random.uniform(-0.5, 0.5)
+                rx = max(0, min(16, rx))
+                ry = y + 9*random.uniform(-0.5, 0.5)
+                ry = max(0, min(9, ry))
+                steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,5)))
+                steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
+        # then move to target
         tx, ty = x*self.scaler, y*self.scaler
-        steps.append(ActionStepMove(tx, ty, random.randint(3,6)))
+        steps.append(ActionStepMove(tx, ty, random.randint(5,10)))
         return steps
     
-    def steps_randomized_move_click(self, x:float, y:float, random_moves:int=None) -> list[ActionStep]:
+    def steps_randomized_move_click(self, x:float, y:float) -> list[ActionStep]:
         """ generate list of steps for a randomized mouse move and click
         Params:
             x, y: target position in 16x9 resolution
             random_moves(int): number of random moves before target. None -> use settings"""
-        steps = self.steps_randomized_move(x, y, random_moves)
-        steps.append(ActionStepDelay(random.uniform(0.4, 0.5)))
-        steps.append(ActionStepClick(x*self.scaler, y*self.scaler, random.randint(60, 100)))
+        steps = self.steps_randomized_move(x, y)
+        steps.append(ActionStepDelay(random.uniform(0.3, 0.5)))
+        steps.append(ActionStepClick(random.randint(60, 100)))
+        return steps
+    
+    def steps_mouse_click(self) -> list[ActionStep]:
+        """ generate list of steps for a simple mouse click"""
+        steps = []
+        steps.append(ActionStepDelay(random.uniform(0.3, 0.5)))
+        steps.append(ActionStepClick(random.randint(60, 100)))
+        return steps
+    
+    def steps_mouse_drag_to_center(self) -> list[ActionStep]:
+        """ steps for dragging to center (e.g. for dahai)"""
+        steps = []
+        steps.append(ActionStepDelay(random.uniform(0.2, 0.4)))
+        steps.append(ActionStepMouseDown())
+        steps += self.steps_move_to_center(False)
+        steps.append(ActionStepDelay(random.uniform(0.2, 0.4)))
+        steps.append(ActionStepMouseUp())
+        return steps
+    
+    def steps_move_to_center(self, ignore_step_change:bool=False) -> list[ActionStep]: 
+        """ get action steps for moving the mouse to screen center""" 
+        # Ignore step change (even during other players' turns) 
+        steps = []
+        delay_step = ActionStepDelay(random.uniform(0.2, 0.3))
+        delay_step.ignore_step_change = ignore_step_change
+        steps.append(delay_step)
+        
+        xmid, ymid = 16 * random.uniform(0.25, 0.75), 9 * random.uniform(0.25, 0.75)
+        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(5,10))
+        move_step.ignore_step_change = ignore_step_change
+        steps.append(move_step)
         return steps
     
     def steps_random_wheels(self, total_dx:float, total_dy:float) -> list[ActionStep]:
@@ -725,10 +810,7 @@ class Automation:
     
     def decide_lobby_action(self):
         """ decide what "lobby action" to execute based on current state."""
-        if not self.can_automate():
-            return
-        if self.is_running_execution():
-             # don't do anything if previous task is still running
+        if not self.can_automate(True):
             return
         if self._task:      # Cancel if interval not reached
             if time.time() - self._task.last_exe_time < self.st.auto_retry_interval:                

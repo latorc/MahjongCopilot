@@ -210,9 +210,9 @@ def meta_to_options(meta: dict) -> list:
     mask = mask_bits_to_bool_list(mask_bits)
     weight_values = softmax(q_values)
     # further square the numbers and normalize
-    weight_values = [w*w for w in weight_values]
-    sum_weight = sum(weight_values)
-    weight_values = [w/sum_weight for w in weight_values]
+    # weight_values = [w*w for w in weight_values]
+    # sum_weight = sum(weight_values)
+    # weight_values = [w/sum_weight for w in weight_values]
     # sum_weight should ~= 1.0
     
     q_value_idx = 0
