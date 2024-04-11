@@ -1,8 +1,9 @@
 import threading
 import asyncio
 import queue
+import json
 from dataclasses import dataclass
-from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 from mitmproxy.http import HTTPFlow
 from mitmproxy import options
 from mitmproxy.tools.dump import DumpMaster
@@ -50,6 +51,7 @@ class WSDataInterceptor:
         return False
 
     def websocket_start(self, flow:HTTPFlow):
+        """ ws start handler"""
         if self.allow_url(flow.request.pretty_url):
             self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_TYPE.START))
         else:
@@ -57,16 +59,33 @@ class WSDataInterceptor:
             LOGGER.info("Killing flow since it is not in allowed domains: %s", flow.request.pretty_url)            
         
     def websocket_message(self, flow:HTTPFlow):
+        """ ws message handler"""
         msg = flow.websocket.messages[-1]
         if self.allow_url(flow.request.pretty_url):
             self.message_queue.put(WSMessage(flow.id, msg.timestamp, msg.content))
         
     def websocket_end(self, flow:HTTPFlow):
+        """ ws flow end handler"""
         if self.allow_url(flow.request.pretty_url):
             self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_TYPE.END))        
 
     def replace_next_msg(self):
         pass
+    
+    def request(self, flow: HTTPFlow):
+        """ handler for request"""
+        parsed_url = urlparse(flow.request.url)
+        if parsed_url.hostname == "majsoul-hk-client.cn-hongkong.log.aliyuncs.com":
+            qs = parse_qs(parsed_url.query)
+            try:
+                content = json.loads(qs["content"][0])
+                if content["type"] == "re_err":
+                    LOGGER.warning("Majsoul Aliyun Error (killed): %s", str(qs))
+                    flow.kill()
+                else:
+                    LOGGER.debug("Majsoul Aliyun Log detected, len = %d", len(str(qs)))
+            except:
+                return
     
     
 class MitmController:

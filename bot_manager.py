@@ -270,8 +270,8 @@ class BotManager:
                     LOGGER.debug("Bot manager turning off browser overlay")
                     self.browser.stop_overlay()    
         
-        self._retry_failed_automation() # retry failed automation
-        # self._update_overlay_botleft() # update overlay bot-left
+        self._retry_failed_automation()                 # retry failed automation
+        
         if not self.game_exception:     # skip on game error
             self.automation.decide_lobby_action()
         
@@ -340,6 +340,8 @@ class BotManager:
                 # self._update_overlay_guide()
                 if reaction:
                     self._do_automation(reaction)
+                else:
+                    self.automation.idle_move_mouse(0.05)           # move mouse around randomly
                 if self.game_state.is_game_ended:
                     self._process_end_game()
             

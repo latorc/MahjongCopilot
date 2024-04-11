@@ -12,7 +12,8 @@ from common.utils import BROWSER_DATA_FOLDER, FPSCounter
 from common.log_helper import LOGGER
 
 class GameBrowser:
-    """ Wrapper for Playwright browser controlling maj-soul operations"""  
+    """ Wrapper for Playwright browser controlling maj-soul operations
+    Browser runs in a thread, and actions are queued to be processed by the thread"""  
 
     def __init__(self, width:int, height:int):
         """ Set browser with viewport size (width, height)"""
@@ -29,6 +30,7 @@ class GameBrowser:
         """ initialize internal variables"""
         self.context:BrowserContext = None
         self.page:Page = None        # playwright page, only used by thread        
+        self.fps_counter.reset()
         
         # for tracking page info
         self._page_title:str = None
@@ -181,11 +183,25 @@ class GameBrowser:
         if blocking:
             finish_event.wait()
     
-    def mouse_click(self, x:int, y:int, delay:float=80, blocking:bool=False):
+    def mouse_click(self, delay:float=80, blocking:bool=False):
         """ Queue action: mouse click at (x,y) on viewport
         if block, wait until action is done"""
         finish_event = threading.Event()
-        self._action_queue.put(lambda: self._action_mouse_click(x, y, delay, finish_event))
+        self._action_queue.put(lambda: self._action_mouse_click(delay, finish_event))
+        if blocking:
+            finish_event.wait()
+    
+    def mouse_down(self, blocking:bool=False):
+        """ Queue action: mouse down on page"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_down(finish_event))
+        if blocking:
+            finish_event.wait()
+    
+    def mouse_up(self,blocking:bool=False):
+        """ Queue action: mouse up on page"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_up(finish_event))
         if blocking:
             finish_event.wait()
             
@@ -235,13 +251,6 @@ class GameBrowser:
             return
         self._action_queue.put(lambda: self._action_overlay_update_botleft(text))
         
-    # def overlay_clear_botleft(self):
-    #     """ clear overlay bot-left texts"""
-    #     self._action_queue.put(lambda: self._action_overlay_update_botleft(None))
-    
-    # def draw_bars(self, bars:list[float]): 
-    #     pass
-    
     
     def screen_shot(self) -> bytes | None:
         """ Take broswer page screenshot and return buff if success, or None if not"""
@@ -267,9 +276,22 @@ class GameBrowser:
         self.page.mouse.move(x=x, y=y, steps=steps)
         finish_event.set()
         
-    def _action_mouse_click(self, x:int, y:int, delay:float, finish_event:threading.Event):
+    def _action_mouse_click(self, delay:float, finish_event:threading.Event):
         """ mouse click on page at (x,y)"""
-        self.page.mouse.click(x=x, y=y, delay=delay)
+        # self.page.mouse.click(x=x, y=y, delay=delay)
+        self.page.mouse.down()
+        time.sleep(delay/1000)
+        self.page.mouse.up()
+        finish_event.set()
+    
+    def _action_mouse_down(self, finish_event:threading.Event):
+        """ mouse down on page"""
+        self.page.mouse.down()
+        finish_event.set()
+        
+    def _action_mouse_up(self, finish_event:threading.Event):
+        """ mouse up on page"""
+        self.page.mouse.up()
         finish_event.set()
         
     def _action_mouse_wheel(self, dx:float, dy:float, finish_event:threading.Event):
@@ -459,8 +481,12 @@ class GameBrowser:
         self.page.evaluate(js_code)
         self._last_botleft_text = text
     
-    def _overlay_update_indicators(self, reaction:dict):        
-        pass
+    def _overlay_update_indicators(self, bars:list):
+        """ Update the indicators on overlay """
+        # TODO
+        for x,y,height in bars:
+            pass
+
             
     def _action_screen_shot(self, res_queue:queue.Queue, time_ms:int=5000):
         """ take screen shot from browser page
