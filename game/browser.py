@@ -30,6 +30,7 @@ class GameBrowser:
         """ initialize internal variables"""
         self.context:BrowserContext = None
         self.page:Page = None        # playwright page, only used by thread        
+        self.fps_counter.reset()
         
         # for tracking page info
         self._page_title:str = None
@@ -182,11 +183,25 @@ class GameBrowser:
         if blocking:
             finish_event.wait()
     
-    def mouse_click(self, x:int, y:int, delay:float=80, blocking:bool=False):
+    def mouse_click(self, delay:float=80, blocking:bool=False):
         """ Queue action: mouse click at (x,y) on viewport
         if block, wait until action is done"""
         finish_event = threading.Event()
-        self._action_queue.put(lambda: self._action_mouse_click(x, y, delay, finish_event))
+        self._action_queue.put(lambda: self._action_mouse_click(delay, finish_event))
+        if blocking:
+            finish_event.wait()
+    
+    def mouse_down(self, blocking:bool=False):
+        """ Queue action: mouse down on page"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_down(finish_event))
+        if blocking:
+            finish_event.wait()
+    
+    def mouse_up(self,blocking:bool=False):
+        """ Queue action: mouse up on page"""
+        finish_event = threading.Event()
+        self._action_queue.put(lambda: self._action_mouse_up(finish_event))
         if blocking:
             finish_event.wait()
             
@@ -261,9 +276,22 @@ class GameBrowser:
         self.page.mouse.move(x=x, y=y, steps=steps)
         finish_event.set()
         
-    def _action_mouse_click(self, x:int, y:int, delay:float, finish_event:threading.Event):
+    def _action_mouse_click(self, delay:float, finish_event:threading.Event):
         """ mouse click on page at (x,y)"""
-        self.page.mouse.click(x=x, y=y, delay=delay)
+        # self.page.mouse.click(x=x, y=y, delay=delay)
+        self.page.mouse.down()
+        time.sleep(delay/1000)
+        self.page.mouse.up()
+        finish_event.set()
+    
+    def _action_mouse_down(self, finish_event:threading.Event):
+        """ mouse down on page"""
+        self.page.mouse.down()
+        finish_event.set()
+        
+    def _action_mouse_up(self, finish_event:threading.Event):
+        """ mouse up on page"""
+        self.page.mouse.up()
         finish_event.set()
         
     def _action_mouse_wheel(self, dx:float, dy:float, finish_event:threading.Event):

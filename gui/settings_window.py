@@ -164,20 +164,30 @@ class SettingsWindow(tk.Toplevel):
         self.autoplay_var = tk.BooleanVar(value=self.st.enable_automation)
         autoplay_entry = ttk.Checkbutton(main_frame, variable=self.autoplay_var, text=self.st.lan().AUTOPLAY, width=12)
         autoplay_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
-        # randomize choice
-        self.randomized_choice_var = tk.BooleanVar(value=self.st.ai_randomize_choice)
-        random_choice_entry = ttk.Checkbutton(main_frame, variable=self.randomized_choice_var, text=self.st.lan().RANDOM_CHOICE, width=14)
-        random_choice_entry.grid(row=cur_row, column=2, columnspan=1, **args_entry)
         
-        # random move
-        cur_row += 1
-        _label = ttk.Label(main_frame, text=self.st.lan().MOUSE_RANDOM_MOVES)
+        # random move        
+        # _label = ttk.Label(main_frame, text=self.st.lan().MOUSE_RANDOM_MOVES)
+        # _label.grid(row=cur_row, column=0, **args_label)
+        self.random_move_var = tk.BooleanVar(value=self.st.auto_random_move)
+        ran_moves_entry = ttk.Checkbutton(
+            main_frame, variable=self.random_move_var, text=self.st.lan().MOUSE_RANDOM_MOVE, width=12)
+        ran_moves_entry.grid(row=cur_row, column=2, columnspan=1, **args_entry)
+        
+        # idle move
+        self.auto_idle_move_var = tk.BooleanVar(value=self.st.auto_idle_move)
+        idle_move_entry = ttk.Checkbutton(main_frame, variable=self.auto_idle_move_var, text=self.st.lan().AUTO_IDLE_MOVE, width=12)
+        idle_move_entry.grid(row=cur_row, column=3, columnspan=1, **args_entry)
+        
+        # randomize choice 
+        cur_row += 1       
+        _label = ttk.Label(main_frame, text=self.st.lan().RANDOM_CHOICE)
         _label.grid(row=cur_row, column=0, **args_label)
-        self.random_moves_var = tk.IntVar(value=self.st.auto_random_moves)
-        ran_moves_entry = ttk.Combobox(
-            main_frame, textvariable=self.random_moves_var, values=tuple(range(11)), state="readonly", width=12)
-        #ttk.Checkbutton(main_frame, variable=self.random_moves_var, text=self.st.lan().MOUSE_RANDOM_MOVES, width=12)
-        ran_moves_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
+        self.randomized_choice_var = tk.StringVar(value=self.st.ai_randomize_choice)
+        options = ['0 (Off)',1,2,3,4,5]
+        random_choice_entry = ttk.Combobox(
+            main_frame, textvariable=self.randomized_choice_var, values=options, state="readonly", width=12)
+        random_choice_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
+        
         
         # random delay lower/upper
         cur_row += 1
@@ -192,6 +202,8 @@ class SettingsWindow(tk.Toplevel):
         
         # auto join settings
         cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AUTO_JOIN_GAME)
+        _label.grid(row=cur_row, column=0, **args_label)
         self.auto_join_var = tk.BooleanVar(value=self.st.auto_join_game)
         auto_join_entry = ttk.Checkbutton(main_frame, variable=self.auto_join_var, text = self.st.lan().AUTO_JOIN_GAME, width=12)
         auto_join_entry.grid(row=cur_row, column=1,columnspan=1, **args_entry)
@@ -267,12 +279,13 @@ class SettingsWindow(tk.Toplevel):
         
         # auto play settings
         autoplay_new = self.autoplay_var.get()
-        randomized_choice_new = self.randomized_choice_var.get()
-        auto_random_moves_new = self.random_moves_var.get()
+        idle_move_new = self.auto_idle_move_var.get()
+        randomized_choice_new:int = int(self.randomized_choice_var.get().split(' ')[0])
+        auto_random_move_new = self.random_move_var.get()
         try:
             delay_lower_new = self.delay_random_lower_var.get()
             delay_upper_new = self.delay_random_upper_var.get()
-        except:
+        except Exception as _e:
             messagebox.showerror("⚠", self.st.lan().RANDOM_DELAY_RANGE)
             return
         delay_lower_new = max(0,delay_lower_new)
@@ -300,8 +313,9 @@ class SettingsWindow(tk.Toplevel):
         self.st.mjapi_model_select = mjapi_model_select_new
         
         self.st.enable_automation = autoplay_new
+        self.st.auto_idle_move = idle_move_new
         self.st.ai_randomize_choice = randomized_choice_new
-        self.st.auto_random_moves = auto_random_moves_new
+        self.st.auto_random_move = auto_random_move_new
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
         self.st.auto_join_game = auto_join_new

@@ -47,7 +47,7 @@ Credits:
     UNZIPPING = "Unzipping..."
     UPDATE_PREPARED = "Update prepared. Click the button to update and restart."
 
-    # Settings
+    ### Settings
     SAVE = "Save"
     CANCEL = "Cancel"
     SETTINGS_TIPS = "A restart is needed to apply some settings"
@@ -67,13 +67,15 @@ Credits:
     MJAPI_MODEL_SELECT = "MJAPI Model Select"
     LOGIN_TO_REFRESH = "Log in to refresh"
     MITM_PORT_ERROR_PROMPT = "Invalid MITM Port (must between 1000~65535)"
+    # autoplay
     AUTO_PLAY_SETTINGS = "Autoplay Settings"
-    RANDOM_CHOICE = "Randomize Choice"
+    AUTO_IDLE_MOVE = "Idle Mouse Move"
+    RANDOM_CHOICE = "Randomize AI Choice"
     RANDOM_DELAY_RANGE = "Base Delay Range (sec)"
     AUTO_JOIN_GAME = "Auto Join"
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
     GAME_MODES = ["4-p East","4-p South","3-p East","3-p South"]
-    MOUSE_RANDOM_MOVES = "Random Moves"
+    MOUSE_RANDOM_MOVE = "Randomize Move"
     
     # Status
     MAIN_THREAD  = "Main Thread"
@@ -203,13 +205,15 @@ Github: https://github.com/latorc/MahjongCopilot
     LOGIN_TO_REFRESH = "登录后刷新"
     AUTO_LAUNCH_BROWSER = "自动启动浏览器"
     MITM_PORT_ERROR_PROMPT = "错误的 MITM 服务端口(必须是1000~65535)"
+    # autoplay
     AUTO_PLAY_SETTINGS = "自动打牌设置"
-    RANDOM_CHOICE = "随机化选项(去重)"
+    AUTO_IDLE_MOVE = "鼠标空闲移动"
+    RANDOM_CHOICE = "AI 选项随机化(去重)"
     AUTO_JOIN_GAME = "自动加入"
     RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
-    MOUSE_RANDOM_MOVES = "鼠标随机移动次数"
+    MOUSE_RANDOM_MOVE = "鼠标移动随机化"
     
     # Status
     MAIN_THREAD  = "主程序"
