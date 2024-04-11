@@ -653,7 +653,7 @@ class Automation:
                 steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
         # then move to target
         tx, ty = x*self.scaler, y*self.scaler
-        steps.append(ActionStepMove(tx, ty, random.randint(5,10)))
+        steps.append(ActionStepMove(tx, ty, random.randint(3,6)))
         return steps
     
     def steps_randomized_move_click(self, x:float, y:float) -> list[ActionStep]:
@@ -692,7 +692,7 @@ class Automation:
         steps.append(delay_step)
         
         xmid, ymid = 16 * random.uniform(0.25, 0.75), 9 * random.uniform(0.25, 0.75)
-        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(5,10))
+        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(3,7))
         move_step.ignore_step_change = ignore_step_change
         steps.append(move_step)
         return steps
