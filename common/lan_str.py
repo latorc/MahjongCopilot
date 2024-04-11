@@ -77,6 +77,9 @@ Credits:
     GAME_MODES = ["4-p East","4-p South","3-p East","3-p South"]
     MOUSE_RANDOM_MOVE = "Randomize Move"
     
+    ACCOUNT_SWITCH = "Account Switch"
+    ACCOUNT_SAVE = "Account Save"
+    
     # Status
     MAIN_THREAD  = "Main Thread"
     MITM_SERVICE = "MITM Service"
@@ -214,6 +217,9 @@ Github: https://github.com/latorc/MahjongCopilot
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
     MOUSE_RANDOM_MOVE = "鼠标移动随机化"
+
+    ACCOUNT_SWITCH = "账号切换"
+    ACCOUNT_SAVE = "输入账号备注并点击保存 "
     
     # Status
     MAIN_THREAD  = "主程序"

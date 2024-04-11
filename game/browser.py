@@ -151,6 +151,10 @@ class GameBrowser:
     def stop(self):
         """ Shutdown browser thread"""
         self._stop_event.set()
+        while True:
+            if self.is_running() is False:
+                break
+            time.sleep(0.2)
 
     def is_running(self):
         """ return True if browser thread is still running"""

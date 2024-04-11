@@ -3,3 +3,7 @@ playwright==1.42.0
 torch==2.2.1
 --find-links https://github.com/shinkuan/Akagi/releases/expanded_assets/v0.1.1-libriichi
 riichi>=0.1.1
+numpy>=1.26.4
+pillow>=10.3.0
+requests>=2.31.0
+#plyvel

@@ -121,6 +121,11 @@ class BotManager:
         proxy = r'http://localhost:' + str(self.mitm_port)
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
         
+    
+    def stop_browser(self):
+        """ Stop the browser thread,close browser window """
+        self.browser.stop()
+        
     def get_pending_reaction(self) -> dict:
         """ returns the pending mjai output reaction (which hasn't been acted on)"""
         if self.game_state:

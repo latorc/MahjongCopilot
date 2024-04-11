@@ -10,6 +10,7 @@ from typing import Callable
 import tkinter as tk
 from tkinter import font
 from tkinter import ttk, messagebox
+import  account_manager
 
 from bot_manager import BotManager, mjai_reaction_2_guide
 from common.utils import RES_FOLDER
@@ -132,6 +133,8 @@ class MainGUI(tk.Tk):
 
     def _on_btn_start_browser_clicked(self):
         self.btn_start_browser.config(state=tk.DISABLED)
+        self.bot_manager.stop_browser()
+        account_manager.switchAccountLogin(self.st.account)
         self.bot_manager.start_browser()
 
     def _on_switch_hud_clicked(self):
@@ -174,6 +177,10 @@ class MainGUI(tk.Tk):
         else:
             if not self.bot_manager.is_bot_created():
                 self.bot_manager.create_bot()
+        if settings_window.account_updated:
+            LOGGER.debug("stop brower")
+            self.bot_manager.stop_browser()
+            account_manager.switchAccountLogin(self.st.account)
 
     def _on_btn_help_clicked(self):
         # open help dialog        

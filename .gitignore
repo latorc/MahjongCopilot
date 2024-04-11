@@ -22,3 +22,4 @@ test/
 /_*.py
 /settings*.json
 
+account_switch/*

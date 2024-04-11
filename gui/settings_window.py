@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+import account_manager
 
 from common.utils import MODEL_FOLDER, GAME_MODES
 from common.utils import list_files
@@ -28,6 +29,7 @@ class SettingsWindow(tk.Toplevel):
         """ Whether a GUI refresh is needed to apply new settings"""
 
         self.model_updated:bool = False
+        self.account_updated:bool = False
         # Call create_widgets after the window is fully initialized
         self.create_widgets()
 
@@ -108,6 +110,23 @@ class SettingsWindow(tk.Toplevel):
         self.model_file_var = tk.StringVar(value=self.st.model_file)
         select_menu = ttk.Combobox(main_frame, textvariable=self.model_file_var, values=options, state="readonly", width=30)
         select_menu.grid(row=cur_row, column=1, columnspan=3,  **args_entry)
+        
+        # Select Account
+        # Inpute Account Name
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().ACCOUNT_SWITCH)
+        _label.grid(row=cur_row, column=0, **args_label)
+        options =account_manager.listUser()
+        self.account_var = tk.StringVar(value=self.st.account)
+        self.select_menu_account = ttk.Combobox(main_frame, textvariable=self.account_var, values=options, width=10)
+        self.select_menu_account.grid(row=cur_row, column=1, columnspan=1,  **args_entry)
+        
+        # Save Account Name
+        button_frame_2 = ttk.Frame(main_frame, relief="flat", borderwidth=2)
+        button_frame_2.grid(row=cur_row, column=2)
+        string_button =ttk.Button(button_frame_2, text=self.st.lan().ACCOUNT_SAVE, command=self.account_on_save)
+        string_button.pack()
+
         
         # MJAPI url
         cur_row += 1
@@ -231,7 +250,24 @@ class SettingsWindow(tk.Toplevel):
         cancel_button.pack(side="left", padx=20, pady=10)
         save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
         save_button.pack(side="right", padx=20, pady=10)
-        
+    def account_on_save(self):        
+        account_var_new = self.account_var.get()
+        print(account_var_new)
+        if account_var_new == "":
+            return
+        account_manager.saveUserAccount(account_var_new)
+        LOGGER.info(str("Saving Account"+account_var_new+" to database"))
+
+        self.account_var = tk.StringVar(value=account_var_new)
+        self.select_menu_account['values']=account_manager.listUser()
+        print("select_menu_values",self.select_menu_account['values'])
+        # select_menu = ttk.Combobox(main_frame, textvariable=self.account_var, values=options, width=10)
+        # select_menu.set(account_var_new)
+        # print("select_menu.values=",select_menu['values'])
+        # select_menu.set(select_menu.values[0])
+        self.select_menu_account.set(account_var_new)
+        self.select_menu_account.update()
+        return
     def _on_save(self):
         # Get values from entry fields, validate, and save them
         
@@ -259,6 +295,7 @@ class SettingsWindow(tk.Toplevel):
         else:
             self.gui_need_reload = False
         
+        account_var_new = self.account_var.get()
         # models
         model_type_new = self.model_type_var.get()
         model_file_new = self.model_file_var.get()
@@ -276,6 +313,11 @@ class SettingsWindow(tk.Toplevel):
             self.st.mjapi_model_select != mjapi_model_select_new
         ):
             self.model_updated = True
+        
+        if (
+            self.st.account != account_var_new
+        ):
+            self.account_updated = True
         
         # auto play settings
         autoplay_new = self.autoplay_var.get()
@@ -312,6 +354,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.mjapi_secret = mjapi_secret_new
         self.st.mjapi_model_select = mjapi_model_select_new
         
+        self.st.account = account_var_new
         self.st.enable_automation = autoplay_new
         self.st.auto_idle_move = idle_move_new
         self.st.ai_randomize_choice = randomized_choice_new
