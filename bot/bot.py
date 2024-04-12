@@ -33,8 +33,9 @@ class Bot(ABC):
         self._initialized:bool = False
         self.seat:int = None
 
-    def init_bot(self, seat:int):
+    def init_bot(self, seat:int,is_3p:bool=False):
         """ Initialize the bot before the game starts. Bot must be initialized before a new game""" 
+        self.is_3p = is_3p
         self.seat = seat
         self._init_bot_impl()
         self._initialized = True

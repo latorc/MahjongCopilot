@@ -67,6 +67,7 @@ class GameState:
         
         self.kyoku_state:KyokuState = KyokuState()  # kyoku info - cleared every newround
         
+        self.is_3p:bool = False                 # if 3p mahjong
         ### about last reaction
         self.last_reaction:dict = None          # last bot output reaction
         self.last_reaction_pending:bool = True  # reaction pending until there is new liqi msg indicating the reaction is done/expired
@@ -161,6 +162,7 @@ class GameState:
                 return None
             elif liqi_type == MsgType.RES:
                 # response with game info (first entering game)
+                self.is_3p = len(liqi_data['seatList']) == 3
                 return self.ms_auth_game(liqi_data)
             else:
                 raise RuntimeError(f'Unexpected liqi message, method={liqi_method}, type={liqi_type}')
@@ -242,7 +244,7 @@ class GameState:
             self.is_game_ended = True
             return None
         self.seat = seatList.index(self.account_id)
-        self.mjai_bot.init_bot(self.seat)
+        self.mjai_bot.init_bot(self.seat,self.is_3p)
         # self.mjai_pending_input_msgs.append(
         #     {
         #         'type': MJAI_TYPE.START_GAME,
@@ -266,8 +268,8 @@ class GameState:
         self.kyoku_state.jikaze  = MJAI_WINDS[(self.seat - oya)]
         kyotaku = liqi_data['data']['liqibang']
         self.player_scores = liqi_data['data']['scores']
-        # if self.is_3p:
-        #     scores = scores + [0]
+        if self.is_3p:
+            self.player_scores = self.player_scores + [0]
         tehais_mjai = [['?']*13]*4        
         my_tehai_ms = liqi_data['data']['tiles']
         self.kyoku_state.my_tehai = [mj_helper.cvt_ms2mjai(tile) for tile in my_tehai_ms]
