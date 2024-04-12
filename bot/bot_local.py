@@ -14,10 +14,12 @@ except:
     import riichi as libriichi
 # mjai Bot class from rust library
 # pylint: disable=no-member
-try:
-    from models import model_3p    
-except:
-    pass
+import importlib
+import sys
+import os
+# 添加子目录到 Python 搜索路径
+sys.path.append(os.path.dirname(sys.executable))
+model_3p=importlib.import_module('models.model_3p')
 
 class BotMortalLocal(Bot):
     """ Mortal model based mjai bot"""
