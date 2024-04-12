@@ -168,12 +168,15 @@ class MainGUI(tk.Tk):
         
         if settings_window.gui_need_reload:     # reload UI if needed
             self.reload_gui()
-        if settings_window.model_updated:       # re-create bot if needed
-            if not self.bot_manager.is_in_game():
-                self.bot_manager.create_bot()
-        else:
-            if not self.bot_manager.is_bot_created():
-                self.bot_manager.create_bot()
+        self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
+        if settings_window.mitm_updated:
+            self.bot_manager.restart_mitm()
+        # if settings_window.model_updated:       # re-create bot if needed
+        #     if not self.bot_manager.is_in_game():
+                
+        # else:
+        #     if not self.bot_manager.is_bot_created():
+        #         self.bot_manager.create_bot()
 
     def _on_btn_help_clicked(self):
         # open help dialog        

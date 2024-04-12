@@ -518,8 +518,8 @@ class Automation:
             idx = gi.my_tehai.index(dahai)
             steps = self.steps_randomized_move(Positions.TEHAI_X[idx], Positions.TEHAI_Y)
         
-        # click / drag 50/50
-        if self.st.auto_random_move and random.random()< 0.5:
+        # drag or click to dahai
+        if self.st.auto_dahai_drag:
             steps += self.steps_mouse_drag_to_center()
         else:
             steps += self.steps_mouse_click()
@@ -649,11 +649,11 @@ class Automation:
                 rx = max(0, min(16, rx))
                 ry = y + 9*random.uniform(-0.5, 0.5)
                 ry = max(0, min(9, ry))
-                steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(3,6)))
+                steps.append(ActionStepMove(rx*self.scaler, ry*self.scaler, random.randint(2, 5)))
                 steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
         # then move to target
         tx, ty = x*self.scaler, y*self.scaler
-        steps.append(ActionStepMove(tx, ty, random.randint(3,6)))
+        steps.append(ActionStepMove(tx, ty, random.randint(2, 5)))
         return steps
     
     def steps_randomized_move_click(self, x:float, y:float) -> list[ActionStep]:
@@ -669,17 +669,17 @@ class Automation:
     def steps_mouse_click(self) -> list[ActionStep]:
         """ generate list of steps for a simple mouse click"""
         steps = []
-        steps.append(ActionStepDelay(random.uniform(0.3, 0.5)))
+        steps.append(ActionStepDelay(random.uniform(0.2, 0.4)))
         steps.append(ActionStepClick(random.randint(60, 100)))
         return steps
     
     def steps_mouse_drag_to_center(self) -> list[ActionStep]:
         """ steps for dragging to center (e.g. for dahai)"""
         steps = []
-        steps.append(ActionStepDelay(random.uniform(0.2, 0.4)))
+        steps.append(ActionStepDelay(random.uniform(0.1, 0.3)))
         steps.append(ActionStepMouseDown())
         steps += self.steps_move_to_center(False)
-        steps.append(ActionStepDelay(random.uniform(0.2, 0.4)))
+        steps.append(ActionStepDelay(random.uniform(0.1, 0.3)))
         steps.append(ActionStepMouseUp())
         return steps
     
@@ -692,7 +692,7 @@ class Automation:
         steps.append(delay_step)
         
         xmid, ymid = 16 * random.uniform(0.25, 0.75), 9 * random.uniform(0.25, 0.75)
-        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(3,6))
+        move_step = ActionStepMove(xmid*self.scaler, ymid*self.scaler, random.randint(2, 5))
         move_step.ignore_step_change = ignore_step_change
         steps.append(move_step)
         return steps
@@ -703,7 +703,7 @@ class Automation:
             total_dx, total_dy: total distance to wheel move"""
         # break the wheel action into several steps
         steps = []
-        times = random.randint(3,6)
+        times = random.randint(2, 5)
         for _i in range(times):
             dx = total_dx / times
             dy = total_dy / times

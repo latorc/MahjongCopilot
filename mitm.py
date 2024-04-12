@@ -92,24 +92,29 @@ class MitmController:
     """ Controlling mitm proxy server interactions and managing threads
     mitm proxy server intercepts data to/from the game server"""
     
-    def __init__(self, proxy_port:int, allowed_domains:list=None) -> None:
+    def __init__(self, allowed_domains:list=None) -> None:
         """
         params:
             proxy_port(int): proxy server port to open
             allowed_domains(list): Intercept data only from allowed domains. Other websocket traffic will be blocked.
                 filtering turned off if None/empty"""
         
-        self.proxy_port = proxy_port
+        self.proxy_port = None
         self.mitm_config_folder = utils.sub_folder(MITM_CONFDIR)
 
         self.mitm_thread = None
         self.dump_master = None
+        self.upstream_proxy = None
         
         self.ws_data_addon = WSDataInterceptor(allowed_domains)
         
-    def start(self):
-        """ Start mitm server thread"""
-       
+    def start(self, port:int, upstream_proxy:str=None):
+        """ Start mitm server thread
+        params:
+            port(int): port to open
+            upstream_proxy(str): upstream proxy server to forward data to. Format: http://ip:port"""
+        self.proxy_port = port
+        self.upstream_proxy = upstream_proxy       
         # Start thread
         self.mitm_thread = threading.Thread(
             name="MitmThread",
@@ -121,10 +126,17 @@ class MitmController:
     
     async def _run_mitm_async(self):
         """ async run mitm proxy server"""
-        opts = options.Options(
-            listen_port=self.proxy_port,
-            confdir=str(self.mitm_config_folder)
-        )
+        if self.upstream_proxy:
+            opts = options.Options(
+                listen_port=self.proxy_port,
+                confdir=str(self.mitm_config_folder),
+                mode=[f"upstream:{self.upstream_proxy}"]
+            )
+        else:
+            opts = options.Options(
+                listen_port=self.proxy_port,
+                confdir=str(self.mitm_config_folder)
+            )
         self.dump_master = DumpMaster(
             opts,
             with_termlog=False,
@@ -138,6 +150,7 @@ class MitmController:
         if self.dump_master:
             self.dump_master.shutdown()
             self.dump_master = None
+            self.mitm_thread.join()
     
     def is_running(self) -> bool:
         """ return True if mitm proxy server is running"""

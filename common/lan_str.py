@@ -53,6 +53,7 @@ Credits:
     SETTINGS_TIPS = "A restart is needed to apply some settings"
     AUTO_LAUNCH_BROWSER = "Auto Launch Browser"
     MITM_PORT = "MITM Server Port"
+    UPSTREAM_PROXY = "Upstream Proxy"
     BROWSER_WIDTH = "Web Client Width"
     BROWSER_HEIGHT = "Web Client Height"
     CLIENT_SIZE = "Web Client Size"
@@ -71,6 +72,7 @@ Credits:
     AUTO_PLAY_SETTINGS = "Autoplay Settings"
     AUTO_IDLE_MOVE = "Idle Mouse Move"
     RANDOM_CHOICE = "Randomize AI Choice"
+    DRAG_DAHAI = "Mouse drag dahai"
     RANDOM_DELAY_RANGE = "Base Delay Range (sec)"
     AUTO_JOIN_GAME = "Auto Join"
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
@@ -190,6 +192,7 @@ Github: https://github.com/latorc/MahjongCopilot
     CANCEL = "取消"
     SETTINGS_TIPS = "部分设置项重启后生效"
     MITM_PORT = "MITM 服务端口"
+    UPSTREAM_PROXY = "上游代理"
     BROWSER_WIDTH = "网页客户端宽度"
     BROWSER_HEIGHT = "网页客户端高度"
     CLIENT_SIZE = "网页客户端大小"
@@ -209,6 +212,7 @@ Github: https://github.com/latorc/MahjongCopilot
     AUTO_PLAY_SETTINGS = "自动打牌设置"
     AUTO_IDLE_MOVE = "鼠标空闲移动"
     RANDOM_CHOICE = "AI 选项随机化(去重)"
+    DRAG_DAHAI = "鼠标拖拽出牌"
     AUTO_JOIN_GAME = "自动加入"
     RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]

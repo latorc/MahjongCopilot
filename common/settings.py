@@ -15,7 +15,7 @@ class Settings:
         self._settings_dict:dict = self.load_json()        
         # read settings or set default values
         # variable names must match keys in json, for saving later
-        ("update_url", "https://update.mjcopilot.com", self.valid_url)
+
         # UI settings
         self.update_url:str = self._get_value("update_url", "https://update.mjcopilot.com", self.valid_url) # not shown
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
@@ -23,7 +23,8 @@ class Settings:
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 10999)
-        self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)
+        self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
+        self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)  # language code
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool) # not shown
         
         # AI Model settings
@@ -43,6 +44,7 @@ class Settings:
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
         self.auto_idle_move:bool = self._get_value("auto_idle_move", False, self.valid_bool)
         self.auto_random_move:bool = self._get_value("auto_random_move", False, self.valid_bool)
+        self.auto_dahai_drag:bool = self._get_value("auto_dahai_drag", True, self.valid_bool)
         self.ai_randomize_choice:int = self._get_value("ai_randomize_choice", 1, lambda x: 0 <= x <= 5)
         self.delay_random_lower:float = self._get_value("delay_random_lower", 1, lambda x: 0 <= x )
         self.delay_random_upper:float = self._get_value(
