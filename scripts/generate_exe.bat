@@ -9,9 +9,9 @@ if errorlevel 1 (
     echo PyInstaller encountered an error.
     exit /b 1
 )
-robocopy . .\dist\MahjongCopilot settings.json
 robocopy . .\dist\MahjongCopilot version
-robocopy models dist\MahjongCopilot\models /E
+REM robocopy . .\dist\MahjongCopilot settings.json
+REM robocopy models dist\MahjongCopilot\models /E
 robocopy resources dist\MahjongCopilot\resources /E
 robocopy liqi_proto dist\MahjongCopilot\liqi_proto /E
 robocopy .venv\Lib\site-packages\playwright\driver\package\.local-browsers dist\MahjongCopilot\_internal\playwright\driver\package\.local-browsers /E
