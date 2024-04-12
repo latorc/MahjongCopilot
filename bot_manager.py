@@ -45,7 +45,7 @@ class BotManager:
 
         self.liqi_parser:liqi.LiqiProto = None
         self.mitm_port = self.st.mitm_port
-        self.mitm_server:mitm.MitmController = mitm.MitmController(self.mitm_port)      # no domain restrictions for now
+        self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
         self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
         self.automation = Automation(self.browser, self.st)
         self.bot:Bot = None
@@ -62,6 +62,7 @@ class BotManager:
         # self._overlay_reaction:dict = None          # update overlay guidance if new reaction is different
         # self._overlay_guide_last_update:float = 0   # last update time
         
+        self.bot_need_update:bool = True              # set this True to update bot in main thread
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
         self.game_exception:Exception = None   # game run time error (but does not break main thread)        
@@ -121,6 +122,12 @@ class BotManager:
         proxy = r'http://localhost:' + str(self.mitm_port)
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
         
+    def restart_mitm(self):
+        """ restart mitm proxy server"""
+        LOGGER.info("Restarting mitm proxy server, port=%d, upstream_proxy=%s", self.st.mitm_port, self.st.upstream_proxy)
+        self.mitm_server.stop()
+        self.mitm_server.start(self.st.mitm_port, self.st.upstream_proxy)
+        
     def get_pending_reaction(self) -> dict:
         """ returns the pending mjai output reaction (which hasn't been acted on)"""
         if self.game_state:
@@ -175,7 +182,7 @@ class BotManager:
             if name in (JOIN_GAME, END_GAME):
                 self.automation.stop_previous()
     
-    def create_bot(self):
+    def _create_bot(self):
         """ create Bot object based on settings"""
         try:
             self.bot = get_bot(self.st)
@@ -200,22 +207,14 @@ class BotManager:
     def _run(self):
         """ Keep running the main loop (blocking)"""
         try:
-            LOGGER.info("Starting MITM proxy server")
-            self.mitm_server.start()
+            LOGGER.info("Starting mitm proxy server, port=%d, upstream_proxy=%s", self.st.mitm_port, self.st.upstream_proxy)
+            self.mitm_server.start(self.st.mitm_port,self.st.upstream_proxy)
             LOGGER.info("Installing MITM certificate")
             if self.mitm_server.install_mitm_cert():
                 LOGGER.info("MITM certificate installed")
             else:
                 LOGGER.warning("MITM certificate installation failed (No Admin rights?)")
-
-            # Attempt to create bot. wait for the bot (gui may re-create)
-            self.create_bot()
-            while True:
-                if self.bot is not None:
-                    break
-                else:
-                    time.sleep(0.5)
-
+                
             self.liqi_parser = liqi.LiqiProto()
             if self.st.auto_launch_browser:
                 self.start_browser()
@@ -224,6 +223,7 @@ class BotManager:
             while self._stop_event.is_set() is False:
                 # keep processing majsoul game messages forwarded from mitm server
                 self.fps_counter.frame()
+                self._udpate_bot()
                 try:
                     msg = self.mitm_server.get_message()
                     self._process_msg(msg)                
@@ -250,13 +250,22 @@ class BotManager:
         except Exception as e:
             self.main_thread_exception = e
             LOGGER.error("Bot Manager Thread Exception: %s", e, exc_info=True)
+    
+    def _udpate_bot(self):
+        """ Wait for bot to be created"""
+        if self.bot_need_update and self.is_in_game() is False:                
+            self._create_bot()
+            self.bot_need_update = False
                 
     def _every_loop_post_proc_msg(self):
         # things to do in every loop
 
         # check mitm
         if self.mitm_server.is_running() is False:
-            raise utils.MITMException("MITM server stopped")
+            self.game_exception = utils.MITMException("MITM server stopped")
+        else:   # clear exception
+            if isinstance(self.game_exception, utils.MITMException):
+                self.game_exception = None
 
         # check overlay
         if self.browser and self.browser.is_page_normal():
