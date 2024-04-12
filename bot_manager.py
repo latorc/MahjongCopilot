@@ -185,6 +185,7 @@ class BotManager:
     def _create_bot(self):
         """ create Bot object based on settings"""
         try:
+            self.game_exception = Exception("Creating Bot...")
             self.bot = get_bot(self.st)
             self.game_exception = None
             LOGGER.info("Created bot: %s", self.bot.name)
@@ -253,7 +254,7 @@ class BotManager:
     
     def _udpate_bot(self):
         """ Wait for bot to be created"""
-        if self.bot_need_update and self.is_in_game() is False:                
+        if self.bot_need_update and self.is_in_game() is False:
             self._create_bot()
             self.bot_need_update = False
                 
