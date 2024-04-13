@@ -76,6 +76,29 @@ pip install -r requirements.txt
 python main.py
 ```
 
+###  三人麻将
+如下方式放置三人麻将模型文件，即可使用三人麻将模型
+```
+MahjongCopilot
+    │ MahjongCopilot.exe
+    ├─models
+         │  model_v4.pth
+         │  online.json
+         └─model_3p
+               │  libriichi3p.pyd
+               │  model.py
+               │  mortal.pth
+               └─ __init__.py
+    │  settings.json
+    │  version
+    │  ******
+```
+
+其中__init__.py内容为
+```python
+from . import *
+from .model import *
+```
 ### 使用帮助：
 
 1. 软件使用中间人 (MITM) 代理获取游戏客户端和服务器之间传输的信息。推荐使用内置的浏览器进行游戏。

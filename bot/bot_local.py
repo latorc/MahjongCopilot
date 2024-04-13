@@ -14,7 +14,12 @@ except:
     import riichi as libriichi
 # mjai Bot class from rust library
 # pylint: disable=no-member
-MjaiBot = libriichi.mjai.Bot
+import importlib
+import sys
+import os
+# 添加子目录到 Python 搜索路径
+sys.path.append(os.path.dirname(sys.executable))
+model_3p=importlib.import_module('models.model_3p')
 
 class BotMortalLocal(Bot):
     """ Mortal model based mjai bot"""
@@ -27,8 +32,7 @@ class BotMortalLocal(Bot):
         if not Path(self.model_file).exists():
             raise ModelFileException(f"Cannot find model file:{self.model_file}")
         
-        self.mjai_bot:MjaiBot = None
-        
+        self.mjai_bot = None
         self.ignore_next_turn_self_reach:bool = False
         self.str_input_history:list = []
         # thread lock for mjai.bot access
@@ -36,8 +40,16 @@ class BotMortalLocal(Bot):
         self.lock = threading.Lock()        
     
     def _init_bot_impl(self):
-        engine = get_engine(self.model_file)
-        self.mjai_bot = MjaiBot(engine, self.seat)
+        if self.is_3p:
+            try:
+                self.mjai_bot=model_3p.load_model(self.seat)
+                LOGGER.info("Loading 3p model")
+            except Exception as e:
+                raise ModelFileException(f"Error loading 3p model: {e}")
+        else:
+            LOGGER.info("Loading 4p model")
+            engine = get_engine(self.model_file)
+            self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
         self.str_input_history.clear()
         
     def react(self, input_msg:dict) -> dict:
