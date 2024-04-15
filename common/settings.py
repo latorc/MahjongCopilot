@@ -32,6 +32,7 @@ class Settings:
         """ model type: local, mjapi"""
         # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
+        self.model_file_3p:str = self._get_value("model_file_3p", "mortal_3p.pth")
         # for mjapi
         self.mjapi_url:str = self._get_value("mjapi_url", "https://mjai.7xcnnw11phu.eu.org")
         self.mjapi_user:str = self._get_value("mjapi_user", "")

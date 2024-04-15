@@ -129,6 +129,15 @@ MJAI_MASK_LIST = [
     'reach', 'chi_low', 'chi_mid', 'chi_high', 'pon', 'kan_select', 'hora', 'ryukyoku', 'none'
 ]
 
+MJAI_MASK_LIST_3P = [
+    "1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m",
+    "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p",
+    "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s",
+    "E",  "S",  "W",  "N",  "P",  "F",  "C",
+    '5mr', '5pr', '5sr', 
+    'reach', 'pon', 'kan_select', 'nukidora', 'hora', 'ryukyoku', 'none'
+]
+
 MJAI_TILES_34 = [
     "1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m",
     "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p",
@@ -197,13 +206,17 @@ _sample_meta = {
     "eval_time_ns": 357088300
 }
 
-def meta_to_options(meta: dict) -> list:
+def meta_to_options(meta: dict, is_3p:bool=False) -> list:
     """ Convert meta from mjai reaction msg to readable list of tiles with weights
     params:
         meta object from bot reaction msg, see sample above
     returns:
         list of (tile, weights): e.g. [('1m', 0.987532), ('P', 0.011123), ...]
     """
+    if is_3p:
+        mask_list = MJAI_MASK_LIST_3P
+    else:
+        mask_list = MJAI_MASK_LIST
     
     q_values = meta['q_values']
     mask_bits = meta['mask_bits']
@@ -219,7 +232,7 @@ def meta_to_options(meta: dict) -> list:
     option_list = []
     for i in range(46):
         if mask[i]:
-            option_list.append((MJAI_MASK_LIST[i], weight_values[q_value_idx]))
+            option_list.append((mask_list[i], weight_values[q_value_idx]))
             q_value_idx += 1
 
     option_list = sorted(option_list, key=lambda x: x[1], reverse=True)

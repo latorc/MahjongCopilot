@@ -188,7 +188,7 @@ class BotManager:
             self.game_exception = Exception("Creating Bot...")
             self.bot = get_bot(self.st)
             self.game_exception = None
-            LOGGER.info("Created bot: %s", self.bot.name)
+            LOGGER.info("Created bot: %s. Supported Modes: %s", self.bot.name, self.bot.supported_modes)
         except Exception as e:
             LOGGER.warning("Failed to create bot: %s", e, exc_info=True)
             self.bot = None
@@ -532,7 +532,7 @@ def mjai_reaction_2_guide(
     elif re_type == MJAI_TYPE.RYUKYOKU:
         action_str = f"{ActionUnicode.RYUKYOKU}{lan_str.RYUKYOKU}"
     elif re_type == MJAI_TYPE.NUKIDORA:
-        action_str = f"{lan_str.NUKIDORA}"
+        action_str = f"{lan_str.NUKIDORA}{MJAI_TILE_2_UNICODE['N']}"
     else:
         action_str = lan_str.mjai2str(re_type)
     
@@ -541,11 +541,15 @@ def mjai_reaction_2_guide(
         # process options. display top options with their weights
         meta_options = reaction['meta_options'][:max_options]
         if meta_options:
-            for (code, q) in meta_options:      # code is in MJAI_MASK_LIST
-                name_str = lan_str.mjai2str(code)
+            for (code, q) in meta_options:      # code is in MJAI_MASK_LIST                
                 if code in MJAI_TILES_34 or code in MJAI_AKA_DORAS:
                     # if it is a tile
                     name_str = get_tile_str(code)
+                elif code == MJAI_TYPE.NUKIDORA:
+                    name_str = code + MJAI_TILE_2_UNICODE['N']
+                else:
+                    name_str = lan_str.mjai2str(code)
+                
                 options.append((name_str, q))
         
     return (action_str, options)

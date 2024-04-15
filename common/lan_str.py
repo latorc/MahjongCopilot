@@ -60,7 +60,8 @@ Credits:
     MAJSOUL_URL = "Majsoul URL"
     LANGUAGE = "Language"
     MODEL_TYPE = "AI Model Type"
-    AI_MODEL_FILE = "Local Model File"
+    AI_MODEL_FILE = "Local Model File (4P)"
+    AI_MODEL_FILE_3P = "Local Model File (3P)"
     MJAPI_URL = "MJAPI URL"
     MJAPI_USER = "MJAPI User"
     MJAPI_USAGE = "API Usage"
@@ -128,7 +129,7 @@ Credits:
         'C': 'Chun', 'F': 'Hatsu', 'P': 'Haku',
         '5mr': 'Red 5 Man', '5pr': 'Red 5 Pin', '5sr': 'Red 5 Sou',
         'reach': 'Riichi', 'chi_low': 'Chi Low', 'chi_mid': 'Chi Mid', 'chi_high': 'Chi High', 'pon': 'Pon', 'kan_select':'Kan',
-        'hora': 'Agari', 'ryukyoku': 'Ryukyoku', 'none':'Skip'
+        'hora': 'Agari', 'ryukyoku': 'Ryukyoku', 'none':'Skip', 'nukidora':'Nukidora'
     }
       
     def mjai2str(self, mjai_option:str) -> str:
@@ -199,7 +200,8 @@ Github: https://github.com/latorc/MahjongCopilot
     MAJSOUL_URL = "雀魂网址"
     LANGUAGE = "语言" 
     MODEL_TYPE = "AI 模型类型"
-    AI_MODEL_FILE = "本地 AI 模型文件"
+    AI_MODEL_FILE = "本地模型文件(四麻)"
+    AI_MODEL_FILE_3P = "本地模型文件(三麻)"
     MJAPI_URL = "MJAPI 网址"
     MJAPI_USER = "MJAPI 用户名"
     MJAPI_USAGE = "API 用量"
@@ -268,7 +270,7 @@ Github: https://github.com/latorc/MahjongCopilot
         'C': '中', 'F': '發', 'P': '白',
         '5mr': '赤伍萬', '5pr': '赤伍筒', '5sr': '赤伍索', 
         'reach': '立直', 'chi_low': '吃-低', 'chi_mid': '吃-中', 'chi_high': '吃-高', 'pon': '碰', 'kan_select':'杠',
-        'hora': '和牌', 'ryukyoku': '流局', 'none': '跳过'
+        'hora': '和牌', 'ryukyoku': '流局', 'none': '跳过', 'nukidora':'拔北'
     }
 
 
