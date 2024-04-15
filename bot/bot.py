@@ -41,7 +41,7 @@ class Bot(ABC):
         """ Initialize the bot before the game starts. Bot must be initialized before a new game
         params:
             seat(int): Player seat index
-            mode(GameMode): Game mode"""
+            mode(GameMode): Game mode, defaults to normal 4p mahjong"""
          
         self.seat = seat
         self._init_bot_impl(mode)
