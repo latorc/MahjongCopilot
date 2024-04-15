@@ -13,14 +13,14 @@ Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaio
 - 对局每一步 AI 指导，可在游戏中覆盖显示
 - 自动打牌，自动加入游戏
 - 多语言支持
-- 支持本地 Mortal 模型和在线模型
+- 支持本地 Mortal 模型和在线模型，支持三麻和四麻
 
 Features:
 
 - Step-by-step AI guidance for the game, with optional in-game overlay.
 - Auto play & auto joining next game
 - Multi-language support
-- Supports Mortal local models and online models
+- Supports Mortal local models and online models, 3p and 4p mahjong modes.
 
 <a id="instructions"></a>
 
@@ -30,17 +30,17 @@ Features:
 
 1. 从 Release 中下载压缩包并解压。 [Release](https://github.com/latorc/MahjongCopilot/releases)
 2. 配置 AI 模型：
-   1. 获取 Mortal 模型文件 （pth 文件），放到 'models' 目录中。模型文件请参见 [Akagi](https://github.com/shinkuan/Akagi?tab=readme-ov-file#installation). 或者
+   1. 使用本地(Local)模型，需要获取 Mortal 模型文件 （pth 文件），放到 'models' 目录中。本项目使用兼容 Akagi 的模型文件，获取模型请参见 [Akagi](https://github.com/shinkuan/Akagi?tab=readme-ov-file#installation). 或者
    2. 使用在线模型（MJAPI 支持自动注册）
-3. 运行 exe 文件，点击雀魂按钮，在内置浏览器中启动雀魂客户端。
+3. 运行 MahjongCopilot，点击雀魂按钮，在内置浏览器中启动雀魂客户端。
 
 ### To Run
 
 1. Download and unzip the release from [Release](https://github.com/latorc/MahjongCopilot/releases)
-2. Config AI model:
-   1. Aquire Mortal model file (pth file), and put it into 'models' folder. For model file please refer to [Akagi](https://github.com/shinkuan/Akagi?tab=readme-ov-file#installation). Or,
-   2. Use online models (MJAPI supports auto register new users)
-3. Launch exe file. Click on the "Majsoul" button to launch game client in built-in Browser.
+2. Configure AI models:
+   1. To use Local model, aquire Akagi-compatible Mortal model file (pth file), and put it into 'models' folder. For model files please refer to [Akagi](https://github.com/shinkuan/Akagi?tab=readme-ov-file#installation). Or,
+   2. To use online models (MJAPI supports auto register new users)
+3. Launch MahjongCopilot. Click on the "Majsoul" button to launch game client in built-in Browser.
 
 ### 开发
 
