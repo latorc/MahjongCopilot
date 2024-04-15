@@ -33,7 +33,8 @@ class MainGUI(tk.Tk):
         icon = tk.PhotoImage(file=sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window        
-
+        self.geometry('750x500')
+        self.minsize(750,500)
         # icon resources:
         self.icon_green = sub_file(RES_FOLDER,'green.png')
         self.icon_red = sub_file(RES_FOLDER,'red.png')
@@ -55,8 +56,7 @@ class MainGUI(tk.Tk):
 
         # Main window properties
         self.title(self.st.lan().APP_TITLE)
-        self.geometry('750x500')
-        self.minsize(750,500)
+        
 
         # container for grid control
         self.grid_frame = tk.Frame(self)
@@ -244,7 +244,8 @@ class MainGUI(tk.Tk):
             self.text_state.insert(tk.END, hand_str)
         self.text_state.config(state=tk.DISABLED)
 
-        # Update status bar
+        ### Status bar
+        # main thread
         fps_disp = min([999, self.bot_manager.fps_counter.fps])
         fps_str = f"({fps_disp:3.0f})"
         if self.bot_manager.is_running():       # main thread
@@ -252,24 +253,27 @@ class MainGUI(tk.Tk):
         else:
             self.status_bar.update_column(0, self.st.lan().MAIN_THREAD + fps_str, self.icon_red)
 
+        # bot/model
         if self.bot_manager.is_bot_created():
-            text = self.st.lan().MODEL + ": " + self.bot_manager.bot.type.value
+            modes_str = ','.join(m.value for m in self.bot_manager.bot.supported_modes)
+            text = f"{self.st.lan().MODEL}:{self.bot_manager.bot.type.value}[{modes_str}]"
             self.status_bar.update_column(1, text, self.icon_green)
         else:
             text = self.st.lan().AWAIT_BOT
             self.status_bar.update_column(1, text, self.icon_red)
 
-        
+        # client/browser
         fps_disp = min(999, self.bot_manager.browser.fps_counter.fps)
         fps_str = f"({fps_disp:3.0f})"
         if self.bot_manager.browser.is_running():
             self.status_bar.update_column(2, self.st.lan().BROWSER+fps_str, self.icon_green)
         else:
             self.status_bar.update_column(2, self.st.lan().BROWSER+fps_str, self.icon_gray)
-
+        # status (4th col)
         status_str, icon = self._get_status_text_icon(gi)
         self.status_bar.update_column(3, status_str, icon)
         
+        ### update overlay
         self.bot_manager.update_overlay()
 
         self.after(self.gui_update_delay, self._update_gui_info)     # next update

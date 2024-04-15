@@ -8,6 +8,7 @@ from liqi import LiqiProto, LiqiMethod, LiqiAction
 import common.mj_helper as mj_helper
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
 from common.log_helper import LOGGER
+from common.utils import GameMode
 from bot import Bot, reaction_convert_meta
 
 NO_EFFECT_METHODS = [
@@ -56,6 +57,7 @@ class GameState:
         if self.mjai_bot is None:
             raise ValueError("Bot is None")
         self.mjai_pending_input_msgs = []   # input msgs to be fed into bot
+        self.game_mode:GameMode = None      # Game mode
         
         ### Game info
         self.account_id = 0                     # Majsoul account id
@@ -63,9 +65,8 @@ class GameState:
         self.seat = 0                           # seat index
         #seat 0 is chiicha (起家; first dealer; first East)
         #1-2-3 then goes counter-clockwise        
-        self.player_scores:list = None          # player scores
-        
-        self.kyoku_state:KyokuState = KyokuState()  # kyoku info - cleared every newround
+        self.player_scores:list = None          # player scores        
+        self.kyoku_state:KyokuState = KyokuState()  # kyoku info - cleared every newround        
         
         ### about last reaction
         self.last_reaction:dict = None          # last bot output reaction
@@ -73,13 +74,12 @@ class GameState:
         self.last_operation:dict = None         # liqi msg 'operation' element
         self.last_op_step:int = None            # liqi msg 'step' element
         
-        ### Internal Status flags
+        ### Internal Status flags        
         self.is_bot_calculating:bool = False    # if bot is calculating reaction
         self.is_ms_syncing:bool = False         # if mjai_bot is running syncing from MS (after disconnection)
         self.is_round_started:bool = False
         """ if any new round has started (so game info is available)"""
-        self.is_game_ended:bool = False         # if game has ended
-    
+        self.is_game_ended:bool = False         # if game has ended    
              
     def get_game_info(self) -> GameInfo:
         """ Return game info. Return None if N/A"""        
@@ -241,8 +241,17 @@ class GameState:
             LOGGER.debug("No seatList in liqi_data, game has likely ended")
             self.is_game_ended = True
             return None
+        if len(seatList) == 4:
+            self.game_mode = GameMode.MJ4P            
+        elif len(seatList) == 3:
+            self.game_mode = GameMode.MJ3P
+        else:
+            raise RuntimeError(f"Unexpected seat len:{len(seatList)}")
+        LOGGER.info("Game Mode: %s", self.game_mode.name)
+        
         self.seat = seatList.index(self.account_id)
-        self.mjai_bot.init_bot(self.seat)
+        self.mjai_bot.init_bot(self.seat, self.game_mode)
+        # Start_game has no effect for mjai bot, omit here
         # self.mjai_pending_input_msgs.append(
         #     {
         #         'type': MJAI_TYPE.START_GAME,
@@ -266,8 +275,8 @@ class GameState:
         self.kyoku_state.jikaze  = MJAI_WINDS[(self.seat - oya)]
         kyotaku = liqi_data['data']['liqibang']
         self.player_scores = liqi_data['data']['scores']
-        # if self.is_3p:
-        #     scores = scores + [0]
+        if self.game_mode in [GameMode.MJ3P]:
+            self.player_scores = self.player_scores + [0]
         tehais_mjai = [['?']*13]*4        
         my_tehai_ms = liqi_data['data']['tiles']
         self.kyoku_state.my_tehai = [mj_helper.cvt_ms2mjai(tile) for tile in my_tehai_ms]
@@ -592,5 +601,10 @@ class GameState:
             return None
         else:
             LOGGER.info("Bot out: %s", output_reaction)
-            reaction_convert_meta(output_reaction)
+            if self.game_mode == GameMode.MJ3P:
+                is_3p = True
+            else:
+                is_3p = False
+                
+            reaction_convert_meta(output_reaction,is_3p)
             return output_reaction

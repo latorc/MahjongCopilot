@@ -1,4 +1,4 @@
-""" ######## Main Entry Point for Mahjong Copilot ####### """
+""" Main Entry Point for Mahjong Copilot """
 from gui.main_gui import MainGUI
 from common.log_helper import LogHelper
 from common.settings import Settings

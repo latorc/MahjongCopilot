@@ -24,6 +24,10 @@ TEMP_FOLDER = 'temp'
 # for automation
 GAME_MODES = ['4E', '4S', '3E', '3S']
 
+class GameMode(Enum):
+    """ Game Modes for bots/models"""
+    MJ4P = "4P"
+    MJ3P = "3P"
     
 class UiState(Enum):
     """ UI State for the game"""

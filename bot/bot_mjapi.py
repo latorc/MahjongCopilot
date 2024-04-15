@@ -7,7 +7,7 @@ from common.utils import random_str
 from common.mj_helper import MJAI_TYPE
 from .mjapi import MjapiClient
 
-from .bot import Bot, BotType, reaction_convert_meta
+from .bot import Bot, BotType, GameMode
 
 
 
@@ -68,7 +68,7 @@ class BotMjapi(Bot):
             self.st.save_json()
             self.mjapi.logout()
 
-    def _init_bot_impl(self):
+    def _init_bot_impl(self, _mode:GameMode=GameMode.MJ4P):
         self.mjapi.start_bot(self.seat, BotMjapi.bound, self.model_name)
         self.id = -1
 
