@@ -91,7 +91,7 @@ python main.py
    1. 网页 HUD 开关: 在网页上覆盖显示信息和 AI 选项。关闭此项可略微提升自动打牌流畅度。
    2. AI 模型类型：可选择不同的模型，分别支持不同的麻将模式（三麻、四麻）
       
-      - Local: 兼容 Akagi 的本地 Mortal 模型，支持三麻和四麻。需要获取模型文件(.pth文件)放到 models 目录下；三麻和四麻模型需要分别获取各自的模型文件。三麻模型，还需要额外下载libriichi3p相关文件库文件（pyd文件），放到libriichi3p目录下。详情请参见 Akagi Discord 中的说明。
+      - Local: 兼容 Akagi 的本地 Mortal 模型，支持三麻和四麻。需要获取模型文件(.pth文件)放到 models 目录下；三麻和四麻模型需要分别获取各自的模型文件。三麻模型，还需要额外下载libriichi3p相关文件库文件（pyd文件），放到libriichi3p目录下。模型支持的游戏类型会显示在状态栏，模型后的方括号内。详情请参见 Akagi Discord 中的说明。
       - MJAPI: (作者 9ns4esyx) 开发的在线麻将 AI API. 使用 MJAPI 时，可以填写已有的用户名和密钥。或者，将用户名和密钥 (Secret) 留空，软件会自动注册新用户并登录。MJAPI 有不同模型可选择，登陆后会刷新模型选项，并显示 API 用量。4月13日更新的 MJAPI 地址：（临时域名有总连接数限制，而且不保证长久有效，之后也可能会变。）
         临时域名：`https://cdt-authentication-consultation-significance.trycloudflare.com`
         稳定域名：`https://mjai.7xcnnw11phu.eu.org`
