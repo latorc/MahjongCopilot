@@ -25,16 +25,21 @@ class BotMortalLocal(Bot):
         self._supported_modes: list[GameMode] = list(model_files.keys())     
         self.model_files = model_files
         for k,v in model_files.items():
+            mode_valid:bool = True
             if not Path(v).exists() or not Path(v).is_file():
+                # test file exists
                 LOGGER.warning("Cannot find model file for mode %s:%s", k,v)
-                self._supported_modes.remove(k)
-            if k == GameMode.MJ3P:
+                mode_valid = False
+            elif k == GameMode.MJ3P:
                 # test import libraries for 3p
                 try:
                     import libriichi3p
                 except Exception as e: # pylint: disable=bare-except
                     LOGGER.warning("Cannot import libriichi3p: %s", e)
-                    self._supported_modes.remove(k)
+                    mode_valid = False
+            if not mode_valid:
+                self._supported_modes.remove(k)
+                
         if not self._supported_modes:
             raise ModelFileException("No valid model files found")
         
