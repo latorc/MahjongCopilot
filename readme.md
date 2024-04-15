@@ -1,8 +1,8 @@
 # 麻将 Copilot / Mahjong Copilot
 
-麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂四人麻将。
+麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂三人、四人麻将。
 
-Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 4-person mode games.
+Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 3-person and 4-person game modes.
 
 [下载和使用说明 / Download&Instructions](#instructions)
 
@@ -75,30 +75,6 @@ CALL venv\Scripts\activate.bat
 pip install -r requirements.txt
 python main.py
 ```
-
-###  三人麻将
-如下方式放置三人麻将模型文件，即可使用三人麻将模型
-```
-MahjongCopilot
-    │ MahjongCopilot.exe
-    ├─models
-         │  model_v4.pth
-         │  online.json
-         └─model_3p
-               │  libriichi3p.pyd
-               │  model.py
-               │  mortal.pth
-               └─ __init__.py
-    │  settings.json
-    │  version
-    │  ******
-```
-
-其中__init__.py内容为
-```python
-from . import *
-from .model import *
-```
 ### 使用帮助：
 
 1. 软件使用中间人 (MITM) 代理获取游戏客户端和服务器之间传输的信息。推荐使用内置的浏览器进行游戏。
@@ -110,10 +86,12 @@ from .model import *
 2. 界面和设置项说明：
    
    1. 网页 HUD 开关: 在网页上覆盖显示信息和 AI 选项。关闭此项可略微提升自动打牌流畅度。
-   2. AI 模型类型：
+   2. AI 模型类型：可选择不同的模型，分别支持不同的麻将模式（三麻、四麻）
       
-      - Local: 本地模型，需要准备 mortal.pth 文件放到 models 目录下。
-      - MJAPI: (作者 9ns4esyx) 开发的在线麻将 AI API. 使用 MJAPI 时，可以填写已有的用户名和密钥。或者，将用户名和密钥 (Secret) 留空，软件会自动注册新用户并登录。MJAPI 有不同模型可选择，登陆后会刷新模型选项，并显示 API 用量。
+      - Local: 兼容 Akagi 的本地 Mortal 模型，支持三麻和四麻，需要准备模型文件(.pth文件)放到 models 目录下。三麻和四麻需要分别准备模型文件。
+      - MJAPI: (作者 9ns4esyx) 开发的在线麻将 AI API. 使用 MJAPI 时，可以填写已有的用户名和密钥。或者，将用户名和密钥 (Secret) 留空，软件会自动注册新用户并登录。MJAPI 有不同模型可选择，登陆后会刷新模型选项，并显示 API 用量。4月13日更新的 MJAPI 地址：（临时域名有总连接数限制，而且不保证长久有效，之后也可能会变。）
+        临时域名：`https://cdt-authentication-consultation-significance.trycloudflare.com`
+        稳定域名：`https://mjai.7xcnnw11phu.eu.org`
    3. 自动打牌设置：
       
       - 自动打牌：自动化操作的总开关，关闭后将停止所有自动化操作。
