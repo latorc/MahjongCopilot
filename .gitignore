@@ -21,4 +21,5 @@ test/
 /dev_docs
 /_*.py
 /settings*.json
-
+libriichi3p/*.pyd
+libriichi3p/*.so

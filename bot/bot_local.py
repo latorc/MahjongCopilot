@@ -4,7 +4,6 @@ from pathlib import Path
 import threading
 import json
 from mjai.engine import get_engine
-from mjai.engine3p import get_engine as get_engine_3p
 from common.utils import ModelFileException
 from common.mj_helper import MJAI_TYPE
 from common.log_helper import LOGGER
@@ -12,7 +11,6 @@ try:
     import libriichi
 except: # pylint: disable=bare-except
     import riichi as libriichi
-import libriichi3p
 
 from .bot import Bot, BotType, GameMode
 
@@ -30,6 +28,13 @@ class BotMortalLocal(Bot):
             if not Path(v).exists() or not Path(v).is_file():
                 LOGGER.warning("Cannot find model file for mode %s:%s", k,v)
                 self._supported_modes.remove(k)
+            if k == GameMode.MJ3P:
+                # test import libraries for 3p
+                try:
+                    import libriichi3p
+                except Exception as e: # pylint: disable=bare-except
+                    LOGGER.warning("Cannot import libriichi3p: %s", e)
+                    self._supported_modes.remove(k)
         if not self._supported_modes:
             raise ModelFileException("No valid model files found")
         
@@ -49,8 +54,13 @@ class BotMortalLocal(Bot):
             engine = get_engine(self.model_files[mode])
             self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
         elif mode == GameMode.MJ3P:
-            engine = get_engine_3p(self.model_files[mode])
-            self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
+            try:
+                import libriichi3p
+                from mjai.engine3p import get_engine as get_engine_3p
+                engine = get_engine_3p(self.model_files[mode])
+                self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
+            except Exception as e:
+                raise e
         else:
             raise NotImplementedError(f"Mode {mode} not supported")
         self.str_input_history.clear()
