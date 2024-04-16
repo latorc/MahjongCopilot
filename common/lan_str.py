@@ -72,8 +72,9 @@ Credits:
     # autoplay
     AUTO_PLAY_SETTINGS = "Autoplay Settings"
     AUTO_IDLE_MOVE = "Idle Mouse Move"
-    RANDOM_CHOICE = "Randomize AI Choice"
     DRAG_DAHAI = "Mouse drag dahai"
+    RANDOM_CHOICE = "Randomize AI Choice"
+    REPLY_EMOJI_CHANCE = "Reply Emoji Rate"
     RANDOM_DELAY_RANGE = "Base Delay Range (sec)"
     AUTO_JOIN_GAME = "Auto Join"
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
@@ -213,8 +214,9 @@ Github: https://github.com/latorc/MahjongCopilot
     # autoplay
     AUTO_PLAY_SETTINGS = "自动打牌设置"
     AUTO_IDLE_MOVE = "鼠标空闲移动"
-    RANDOM_CHOICE = "AI 选项随机化(去重)"
     DRAG_DAHAI = "鼠标拖拽出牌"
+    RANDOM_CHOICE = "AI 选项随机化(去重)"
+    REPLY_EMOJI_CHANCE = "回复表情概率"
     AUTO_JOIN_GAME = "自动加入"
     RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
