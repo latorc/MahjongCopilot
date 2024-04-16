@@ -794,7 +794,7 @@ class Automation:
             for step in self.steps_randomized_move(wx,wy):
                 yield step
             yield ActionStepDelay(random.uniform(0.5, 1))
-            for step in self.steps_random_wheels(0, 500):
+            for step in self.steps_random_wheels(0, 800):
                 yield step
             yield ActionStepDelay(random.uniform(0.5, 1))                
         x,y = Positions.LEVELS[self.st.auto_join_level]

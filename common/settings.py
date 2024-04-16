@@ -19,6 +19,7 @@ class Settings:
         # UI settings
         self.update_url:str = self._get_value("update_url", "https://update.mjcopilot.com", self.valid_url) # not shown
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
+        self.gui_set_dpi:bool = self._get_value("gui_set_dpi", True, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
