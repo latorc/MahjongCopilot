@@ -1,0 +1,8 @@
+REM recreate dev branch based on main branch (both local and remote)
+git checkout main
+git pull origin main
+git branch -D dev
+
+git push origin --delete dev
+git checkout -b dev
+git push -u origin dev
