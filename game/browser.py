@@ -496,7 +496,7 @@ class GameBrowser:
             try:
                 # save_file = utils.sub_folder(TEMP_FOLDER)/"screenshot.png"
                 # self.page.screenshot(path=save_file)
-                ss_bytes:BytesIO = self.page.screenshot(timeout=time_ms)
+                ss_bytes:BytesIO = self.page.screenshot(timeout=time_ms, scale="css")
                 res_queue.put(ss_bytes)
             except Exception as e:
                 LOGGER.error("Error taking screenshot: %s", e, exc_info=True)
