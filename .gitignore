@@ -10,7 +10,8 @@ venv/
 *.log
 *.swp
 .DS_Store
-
+*.build
+*.dist
 # Local folder/files
 browser_data/
 log/
