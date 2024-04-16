@@ -39,9 +39,9 @@ class SettingsWindow(tk.Toplevel):
         main_frame = ttk.Frame(self, padding="20")
         main_frame.pack(expand=True, fill="both")
         main_frame.columnconfigure(0, minsize=150)
-        main_frame.columnconfigure(1, minsize=100)
-        main_frame.columnconfigure(2, minsize=100)
-        main_frame.columnconfigure(3, minsize=100)
+        main_frame.columnconfigure(1, minsize=80)
+        main_frame.columnconfigure(2, minsize=80)
+        main_frame.columnconfigure(3, minsize=80)
 
         # Styling
         style = ttk.Style(self)
@@ -50,23 +50,25 @@ class SettingsWindow(tk.Toplevel):
         pad_args = {"padx":(3, 3), "pady":(3, 2)}
         args_label = {"sticky":"e", **pad_args}
         args_entry = {"sticky":"w", **pad_args}
-        std_wid = 14
+        std_wid = 15
         # auto launch browser
         cur_row = 0
-        _label = ttk.Label(main_frame, text=self.st.lan().AUTO_LAUNCH_BROWSER)
+        _label = ttk.Label(main_frame, text=self.st.lan().BROWSER)
         _label.grid(row=cur_row, column=0, **args_label)
         self.auto_launch_var = tk.BooleanVar(value=self.st.auto_launch_browser)
-        auto_launch_entry = ttk.Checkbutton(main_frame, variable=self.auto_launch_var, width=5)
-        auto_launch_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
+        auto_launch_entry = ttk.Checkbutton(
+            main_frame, variable=self.auto_launch_var,
+            text=self.st.lan().AUTO_LAUNCH_BROWSER, width=std_wid)
+        auto_launch_entry.grid(row=cur_row, column=1, **args_entry)
 
         # Select client size
         _label = ttk.Label(main_frame, text=self.st.lan().CLIENT_SIZE)
         _label.grid(row=cur_row, column=2, **args_label)
-        options = ["1920 x 1080", "1600 x 900", "1280 x 720"]
+        options = ["960 x 540", "1280 x 720", "1600 x 900", "1920 x 1080", "2560 x 1440", "3840 x 2160"]
         setting_size = f"{self.st.browser_width} x {self.st.browser_height}"
         self.client_size_var = tk.StringVar(value=setting_size)
         select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=std_wid)
-        select_menu.grid(row=cur_row, column=3, columnspan=1, **args_entry)
+        select_menu.grid(row=cur_row, column=3, **args_entry)
         
         # majsoul url
         cur_row += 1
@@ -82,7 +84,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, **args_label)
         self.mitm_port_var = tk.StringVar(value=self.st.mitm_port)
         number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=std_wid)
-        number_entry.grid(row=cur_row, column=1,columnspan=1,  **args_entry)
+        number_entry.grid(row=cur_row, column=1, **args_entry)
         # upstream proxy
         _frame = tk.Frame(main_frame)
         _frame.grid(row=cur_row, column=2, columnspan=2)
@@ -101,7 +103,7 @@ class SettingsWindow(tk.Toplevel):
         options = [v.LANGUAGE_NAME for v in LAN_OPTIONS.values()]
         self.language_var = tk.StringVar(value=LAN_OPTIONS[self.st.language].LANGUAGE_NAME)
         select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly", width=std_wid)
-        select_menu.grid(row=cur_row, column=1,columnspan=1,  **args_entry)
+        select_menu.grid(row=cur_row, column=1, **args_entry)
 
         # Select Model Type
         cur_row += 1
@@ -110,7 +112,7 @@ class SettingsWindow(tk.Toplevel):
         options = [type.value for type in BotType]
         self.model_type_var = tk.StringVar(value=self.st.model_type)
         select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly", width=std_wid)
-        select_menu.grid(row=cur_row, column=1,columnspan=1,  **args_entry)
+        select_menu.grid(row=cur_row, column=1, **args_entry)
         
         # Select Model File
         model_files = [""] + list_files(MODEL_FOLDER)
@@ -143,10 +145,10 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, **args_label)
         self.mjapi_user_var = tk.StringVar(value=self.st.mjapi_user)
         string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var, width=std_wid)
-        string_entry.grid(row=cur_row, column=1,columnspan=1, **args_entry)
+        string_entry.grid(row=cur_row, column=1, **args_entry)
         # MJAPI usage
         _label = ttk.Label(main_frame, text=f"{self.st.lan().MJAPI_USAGE}: {self.st.mjapi_usage}")
-        _label.grid(row=cur_row, column=2, **args_label)
+        _label.grid(row=cur_row, column=2, **args_entry)
         
         
         # MJAPI secret
@@ -164,7 +166,7 @@ class SettingsWindow(tk.Toplevel):
         self.mjapi_model_select_var = tk.StringVar(value=self.st.mjapi_model_select)
         options = self.st.mjapi_models
         sel_model = ttk.Combobox(main_frame, textvariable=self.mjapi_model_select_var, values=options, state="readonly", width=std_wid)
-        sel_model.grid(row=cur_row, column=1, columnspan=1,  **args_entry)
+        sel_model.grid(row=cur_row, column=1, **args_entry)
         
         _label = ttk.Label(main_frame, text=self.st.lan().LOGIN_TO_REFRESH)
         _label.grid(row=cur_row, column=2, **args_entry)
@@ -206,7 +208,7 @@ class SettingsWindow(tk.Toplevel):
         options = ['0 (Off)',1,2,3,4,5]
         random_choice_entry = ttk.Combobox(
             main_frame, textvariable=self.randomized_choice_var, values=options, state="readonly", width=std_wid)
-        random_choice_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
+        random_choice_entry.grid(row=cur_row, column=1, **args_entry)
         # reply emoji chance
         _label = ttk.Label(main_frame, text=self.st.lan().REPLY_EMOJI_CHANCE)
         _label.grid(row=cur_row, column=2, **args_label)
@@ -234,18 +236,18 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, **args_label)
         self.auto_join_var = tk.BooleanVar(value=self.st.auto_join_game)
         auto_join_entry = ttk.Checkbutton(main_frame, variable=self.auto_join_var, text = self.st.lan().AUTO_JOIN_GAME, width=std_wid)
-        auto_join_entry.grid(row=cur_row, column=1,columnspan=1, **args_entry)
+        auto_join_entry.grid(row=cur_row, column=1, **args_entry)
         
         self.auto_join_level_var = tk.StringVar(value=self.st.lan().GAME_LEVELS[self.st.auto_join_level])
         options = self.st.lan().GAME_LEVELS
         next_level = ttk.Combobox(main_frame, textvariable=self.auto_join_level_var, values=options, state="readonly", width=std_wid)
-        next_level.grid(row=cur_row, column=2,columnspan=1,  **args_entry)
+        next_level.grid(row=cur_row, column=2, **args_entry)
         
         mode_idx = GAME_MODES.index(self.st.auto_join_mode)
         self.auto_join_mode_var = tk.StringVar(value=self.st.lan().GAME_MODES[mode_idx])
         options = self.st.lan().GAME_MODES
         next_mode = ttk.Combobox(main_frame, textvariable=self.auto_join_mode_var, values=options, state="readonly", width=std_wid)
-        next_mode.grid(row=cur_row, column=3,columnspan=1,  **args_entry)
+        next_mode.grid(row=cur_row, column=3, **args_entry)
         
         # tips :Settings
         cur_row += 1

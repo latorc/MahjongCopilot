@@ -54,9 +54,7 @@ Credits:
     AUTO_LAUNCH_BROWSER = "Auto Launch Browser"
     MITM_PORT = "MITM Server Port"
     UPSTREAM_PROXY = "Upstream Proxy"
-    BROWSER_WIDTH = "Web Client Width"
-    BROWSER_HEIGHT = "Web Client Height"
-    CLIENT_SIZE = "Web Client Size"
+    CLIENT_SIZE = "Client Size"
     MAJSOUL_URL = "Majsoul URL"
     LANGUAGE = "Language"
     MODEL_TYPE = "AI Model Type"
@@ -78,7 +76,7 @@ Credits:
     RANDOM_DELAY_RANGE = "Base Delay Range (sec)"
     AUTO_JOIN_GAME = "Auto Join"
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
-    GAME_MODES = ["4-p East","4-p South","3-p East","3-p South"]
+    GAME_MODES = ["4-P East","4-P South","3-P East","3-P South"]
     MOUSE_RANDOM_MOVE = "Randomize Move"
     
     # Status
@@ -195,9 +193,7 @@ Github: https://github.com/latorc/MahjongCopilot
     SETTINGS_TIPS = "部分设置项重启后生效"
     MITM_PORT = "MITM 服务端口"
     UPSTREAM_PROXY = "上游代理"
-    BROWSER_WIDTH = "网页客户端宽度"
-    BROWSER_HEIGHT = "网页客户端高度"
-    CLIENT_SIZE = "网页客户端大小"
+    CLIENT_SIZE = "客户端大小"
     MAJSOUL_URL = "雀魂网址"
     LANGUAGE = "语言" 
     MODEL_TYPE = "AI 模型类型"
