@@ -17,8 +17,8 @@ class SettingsWindow(tk.Toplevel):
         super().__init__(parent)
         self.st = setting
 
-        self.geometry('650x600')
-        self.minsize(650,600)
+        self.geometry('700x600')
+        self.minsize(700,600)
         # self.resizable(False, False)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
@@ -47,7 +47,7 @@ class SettingsWindow(tk.Toplevel):
         style = ttk.Style(self)
         set_style_normal(style)
         
-        pad_args = {"padx":(4, 4), "pady":(3, 3)}
+        pad_args = {"padx":(3, 3), "pady":(3, 2)}
         args_label = {"sticky":"e", **pad_args}
         args_entry = {"sticky":"w", **pad_args}
         std_wid = 14
@@ -178,25 +178,25 @@ class SettingsWindow(tk.Toplevel):
         ### Auto play settings
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().AUTO_PLAY_SETTINGS)
-        _label.grid(row=cur_row, column=0, **args_label)
-        
+        _label.grid(row=cur_row, column=0, **args_label)        
         # auto play
         self.autoplay_var = tk.BooleanVar(value=self.st.enable_automation)
         autoplay_entry = ttk.Checkbutton(main_frame, variable=self.autoplay_var, text=self.st.lan().AUTOPLAY, width=std_wid)
-        autoplay_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
-        
+        autoplay_entry.grid(row=cur_row, column=1, **args_entry)        
         # random move        
-        # _label = ttk.Label(main_frame, text=self.st.lan().MOUSE_RANDOM_MOVES)
-        # _label.grid(row=cur_row, column=0, **args_label)
+        cur_row += 1
         self.random_move_var = tk.BooleanVar(value=self.st.auto_random_move)
         ran_moves_entry = ttk.Checkbutton(
             main_frame, variable=self.random_move_var, text=self.st.lan().MOUSE_RANDOM_MOVE, width=std_wid)
-        ran_moves_entry.grid(row=cur_row, column=2, columnspan=1, **args_entry)
-        
+        ran_moves_entry.grid(row=cur_row, column=1, **args_entry)        
         # idle move
         self.auto_idle_move_var = tk.BooleanVar(value=self.st.auto_idle_move)
         idle_move_entry = ttk.Checkbutton(main_frame, variable=self.auto_idle_move_var, text=self.st.lan().AUTO_IDLE_MOVE, width=std_wid)
-        idle_move_entry.grid(row=cur_row, column=3, columnspan=1, **args_entry)
+        idle_move_entry.grid(row=cur_row, column=2, **args_entry)
+        # drag dahai
+        self.auto_drag_dahai_var = tk.BooleanVar(value=self.st.auto_dahai_drag)
+        _entry = ttk.Checkbutton(main_frame, variable=self.auto_drag_dahai_var, text=self.st.lan().DRAG_DAHAI, width=std_wid)
+        _entry.grid(row=cur_row, column=3, **args_entry)
         
         # randomize choice 
         cur_row += 1       
@@ -207,12 +207,15 @@ class SettingsWindow(tk.Toplevel):
         random_choice_entry = ttk.Combobox(
             main_frame, textvariable=self.randomized_choice_var, values=options, state="readonly", width=std_wid)
         random_choice_entry.grid(row=cur_row, column=1, columnspan=1, **args_entry)
-        # drag dahai
-        self.auto_drag_dahai_var = tk.BooleanVar(value=self.st.auto_dahai_drag)
-        _entry = ttk.Checkbutton(main_frame, variable=self.auto_drag_dahai_var, text=self.st.lan().DRAG_DAHAI, width=std_wid)
-        _entry.grid(row=cur_row, column=3, columnspan=1, **args_entry)
-        
-        
+        # reply emoji chance
+        _label = ttk.Label(main_frame, text=self.st.lan().REPLY_EMOJI_CHANCE)
+        _label.grid(row=cur_row, column=2, **args_label)
+        options = [f"{i*10}%" for i in range(11)]
+        options[0] = '0% (off)'
+        self.reply_emoji_var = tk.StringVar(value=f"{int(self.st.auto_reply_emoji_rate*100)}%")
+        _combo = ttk.Combobox(
+            main_frame, textvariable=self.reply_emoji_var, values=options, state="readonly", width=std_wid)
+        _combo.grid(row=cur_row, column=3, **args_entry)        
         
         # random delay lower/upper
         cur_row += 1
@@ -314,8 +317,9 @@ class SettingsWindow(tk.Toplevel):
         autoplay_new = self.autoplay_var.get()
         idle_move_new = self.auto_idle_move_var.get()
         drag_dahai_new = self.auto_drag_dahai_var.get()
-        randomized_choice_new:int = int(self.randomized_choice_var.get().split(' ')[0])
         auto_random_move_new = self.random_move_var.get()
+        randomized_choice_new:int = int(self.randomized_choice_var.get().split(' ')[0])
+        reply_emoji_new:float = int(self.reply_emoji_var.get().split('%')[0])/100
         try:
             delay_lower_new = self.delay_random_lower_var.get()
             delay_upper_new = self.delay_random_upper_var.get()
@@ -352,8 +356,9 @@ class SettingsWindow(tk.Toplevel):
         self.st.enable_automation = autoplay_new
         self.st.auto_idle_move = idle_move_new
         self.st.auto_dahai_drag = drag_dahai_new
-        self.st.ai_randomize_choice = randomized_choice_new
         self.st.auto_random_move = auto_random_move_new
+        self.st.ai_randomize_choice = randomized_choice_new
+        self.st.auto_reply_emoji_rate = reply_emoji_new        
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
         self.st.auto_join_game = auto_join_new
