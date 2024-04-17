@@ -9,6 +9,8 @@ class LanStr:
     START_BROWSER = "Start Web Client"
     WEB_OVERLAY = "Overlay"
     AUTOPLAY = "Autoplay"
+    AUTO_JOIN_GAME = "Auto Join"
+    AUTO_JOIN_TIMER = "Auto Join Timer"
     OPEN_LOG_FILE = "Open Log File"
     SETTINGS = "Settings"
     HELP = "Help"
@@ -54,9 +56,7 @@ Credits:
     AUTO_LAUNCH_BROWSER = "Auto Launch Browser"
     MITM_PORT = "MITM Server Port"
     UPSTREAM_PROXY = "Upstream Proxy"
-    BROWSER_WIDTH = "Web Client Width"
-    BROWSER_HEIGHT = "Web Client Height"
-    CLIENT_SIZE = "Web Client Size"
+    CLIENT_SIZE = "Client Size"
     MAJSOUL_URL = "Majsoul URL"
     LANGUAGE = "Language"
     MODEL_TYPE = "AI Model Type"
@@ -72,12 +72,12 @@ Credits:
     # autoplay
     AUTO_PLAY_SETTINGS = "Autoplay Settings"
     AUTO_IDLE_MOVE = "Idle Mouse Move"
-    RANDOM_CHOICE = "Randomize AI Choice"
     DRAG_DAHAI = "Mouse drag dahai"
-    RANDOM_DELAY_RANGE = "Base Delay Range (sec)"
-    AUTO_JOIN_GAME = "Auto Join"
+    RANDOM_CHOICE = "Randomize AI Choice"
+    REPLY_EMOJI_CHANCE = "Reply Emoji Rate"
+    RANDOM_DELAY_RANGE = "Base Delay Range (sec)"    
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
-    GAME_MODES = ["4-p East","4-p South","3-p East","3-p South"]
+    GAME_MODES = ["4-P East","4-P South","3-P East","3-P South"]
     MOUSE_RANDOM_MOVE = "Randomize Move"
     
     # Status
@@ -86,9 +86,6 @@ Credits:
     BROWSER = "Browser"
     GAME_RUNNING = "Game Running"
     GAME_ERROR = "Game Error!"
-    MODEL_FILE_ERROR = "Model File not Found!"
-    MITM_SERVER_ERROR = "MITM Service Error!"
-    MAIN_THREAD_ERROR = "Main Thread Error!"
     SYNCING = "Syncing..."
     CALCULATING = "Calculating..."
     READY_FOR_GAME = "Ready"
@@ -100,7 +97,12 @@ Credits:
     MAIN_MENU = "Main Menu"
     GAME_ENDING = "Game Ending"
     GAME_NOT_RUNNING = "Game Not Launched"
-    
+    # errors
+    MODEL_FILE_ERROR = "Model File not Found!"
+    MITM_SERVER_ERROR = "MITM Service Error!"
+    MAIN_THREAD_ERROR = "Main Thread Error!"
+    MODEL_NOT_SUPPORT_MODE_ERROR = "Model not supporting game mode"
+    CONNECTION_ERROR = "Network Connection Error"
     # Reaction/Actions
     PASS = "Skip"
     DISCARD = "Discard"
@@ -148,6 +150,8 @@ class LanStrZHS(LanStr):
     START_BROWSER = "启动网页客户端"
     WEB_OVERLAY = "网页 HUD"
     AUTOPLAY = "自动打牌"
+    AUTO_JOIN_GAME = "自动加入"
+    AUTO_JOIN_TIMER = "自动加入设置时限"
     OPEN_LOG_FILE = "打开日志文件"
     SETTINGS = "设置"
     HELP = "帮助"
@@ -194,9 +198,7 @@ Github: https://github.com/latorc/MahjongCopilot
     SETTINGS_TIPS = "部分设置项重启后生效"
     MITM_PORT = "MITM 服务端口"
     UPSTREAM_PROXY = "上游代理"
-    BROWSER_WIDTH = "网页客户端宽度"
-    BROWSER_HEIGHT = "网页客户端高度"
-    CLIENT_SIZE = "网页客户端大小"
+    CLIENT_SIZE = "客户端大小"
     MAJSOUL_URL = "雀魂网址"
     LANGUAGE = "语言" 
     MODEL_TYPE = "AI 模型类型"
@@ -213,9 +215,10 @@ Github: https://github.com/latorc/MahjongCopilot
     # autoplay
     AUTO_PLAY_SETTINGS = "自动打牌设置"
     AUTO_IDLE_MOVE = "鼠标空闲移动"
-    RANDOM_CHOICE = "AI 选项随机化(去重)"
     DRAG_DAHAI = "鼠标拖拽出牌"
-    AUTO_JOIN_GAME = "自动加入"
+    RANDOM_CHOICE = "AI 选项随机化(去重)"
+    REPLY_EMOJI_CHANCE = "回复表情概率"
+    
     RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
@@ -226,10 +229,7 @@ Github: https://github.com/latorc/MahjongCopilot
     MITM_SERVICE = "MITM 服务"
     BROWSER = "浏览器"
     GAME_RUNNING = "对局进行中"
-    GAME_ERROR = "对局发生错误!"
-    MODEL_FILE_ERROR = "无法找到模型文件!"
-    MITM_SERVER_ERROR = "MITM 服务错误!"
-    MAIN_THREAD_ERROR = "主进程发生错误!"
+    GAME_ERROR = "对局发生错误!"    
     SYNCING = "同步中…"
     CALCULATING = "计算中…"
     READY_FOR_GAME = "等待游戏"
@@ -241,6 +241,12 @@ Github: https://github.com/latorc/MahjongCopilot
     MAIN_MENU = "游戏主菜单"
     GAME_ENDING = "游戏结束"
     GAME_NOT_RUNNING = "游戏未启动"
+    #error
+    MODEL_FILE_ERROR = "无法找到模型文件!"
+    MITM_SERVER_ERROR = "MITM 服务错误!"
+    MAIN_THREAD_ERROR = "主进程发生错误!"
+    MODEL_NOT_SUPPORT_MODE_ERROR = "模型不支持游戏模式"
+    CONNECTION_ERROR = "网络连接错误"
     
     # Reaction/Actions
     PASS = "跳过"

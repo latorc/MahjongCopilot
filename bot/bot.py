@@ -5,7 +5,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 
 import common.mj_helper as mj_helper
-from common.utils import GameMode
+from common.utils import GameMode, BotNotSupportingMode
 
 class BotType(Enum):
     """ Model type for bot"""
@@ -36,13 +36,19 @@ class Bot(ABC):
     def supported_modes(self) -> list[GameMode]:
         """ return suported game modes"""
         return [GameMode.MJ4P]
+    
+    @property
+    def info_str(self) -> str:
+        """ return description info"""
+        return self.name
 
     def init_bot(self, seat:int, mode:GameMode=GameMode.MJ4P):
         """ Initialize the bot before the game starts. Bot must be initialized before a new game
         params:
             seat(int): Player seat index
             mode(GameMode): Game mode, defaults to normal 4p mahjong"""
-         
+        if mode not in self.supported_modes:
+            raise BotNotSupportingMode(mode)
         self.seat = seat
         self._init_bot_impl(mode)
         self._initialized = True

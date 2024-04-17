@@ -76,17 +76,11 @@ class Positions:
     """ kakan/ankan candidates (combinations) positions
     idx_kan = int((-(len/2)+idx+0.5)*2+3)"""
     
-    EMOJI_BUTTON = (5, 5)
+    EMOJI_BUTTON = (15.675, 4.9625)
     EMOJIS = [
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
-        (5, 5), 
+        (12.4, 3.5), (13.65, 3.5), (14.8, 3.5),    # 1 2 3
+        (12.4, 5.0), (13.65, 5.0), (14.8, 5.0),    # 4 5 6
+        (12.4, 6.5), (13.65, 6.5), (14.8, 6.5),    # 7 8 9
     ]
     """ emoji positions
     0 1 2
@@ -292,7 +286,9 @@ class Automation:
         self.g_v = GameVisual(browser)
         
         self._task:AutomationTask = None        # the task thread        
-        self.ui_state:UiState = UiState.NOT_RUNNING   # Where game UI is at. initially not running    
+        self.ui_state:UiState = UiState.NOT_RUNNING   # Where game UI is at. initially not running 
+        
+        self.last_emoji_time:float = 0.0        # timestamp of last emoji sent   
     
     def is_running_execution(self):
         """ if task is still running"""
@@ -466,19 +462,28 @@ class Automation:
         else:
             return -1        
     
-    def automate_send_emoji(self, idx:int):
-        """ Send emoji"""
+    def automate_send_emoji(self):
+        """ Send emoji given chance
+        """
         if not self.can_automate(True, UiState.IN_GAME):
             return
+        if time.time() - self.last_emoji_time < self.st.auto_emoji_intervel:  # prevent spamming
+            return
+        roll = random.random()
+        if roll > self.st.auto_reply_emoji_rate:   # send when roll < rate
+            return
+
+        idx = random.randint(0, 8)
         x,y = Positions.EMOJI_BUTTON
         steps = self.steps_randomized_move_click(x,y)
-        steps.append(ActionStepDelay(random.uniform(0.25, 0.35)))
+        steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
         x,y = Positions.EMOJIS[idx]
         steps += self.steps_randomized_move_click(x,y)
         self._task = AutomationTask(self.executor, f"SendEmoji{idx}", f"Send emoji {idx}")
         self._task.start_action_steps(steps, None)
+        self.last_emoji_time = time.time()
     
-    def idle_move_mouse(self, prob:float):
+    def automate_idle_mouse_move(self, prob:float):
         """ move mouse around to avoid AFK. according to probability"""
         if not self.can_automate(True, UiState.IN_GAME):
             return False

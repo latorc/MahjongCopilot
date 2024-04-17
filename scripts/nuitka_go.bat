@@ -1,0 +1,1 @@
+nuitka --standalone main.py

@@ -12,7 +12,7 @@ try:
 except: # pylint: disable=bare-except
     import riichi as libriichi
 
-from .bot import Bot, BotType, GameMode
+from .bot import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
 class BotMortalLocal(Bot):
@@ -67,11 +67,12 @@ class BotMortalLocal(Bot):
             except Exception as e:
                 raise e
         else:
-            raise NotImplementedError(f"Mode {mode} not supported")
+            raise BotNotSupportingMode(mode)
         self.str_input_history.clear()
         
     def react(self, input_msg:dict) -> dict:
-        
+        if self.mjai_bot is None:
+            return None        
         if self.ignore_next_turn_self_reach:    # ignore repetitive self reach. only for the very next msg
             if input_msg['type'] == MJAI_TYPE.REACH and input_msg['actor'] == self.seat:
                 LOGGER.debug("Ignoring repetitive self reach msg, reach msg already sent to AI last turn")

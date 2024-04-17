@@ -41,11 +41,12 @@ class LiqiMethod:
     authGame                    = '.lq.FastTest.authGame'
     terminateGame               = '.lq.FastTest.terminateGame'
     ActionPrototype             = '.lq.ActionPrototype'
-    NotifyGameTerminate         = '.lq.NotifyGameTerminate'
+    NotifyGameTerminate         = '.lq.NotifyGameTerminate'     # Game terminated early (players left custom game)
     NotifyGameEndResult         = '.lq.NotifyGameEndResult'
+    NotifyGameBroadcast         = '.lq.NotifyGameBroadcast'     # player sent emoji
 
 class LiqiAction:
-    """ Liqi method action name string consts"""
+    """ Liqi msg ['data']['name'] string consts for method==ActionPrototype"""
     NewRound = 'ActionNewRound'
     DealTile = 'ActionDealTile'
     DiscardTile = 'ActionDiscardTile'

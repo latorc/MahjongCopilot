@@ -9,6 +9,8 @@ import time
 import subprocess
 import random
 import string
+from requests.exceptions import ConnectionError, ReadTimeout
+from .lan_str import LanStr
 
 # Constants
 WEBSITE = "https://mjcopilot.com"
@@ -41,15 +43,33 @@ class ModelFileException(Exception):
 
 class MITMException(Exception):
     """ Exception for MITM error"""
+    
+class BotNotSupportingMode(Exception):
+    """ Bot not supporting current mode"""
+    def __init__(self, mode:GameMode):
+        super().__init__(mode)
 
-
+def error_to_str(error:Exception, lan:LanStr) -> str:
+    """ Convert error to language specific string"""
+    if isinstance(error, ModelFileException):
+        return lan.MODEL_FILE_ERROR
+    elif isinstance(error, MITMException):
+        return lan.MITM_SERVER_ERROR
+    elif isinstance(error, BotNotSupportingMode):
+        return lan.MODEL_NOT_SUPPORT_MODE_ERROR + f' {error.args[0].value}'
+    elif isinstance(error, ConnectionError):
+        return lan.CONNECTION_ERROR + f': {error}'
+    elif isinstance(error, ReadTimeout):
+        return lan.CONNECTION_ERROR + f': {error}'        
+    else:
+        return str(error)
 
 def sub_folder(folder_name:str) -> pathlib.Path:
     """ return the subfolder Path, create it if not exists"""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = pathlib.Path(sys._MEIPASS).parent   # pylint: disable=W0212,E1101
-    except Exception as e:
+    except Exception:  #pylint: disable=broad-except
         base_path = pathlib.Path('.')
         
     subfolder = base_path / folder_name

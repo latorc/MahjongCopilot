@@ -13,7 +13,7 @@ from bot import Bot, reaction_convert_meta
 
 NO_EFFECT_METHODS = [
     '.lq.NotifyPlayerLoadGameReady',        # Notify: the game starts
-    '.lq.FastTest.checkNetworkDelay',       # REQ/RES: Check network delay
+    LiqiMethod.checkNetworkDelay,       # REQ/RES: Check network delay
     '.lq.FastTest.inputOperation',          # REQ/RES: Send operations (discard/reach/etc.)
     '.lq.FastTest.inputChiPengGang',        # REQ/RES: send Chi/Peng/Gang operations
     '.lq.FastTest.confirmNewRound',         # REQ/RES: confirm results and ask for new round start
@@ -24,7 +24,7 @@ NO_EFFECT_METHODS = [
     '.lq.NotifyActivityReward',             #
     '.lq.NotifyLeaderboardPoint',           #
     '.lq.FastTest.broadcastInGame',         # emoji?
-    '.lq.NotifyGameBroadcast',              # Notify: emoji? 
+    LiqiMethod.NotifyGameBroadcast,         # Notify: emoji? 
     # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast', 'data': {'seat': 2, 'content': '{"emo":7}'}}
     '.lq.NotifyPlayerConnectionState',      # 
 ]
@@ -207,7 +207,7 @@ class GameState:
         
         # unexpected message
         else:
-            LOGGER.warning('Other liqi messages (ignored): %s', liqi_msg)
+            LOGGER.warning('Other liqi msg (ignored): %s', liqi_msg)
             return None        
         
     

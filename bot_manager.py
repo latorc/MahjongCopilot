@@ -185,6 +185,7 @@ class BotManager:
     def _create_bot(self):
         """ create Bot object based on settings"""
         try:
+            self.bot = None
             self.game_exception = Exception("Creating Bot...")
             self.bot = get_bot(self.st)
             self.game_exception = None
@@ -345,13 +346,11 @@ class BotManager:
                 # Game Flow Message (in-Game message)
                 # Feed msg to game_state for processing with AI bot
                 LOGGER.debug('Game msg: %s', str(liqimsg))
-                # self._update_overlay_guide()
                 reaction = self.game_state.input(liqimsg)
-                # self._update_overlay_guide()
                 if reaction:
                     self._do_automation(reaction)
                 else:
-                    self.automation.idle_move_mouse(0.05)           # move mouse around randomly
+                    self._process_idle_automation(liqimsg)
                 if self.game_state.is_game_ended:
                     self._process_end_game()
             
@@ -360,7 +359,15 @@ class BotManager:
 
             else:
                 LOGGER.debug('Other msg (ignored): %s', liqimsg)
-    
+                
+    def _process_idle_automation(self, liqimsg:dict):
+        """ do some idle action based on liqi msg"""
+        liqi_method = liqimsg['method']
+        if liqi_method == liqi.LiqiMethod.NotifyGameBroadcast:  # emoji
+            self.automation.automate_send_emoji()
+        else:           # move mouse around randomly
+            self.automation.automate_idle_mouse_move(0.05)
+        
     def _process_end_game(self):
         # End game processes
         self.game_flow_id = None
