@@ -16,4 +16,5 @@ robocopy resources dist\MahjongCopilot\resources /E
 robocopy liqi_proto dist\MahjongCopilot\liqi_proto /E
 robocopy .\libriichi3p\ dist\MahjongCopilot\libriichi3p\ "Put libriichi3p files in this folder"
 robocopy .venv\Lib\site-packages\playwright\driver\package\.local-browsers dist\MahjongCopilot\_internal\playwright\driver\package\.local-browsers /E
+"C:\Program Files\7-Zip\7z.exe" a -t7z dist\MahjongCopilot.windows.7z dist\MahjongCopilot
 explorer.exe dist
