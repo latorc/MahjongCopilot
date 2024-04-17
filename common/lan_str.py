@@ -86,9 +86,6 @@ Credits:
     BROWSER = "Browser"
     GAME_RUNNING = "Game Running"
     GAME_ERROR = "Game Error!"
-    MODEL_FILE_ERROR = "Model File not Found!"
-    MITM_SERVER_ERROR = "MITM Service Error!"
-    MAIN_THREAD_ERROR = "Main Thread Error!"
     SYNCING = "Syncing..."
     CALCULATING = "Calculating..."
     READY_FOR_GAME = "Ready"
@@ -100,7 +97,12 @@ Credits:
     MAIN_MENU = "Main Menu"
     GAME_ENDING = "Game Ending"
     GAME_NOT_RUNNING = "Game Not Launched"
-    
+    # errors
+    MODEL_FILE_ERROR = "Model File not Found!"
+    MITM_SERVER_ERROR = "MITM Service Error!"
+    MAIN_THREAD_ERROR = "Main Thread Error!"
+    MODEL_NOT_SUPPORT_MODE_ERROR = "Model not supporting game mode"
+    CONNECTION_ERROR = "Network Connection Error"
     # Reaction/Actions
     PASS = "Skip"
     DISCARD = "Discard"
@@ -227,10 +229,7 @@ Github: https://github.com/latorc/MahjongCopilot
     MITM_SERVICE = "MITM 服务"
     BROWSER = "浏览器"
     GAME_RUNNING = "对局进行中"
-    GAME_ERROR = "对局发生错误!"
-    MODEL_FILE_ERROR = "无法找到模型文件!"
-    MITM_SERVER_ERROR = "MITM 服务错误!"
-    MAIN_THREAD_ERROR = "主进程发生错误!"
+    GAME_ERROR = "对局发生错误!"    
     SYNCING = "同步中…"
     CALCULATING = "计算中…"
     READY_FOR_GAME = "等待游戏"
@@ -242,6 +241,12 @@ Github: https://github.com/latorc/MahjongCopilot
     MAIN_MENU = "游戏主菜单"
     GAME_ENDING = "游戏结束"
     GAME_NOT_RUNNING = "游戏未启动"
+    #error
+    MODEL_FILE_ERROR = "无法找到模型文件!"
+    MITM_SERVER_ERROR = "MITM 服务错误!"
+    MAIN_THREAD_ERROR = "主进程发生错误!"
+    MODEL_NOT_SUPPORT_MODE_ERROR = "模型不支持游戏模式"
+    CONNECTION_ERROR = "网络连接错误"
     
     # Reaction/Actions
     PASS = "跳过"
