@@ -87,6 +87,7 @@ class MainGUI(tk.Tk):
         self.tb2 = ToolBar(self.grid_frame, tb_ht)
         self.tb2.grid(row=cur_row, **grid_args)
         sw_ft_sz = 10
+        self.tb2.add_sep()
         # Switches
         self.switch_overlay = ToggleSwitch(
             self.tb2, self.st.lan().WEB_OVERLAY, tb_ht, font_size=sw_ft_sz, command=self._on_switch_hud_clicked)
@@ -116,7 +117,7 @@ class MainGUI(tk.Tk):
         self.text_ai_guide = tk.Text(
             self.grid_frame,
             state=tk.DISABLED,
-            font=font.Font(family="Segoe UI Emoji", size=25),
+            font=font.Font(family="Segoe UI Emoji", size=22),
             height=5,
             relief=tk.SUNKEN,
             padx=5,
@@ -135,7 +136,7 @@ class MainGUI(tk.Tk):
             self.grid_frame,
             state=tk.DISABLED,
             height=2,
-            font=font.Font(family="Segoe UI Emoji", size=25)
+            font=font.Font(family="Segoe UI Emoji", size=22)
             )
         self.text_state.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)
@@ -273,10 +274,10 @@ class MainGUI(tk.Tk):
             mode_str = ' | '.join(mode_strs)
             text = f"{self.st.lan().MODEL}: {self.bot_manager.bot.type.value} ({mode_str})"
             self.model_bar.update_column(0, text, self.icon_green)
-            if self.bot_manager.is_bot_calculating():
-                self.model_bar.update_column(1, '⌛ ' + self.st.lan().CALCULATING)
-            elif self.bot_manager.is_game_syncing():
+            if self.bot_manager.is_game_syncing():
                 self.model_bar.update_column(1, '⌛ ' + self.st.lan().SYNCING)
+            elif self.bot_manager.is_bot_calculating():
+                self.model_bar.update_column(1, '⌛ ' + self.st.lan().CALCULATING)
             else:
                 self.model_bar.update_column(1, 'ℹ️' + self.bot_manager.bot.info_str)
         else:
