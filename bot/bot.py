@@ -36,6 +36,11 @@ class Bot(ABC):
     def supported_modes(self) -> list[GameMode]:
         """ return suported game modes"""
         return [GameMode.MJ4P]
+    
+    @property
+    def info_str(self) -> str:
+        """ return description info"""
+        return self.name
 
     def init_bot(self, seat:int, mode:GameMode=GameMode.MJ4P):
         """ Initialize the bot before the game starts. Bot must be initialized before a new game

@@ -185,6 +185,7 @@ class BotManager:
     def _create_bot(self):
         """ create Bot object based on settings"""
         try:
+            self.bot = None
             self.game_exception = Exception("Creating Bot...")
             self.bot = get_bot(self.st)
             self.game_exception = None
