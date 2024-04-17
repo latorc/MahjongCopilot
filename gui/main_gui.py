@@ -100,7 +100,7 @@ class MainGUI(tk.Tk):
         self.switch_autojoin = ToggleSwitch(
             self.tb2, self.st.lan().AUTO_JOIN_GAME, tb_ht, font_size=sw_ft_sz, command=self._on_switch_autojoin_clicked)
         self.switch_autojoin.pack(**pack_args)
-        self.timer = Timer(self.tb2, tb_ht, sw_ft_sz)
+        self.timer = Timer(self.tb2, tb_ht, sw_ft_sz, self.st.lan().AUTO_JOIN_TIMER)
         self.timer.set_callback(self.bot_manager.disable_autojoin)        # stop autojoin when time is up
         self.timer.pack(**pack_args)
         self.tb2.add_sep()
@@ -116,7 +116,7 @@ class MainGUI(tk.Tk):
         self.text_ai_guide = tk.Text(
             self.grid_frame,
             state=tk.DISABLED,
-            font=font.Font(family="Segoe UI Emoji", size=25, weight="bold"),
+            font=font.Font(family="Segoe UI Emoji", size=25),
             height=5,
             relief=tk.SUNKEN,
             padx=5,
@@ -135,7 +135,7 @@ class MainGUI(tk.Tk):
             self.grid_frame,
             state=tk.DISABLED,
             height=2,
-            font=font.Font(family="Segoe UI Emoji", size=25, weight="bold")
+            font=font.Font(family="Segoe UI Emoji", size=25)
             )
         self.text_state.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)
@@ -188,11 +188,12 @@ class MainGUI(tk.Tk):
         settings_window.grab_set()
         self.wait_window(settings_window)
         
-        if settings_window.gui_need_reload:     # reload UI if needed
-            self.reload_gui()
-        self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
-        if settings_window.mitm_updated:
-            self.bot_manager.restart_mitm()
+        if settings_window.exit_ok:
+            self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
+            if settings_window.gui_need_reload:     # reload UI if needed
+                self.reload_gui()        
+            if settings_window.mitm_updated:
+                self.bot_manager.restart_mitm()
 
     def _on_btn_help_clicked(self):
         # open help dialog        
@@ -277,7 +278,7 @@ class MainGUI(tk.Tk):
             elif self.bot_manager.is_game_syncing():
                 self.model_bar.update_column(1, '⌛ ' + self.st.lan().SYNCING)
             else:
-                self.model_bar.update_column(1, 'ℹ️ ' + self.bot_manager.bot.info_str)
+                self.model_bar.update_column(1, 'ℹ️' + self.bot_manager.bot.info_str)
         else:
             text = self.st.lan().AWAIT_BOT
             self.model_bar.update_column(0, text, self.icon_red)
