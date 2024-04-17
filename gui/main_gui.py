@@ -11,7 +11,7 @@ from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide
 from common.utils import RES_FOLDER, GameMode
-from common.utils import UiState, MITMException, ModelFileException, sub_file
+from common.utils import UiState, sub_file, error_to_str
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
 from common.mj_helper import GameInfo, MJAI_TILE_2_UNICODE
@@ -32,7 +32,7 @@ class MainGUI(tk.Tk):
         icon = tk.PhotoImage(file=sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window  
-        size = (650,550)      
+        size = (620,540)      
         self.geometry(f"{size[0]}x{size[1]}")
         self.minsize(*size)
         # Styling
@@ -314,21 +314,16 @@ class MainGUI(tk.Tk):
     def _get_status_text_icon(self, gi:GameInfo) -> tuple[str, str]:
         # Get text and icon for status bar last column, based on bot running info
         
-        bot_exception = self.bot_manager.main_thread_exception        
-        if isinstance(bot_exception, MITMException):
-            return self.st.lan().MITM_SERVER_ERROR, self.icon_red
-        elif isinstance(bot_exception, Exception):
-            return self.st.lan().MAIN_THREAD_ERROR + str(bot_exception), self.icon_red
+        bot_exception = self.bot_manager.main_thread_exception
+        if bot_exception:
+            return error_to_str(bot_exception, self.st.lan()), self.icon_red
         else:   # no exception in bot manager
             pass
         
         game_error:Exception = self.bot_manager.get_game_error()
-        if isinstance(game_error, ModelFileException):
-            return self.st.lan().MODEL_FILE_ERROR, self.icon_red
-        elif isinstance(game_error, Exception):
-            text = self.st.lan().GAME_ERROR + " " + str(game_error)
-            return text, self.icon_red
-        else:       # no game error
+        if game_error:
+            return error_to_str(game_error, self.st.lan()), self.icon_red
+        else: # no error
             pass
             
         if self.bot_manager.is_in_game():
