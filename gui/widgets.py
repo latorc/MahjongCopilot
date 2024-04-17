@@ -6,7 +6,7 @@ from tkinter import ttk
 import time
 from common.log_helper import LOGGER
 from common.utils import sub_file, RES_FOLDER
-from .utils import set_style_normal, font_normal
+from .utils import set_style_normal, font_normal, add_hover_text
 
 class ToggleSwitch(tk.Frame):
     """ Toggle button widget"""
@@ -80,13 +80,14 @@ class Timer(tk.Frame):
     """ A timer widget with separate entries for hours, minutes, and seconds """
     START="⏱"
     STOP="⏹"
-    def __init__(self, master: tk.Frame, height: int, font_size:int=10):
+    def __init__(self, master: tk.Frame, height: int, font_size:int=10, hover_text:str=None):
         super().__init__(master, height=height)
         self.configure(height=height)
         self.pack_propagate(False)
 
         # Time setup
         self.font_size:int = font_size
+        self.hover_text:str = hover_text
         self.callback:Callable = None
         self.timer_running:bool = False
         self.timer_id = None
@@ -110,8 +111,12 @@ class Timer(tk.Frame):
         self._setup_entry(self.second_var, 59)
 
         # Start/Stop button
-        self.start_stop_button = ttk.Button(self, text=Timer.START, command=self._toggle_timer, width=5)
-        self.start_stop_button.grid(row=1, column=0, sticky=tk.N, padx=(0, 0),pady=(0, 0))
+        self.the_btn = tk.Button(
+            self, text=Timer.START, font=font_normal(),
+            command=self._toggle_timer, width=5, padx=0, pady=0)
+        self.the_btn.grid(row=1, column=0, sticky=tk.N, padx=(0, 0),pady=(0, 0))
+        if self.hover_text:
+            add_hover_text(self.the_btn, self.hover_text)
 
     def set_callback(self, callback:Callable):
         """ Set callback function to be called when timer is stopped"""
@@ -151,7 +156,7 @@ class Timer(tk.Frame):
 
     def _start_timer(self):
         self.timer_running = True
-        self.start_stop_button.config(text=Timer.STOP)
+        self.the_btn.config(text=Timer.STOP)
         hours = int(self.hour_var.get())
         minutes = int(self.minute_var.get())
         seconds = int(self.second_var.get())
@@ -159,6 +164,7 @@ class Timer(tk.Frame):
         self.stop_time = time.time() + hours * 3600 + minutes * 60 + seconds
         for e in self.entries:
             e.configure(state=tk.DISABLED)
+        add_hover_text(self.the_btn, Timer.STOP)
         self._run_timer()
 
     def _run_timer(self):
@@ -188,14 +194,13 @@ class Timer(tk.Frame):
             self.after_cancel(self.timer_id)
             self.timer_id = None
         self.timer_running = False
-        self.start_stop_button.config(text=Timer.START)
+        self.the_btn.config(text=Timer.START)
         for e in self.entries:
             e.configure(state=tk.NORMAL)
         self.stop_time = None
+        if self.hover_text:
+            add_hover_text(self.the_btn, self.hover_text)
         LOGGER.info("Timer stopped.")
-
-    
-
         
 
 class ToolBar(tk.Frame):
@@ -211,42 +216,17 @@ class ToolBar(tk.Frame):
         
         img = tk.PhotoImage(file = Path(RES_FOLDER) / img_file)
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
-        btn = tk.Button(
-            self,
-            text=text,
-            image=img,
-            width=self.height, height=self.height,
-            command=command
-        )
+        btn = tk.Button(self, image=img, width=self.height, height=self.height, command=command)
         btn.image = img  # Keep a reference to prevent image from being garbage collected
         btn.pack(side=tk.LEFT, padx=4, pady=4)
 
-        btn.bind("<Enter>", lambda event, btn=btn: self._on_button_hover(btn))
-        btn.bind("<Leave>", lambda event, btn=btn: self._on_button_leave(btn))
+        add_hover_text(btn, text)
         return btn
     
     def add_sep(self):
         """ add a vertical separator bar """
         separator = ttk.Separator(self, orient=tk.VERTICAL)
         separator.pack(side=tk.LEFT, fill='y', expand=False,padx=5)
-
-    def _on_button_hover(self, btn:tk.Button):
-        # change bg color; display a hover text label
-        btn.original_bg = btn.cget("background")
-        btn.configure(background="light blue")
-        self._hover_text = tk.Label(self, text=btn.cget("text"),
-            bg="lightyellow",highlightbackground="black", highlightthickness=1)
-        x = btn.winfo_x() + self.winfo_x() + btn.winfo_width()
-        y = btn.winfo_y() + self.winfo_y() + btn.winfo_height() //2
-        self._hover_text.place(
-            x=x,
-            y=y,
-            anchor=tk.SW
-        )
-
-    def _on_button_leave(self, btn:tk.Button):
-        btn.configure(background=btn.original_bg)
-        self._hover_text.destroy()
     
 
 class StatusBar(tk.Frame):

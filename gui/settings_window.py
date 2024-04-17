@@ -24,6 +24,7 @@ class SettingsWindow(tk.Toplevel):
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
 
+        self.exit_ok:bool = False
         self.gui_need_reload:bool = False
         """ Whether a GUI refresh is needed to apply new settings"""
 
@@ -369,8 +370,10 @@ class SettingsWindow(tk.Toplevel):
         
         LOGGER.info("Saving Settings to file")
         self.st.save_json()
+        self.exit_ok = True
         self.destroy()
 
     def _on_cancel(self):
         LOGGER.debug("Close settings window without saving")
+        self.exit_ok = False
         self.destroy()

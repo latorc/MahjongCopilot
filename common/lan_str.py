@@ -9,6 +9,8 @@ class LanStr:
     START_BROWSER = "Start Web Client"
     WEB_OVERLAY = "Overlay"
     AUTOPLAY = "Autoplay"
+    AUTO_JOIN_GAME = "Auto Join"
+    AUTO_JOIN_TIMER = "Auto Join Timer"
     OPEN_LOG_FILE = "Open Log File"
     SETTINGS = "Settings"
     HELP = "Help"
@@ -73,8 +75,7 @@ Credits:
     DRAG_DAHAI = "Mouse drag dahai"
     RANDOM_CHOICE = "Randomize AI Choice"
     REPLY_EMOJI_CHANCE = "Reply Emoji Rate"
-    RANDOM_DELAY_RANGE = "Base Delay Range (sec)"
-    AUTO_JOIN_GAME = "Auto Join"
+    RANDOM_DELAY_RANGE = "Base Delay Range (sec)"    
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
     GAME_MODES = ["4-P East","4-P South","3-P East","3-P South"]
     MOUSE_RANDOM_MOVE = "Randomize Move"
@@ -147,6 +148,8 @@ class LanStrZHS(LanStr):
     START_BROWSER = "启动网页客户端"
     WEB_OVERLAY = "网页 HUD"
     AUTOPLAY = "自动打牌"
+    AUTO_JOIN_GAME = "自动加入"
+    AUTO_JOIN_TIMER = "自动加入设置时限"
     OPEN_LOG_FILE = "打开日志文件"
     SETTINGS = "设置"
     HELP = "帮助"
@@ -213,7 +216,7 @@ Github: https://github.com/latorc/MahjongCopilot
     DRAG_DAHAI = "鼠标拖拽出牌"
     RANDOM_CHOICE = "AI 选项随机化(去重)"
     REPLY_EMOJI_CHANCE = "回复表情概率"
-    AUTO_JOIN_GAME = "自动加入"
+    
     RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
