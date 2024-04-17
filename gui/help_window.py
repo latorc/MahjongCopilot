@@ -11,7 +11,7 @@ from common.log_helper import LOGGER
 from common.settings import Settings
 from common.utils import WEBSITE
 from updater import Updater, UpdateStatus
-from .utils import font_normal
+from .utils import GUI_STYLE
 
 
 class HelpWindow(tk.Toplevel):
@@ -29,10 +29,10 @@ class HelpWindow(tk.Toplevel):
         self.resizable(False, False)
 
         # Scrollable Text Widget for help info
-        self.textbox = ScrolledText(self, wrap=tk.WORD, font=font_normal(12), height=15)
+        self.textbox = ScrolledText(self, wrap=tk.WORD, font=GUI_STYLE.font_normal(), height=15)
         self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
         
-        self.textbox.tag_configure("title", font=font.Font(family="Microsoft YaHei", size=20, weight="bold"))
+        self.textbox.tag_configure("title", font=GUI_STYLE.font_normal(size=20,weight="bold"))
         firstline = st.lan().APP_TITLE + f" v{self.updater.local_version}" + "\n"
         self.textbox.insert(tk.END, firstline, "title")
         self.textbox.insert(tk.END, st.lan().HELP_STR)

@@ -2,20 +2,39 @@
 from tkinter import ttk, font
 import tkinter as tk
 
-def set_style_normal(style:ttk.Style, font_size:int=12):
-    """ Set style for ttk widgets"""
-    style.configure("TLabel", font=("Microsoft YaHei", font_size))
-    style.configure(
-        "TButton",
-        background="#4CAF50", foreground="black",
-        font=("Microsoft YaHei", font_size),
-        relief="raised",
-        borderwidth=2
-        )
+class GuiStyle:
+    """ GUI Style Class"""
+    def __init__(self, std_font_size:int=12):
+        self.std_font_size = std_font_size
+        self.font_size = std_font_size
+        self.dpi_scale:float = 1.0
 
-def font_normal(size:int=12):
-    """ return normal font size"""
-    return font.Font(family="Microsoft YaHei", size=size)
+    def set_style_normal(self, style:ttk.Style):
+        """ Set style for ttk widgets"""
+        style.configure("TLabel", font=("Microsoft YaHei", self.font_size))
+        style.configure(
+            "TButton",
+            background="#4CAF50", foreground="black",
+            font=("Microsoft YaHei", self.font_size),
+            relief="raised",
+            borderwidth=2,
+            )
+    
+    def font_normal(self, family:str=None, size:int=None, **args):
+        """ return normal font size"""
+        if not family:
+            family = "Microsoft YaHei"
+        if not size:
+            size = self.font_size
+        else:
+            size = int(size / self.dpi_scale)
+        
+        return font.Font(family=family, size=size, **args)
+
+    def set_dpi_scaling(self, scale:float=1.0):
+        """ set dpi scaling"""
+        self.dpi_scale = scale
+        self.font_size = int(self.std_font_size / scale)
 
 
 def add_hover_text(widget:tk.Widget, text:str):
@@ -39,3 +58,6 @@ def _on_leave_hover(wdg:tk.Widget):
         wdg.hover_text.destroy()
     if hasattr(wdg, "original_bg"):
         wdg.configure(background=wdg.original_bg)
+        
+
+GUI_STYLE = GuiStyle()

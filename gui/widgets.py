@@ -6,7 +6,7 @@ from tkinter import ttk
 import time
 from common.log_helper import LOGGER
 from common.utils import sub_file, RES_FOLDER
-from .utils import set_style_normal, font_normal, add_hover_text
+from .utils import GUI_STYLE, add_hover_text
 
 class ToggleSwitch(tk.Frame):
     """ Toggle button widget"""
@@ -33,7 +33,7 @@ class ToggleSwitch(tk.Frame):
         self.is_on = False
         self.img_label = tk.Label(self, image=self.img_off)
         self.img_label.pack(side="top", pady=(0, 10))
-        self.text_label = tk.Label(self, text=text, font=("Microsoft YaHei", font_size))
+        self.text_label = tk.Label(self, text=text, font=GUI_STYLE.font_normal(font_size))
         self.text_label.pack(side="top")
         if command:
             self.command = command
@@ -105,16 +105,16 @@ class Timer(tk.Frame):
         # Setup each entry
         self.entries:list[tk.Entry] = []
         self._setup_entry(self.hour_var, 23)
-        tk.Label(self.frame_top, text=":", font=font_normal(self.font_size), width=1).pack(**self.pack_args)
+        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(self.font_size), width=1).pack(**self.pack_args)
         self._setup_entry(self.minute_var, 59)
-        tk.Label(self.frame_top, text=":", font=font_normal(self.font_size), width=1).pack(**self.pack_args)
+        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(self.font_size), width=1).pack(**self.pack_args)
         self._setup_entry(self.second_var, 59)
 
         # Start/Stop button
         self.the_btn = tk.Button(
-            self, text=Timer.START, font=font_normal(),
-            command=self._toggle_timer, width=5, padx=0, pady=0)
-        self.the_btn.grid(row=1, column=0, sticky=tk.N, padx=(0, 0),pady=(0, 0))
+            self, text=Timer.START, font=GUI_STYLE.font_normal(self.font_size),
+            command=self._toggle_timer, width=6, padx=1, pady=1)
+        self.the_btn.grid(row=1, column=0, sticky=tk.N, padx=(1, 1),pady=(1, 1))
         if self.hover_text:
             add_hover_text(self.the_btn, self.hover_text)
 
@@ -142,7 +142,7 @@ class Timer(tk.Frame):
         entry = tk.Entry(
             self.frame_top, textvariable=var, 
             validatecommand=(self.register(validate_time), '%P'), validate='focusout',
-            font=font_normal(self.font_size), width=2, justify=tk.CENTER, 
+            font=GUI_STYLE.font_normal(self.font_size), width=2, justify=tk.CENTER, 
         )
         entry.pack(**self.pack_args)
         self.entries.append(entry)
@@ -231,15 +231,14 @@ class ToolBar(tk.Frame):
 
 class StatusBar(tk.Frame):
     """ Status bar with multiple columns"""
-    def __init__(self, master, n_cols:int, font_size:int = 12):
+    def __init__(self, master, n_cols:int):
         super().__init__(master, highlightbackground='gray', highlightthickness=0)
         self.n_cols = n_cols
-        self.font_size = font_size
         self.columns:list[tk.Frame] = []
 
         # Style
         style = ttk.Style(self)
-        set_style_normal(style, font_size)
+        GUI_STYLE.set_style_normal(style)
 
         for i in range(n_cols):
             column = self._create_column(i)
@@ -283,8 +282,8 @@ class StatusBar(tk.Frame):
             # Load new icon
             new_icon = tk.PhotoImage(file=icon_path)
             new_icon = new_icon.subsample(
-                int(new_icon.height()/self.font_size/1.3333),
-                int(new_icon.height() / self.font_size / 1.3333))
+                int(new_icon.height() / GUI_STYLE.std_font_size / 1.3333),
+                int(new_icon.height() / GUI_STYLE.std_font_size / 1.3333))
             label.config(image=new_icon)
             label.image = new_icon      # keep a reference to avoid garbage collection
             label.image_file = icon_path

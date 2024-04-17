@@ -16,7 +16,7 @@ from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
 from common.mj_helper import GameInfo, MJAI_TILE_2_UNICODE
 from updater import Updater
-from .utils import set_style_normal
+from .utils import GUI_STYLE
 from .settings_window import SettingsWindow
 from .help_window import HelpWindow
 from .widgets import *  # pylint: disable=wildcard-import, unused-wildcard-import
@@ -36,8 +36,10 @@ class MainGUI(tk.Tk):
         self.geometry(f"{size[0]}x{size[1]}")
         self.minsize(*size)
         # Styling
+        scaling_factor = self.winfo_fpixels('1i') / 96
+        GUI_STYLE.set_dpi_scaling(scaling_factor)
         style = ttk.Style(self)
-        set_style_normal(style)
+        GUI_STYLE.set_style_normal(style)
         # icon resources:
         self.icon_green = sub_file(RES_FOLDER,'green.png')
         self.icon_red = sub_file(RES_FOLDER,'red.png')
@@ -117,7 +119,7 @@ class MainGUI(tk.Tk):
         self.text_ai_guide = tk.Text(
             self.grid_frame,
             state=tk.DISABLED,
-            font=font.Font(family="Segoe UI Emoji", size=22),
+            font=GUI_STYLE.font_normal("Segoe UI Emoji",22),
             height=5,
             relief=tk.SUNKEN,
             padx=5,
@@ -136,7 +138,7 @@ class MainGUI(tk.Tk):
             self.grid_frame,
             state=tk.DISABLED,
             height=2,
-            font=font.Font(family="Segoe UI Emoji", size=22)
+            font=GUI_STYLE.font_normal("Segoe UI Emoji",22),
             )
         self.text_state.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)

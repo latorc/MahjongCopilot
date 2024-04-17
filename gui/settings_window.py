@@ -9,7 +9,7 @@ from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
 from bot.bot import BotType
-from .utils import set_style_normal
+from .utils import GUI_STYLE
 
 class SettingsWindow(tk.Toplevel):
     """ Settings dialog window"""
@@ -19,6 +19,7 @@ class SettingsWindow(tk.Toplevel):
 
         self.geometry('700x600')
         self.minsize(700,600)
+        
         # self.resizable(False, False)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
@@ -39,14 +40,14 @@ class SettingsWindow(tk.Toplevel):
         # Main frame
         main_frame = ttk.Frame(self, padding="20")
         main_frame.pack(expand=True, fill="both")
-        main_frame.columnconfigure(0, minsize=150)
-        main_frame.columnconfigure(1, minsize=80)
-        main_frame.columnconfigure(2, minsize=80)
-        main_frame.columnconfigure(3, minsize=80)
+        # main_frame.columnconfigure(0, minsize=150)
+        # main_frame.columnconfigure(1, minsize=80)
+        # main_frame.columnconfigure(2, minsize=80)
+        # main_frame.columnconfigure(3, minsize=80)
 
         # Styling
         style = ttk.Style(self)
-        set_style_normal(style)
+        GUI_STYLE.set_style_normal(style)
         
         pad_args = {"padx":(3, 3), "pady":(3, 2)}
         args_label = {"sticky":"e", **pad_args}
