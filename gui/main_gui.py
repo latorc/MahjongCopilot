@@ -15,7 +15,7 @@ from common.utils import UiState, sub_file, error_to_str
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
 from common.mj_helper import GameInfo, MJAI_TILE_2_UNICODE
-from updater import Updater
+from updater import Updater, UpdateStatus
 from .utils import GUI_STYLE
 from .settings_window import SettingsWindow
 from .help_window import HelpWindow
@@ -29,6 +29,9 @@ class MainGUI(tk.Tk):
         self.bot_manager = bot_manager
         self.st = setting
         self.updater = Updater(self.st.update_url)
+        self.after_idle(self.updater.load_help)
+        self.after_idle(self.updater.check_update)        # check update when idle
+        
         icon = tk.PhotoImage(file=sub_file(RES_FOLDER,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window  
@@ -80,7 +83,7 @@ class MainGUI(tk.Tk):
         # buttons on toolbar
         self.toolbar.add_button(self.st.lan().SETTINGS, 'settings.png', self._on_btn_settings_clicked)
         self.toolbar.add_button(self.st.lan().OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
-        self.toolbar.add_button(self.st.lan().HELP, 'help.png', self._on_btn_help_clicked)
+        self.btn_help = self.toolbar.add_button(self.st.lan().HELP, 'help.png', self._on_btn_help_clicked)
         self.toolbar.add_sep()
         self.toolbar.add_button(self.st.lan().EXIT, 'exit.png', self._on_exit)
         
@@ -226,7 +229,18 @@ class MainGUI(tk.Tk):
             self.btn_start_browser.config(state=tk.NORMAL)
         else:
             self.btn_start_browser.config(state=tk.DISABLED)
-            
+
+        # update help button
+        if self.updater.update_status in (
+            UpdateStatus.NEW_VERSION,
+            UpdateStatus.DOWNLOADING,
+            UpdateStatus.UNZIPPING,
+            UpdateStatus.PREPARED
+        ):
+            self.toolbar.set_img(self.btn_help, 'help_update.png')
+        else:
+            self.toolbar.set_img(self.btn_help, 'help.png')
+        
         # update switches' status
         sw_list = [
             (self.switch_overlay, lambda: self.st.enable_overlay),

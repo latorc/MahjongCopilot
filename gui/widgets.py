@@ -218,10 +218,21 @@ class ToolBar(tk.Frame):
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
         btn = tk.Button(self, image=img, width=self.height, height=self.height, command=command)
         btn.image = img  # Keep a reference to prevent image from being garbage collected
+        btn.img_file = img_file
         btn.pack(side=tk.LEFT, padx=4, pady=4)
 
         add_hover_text(btn, text)
         return btn
+    
+    def set_img(self, btn:tk.Button, img_file:str):
+        """ Replace button image"""
+        if btn.img_file == img_file:
+            return
+        img = tk.PhotoImage(file = Path(RES_FOLDER) / img_file)
+        img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
+        btn.config(image=img)
+        btn.image = img  # Keep a reference
+        btn.img_file = img_file
     
     def add_sep(self):
         """ add a vertical separator bar """

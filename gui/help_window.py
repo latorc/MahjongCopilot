@@ -1,11 +1,12 @@
 """ Help Window"""
 
 from typing import Callable
-import webbrowser
+import re
+import requests
+import threading
 import tkinter as tk
-from tkinter import font
 from tkinter import ttk, messagebox
-from tkinter.scrolledtext import ScrolledText
+from tkhtmlview import HTMLScrolledText
 
 from common.log_helper import LOGGER
 from common.settings import Settings
@@ -21,51 +22,57 @@ class HelpWindow(tk.Toplevel):
         self.st = st            # Settings object
         self.updater = updater
         
-        self.title(st.lan().HELP)
+        title_str = f"{st.lan().HELP} {st.lan().APP_TITLE} v{self.updater.local_version}"
+        self.title(title_str)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
-        self.geometry("600x500")  # Set the window size
+        self.win_size = (750, 700)
+        self.geometry(f"{self.win_size[0]}x{self.win_size[1]}")  # Set the window size
         self.resizable(False, False)
 
         # Scrollable Text Widget for help info
-        self.textbox = ScrolledText(self, wrap=tk.WORD, font=GUI_STYLE.font_normal(), height=15)
-        self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
+        # self.textbox = ScrolledText(self, wrap=tk.WORD, font=GUI_STYLE.font_normal(), height=15)
+        # self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
         
-        self.textbox.tag_configure("title", font=GUI_STYLE.font_normal(size=20,weight="bold"))
-        firstline = st.lan().APP_TITLE + f" v{self.updater.local_version}" + "\n"
-        self.textbox.insert(tk.END, firstline, "title")
-        self.textbox.insert(tk.END, st.lan().HELP_STR)
-        self.textbox.configure(state='disabled')  # Make the text read-only
+        # self.textbox.tag_configure("title", font=GUI_STYLE.font_normal(size=20,weight="bold"))
+        # firstline = st.lan().APP_TITLE +  + "\n"
+        # self.textbox.insert(tk.END, firstline, "title")
+        # self.textbox.insert(tk.END, st.lan().HELP_STR)
+        # self.textbox.configure(state='disabled')  # Make the text read-only
+        self.html_text:str = None
+        self.html_box = HTMLScrolledText(self, html=st.lan().HELP+" Loading...", wrap=tk.CHAR, font=GUI_STYLE.font_normal(), height=25)
+        self.html_box.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)        
 
-        self.box = tk.Frame(self, height=40)
-        self.box.pack(expand=True, fill=tk.X)
-        col_widths = [100,300,100]
+        self.frame_bot = tk.Frame(self, height=30)
+        self.frame_bot.pack(expand=True, fill=tk.X, padx=10, pady=10)
+        col_widths = [int(w*self.win_size[0]) for w in (0.15, 0.6, 0.15)]
         for idx, width in enumerate(col_widths):
-            self.box.grid_columnconfigure(idx, minsize=width)
+            self.frame_bot.grid_columnconfigure(idx, minsize=width, weight=1)
         
         # Updater
-        self.update_button = ttk.Button(self.box, text=st.lan().CHECK_FOR_UPDATE, state=tk.DISABLED, width=16)
+        self.update_button = ttk.Button(self.frame_bot, text=st.lan().CHECK_FOR_UPDATE, state=tk.DISABLED, width=16)
         self.update_button.grid(row=0, column=0, sticky=tk.NSEW, padx=10, pady=10)
 
         self.update_str_var = tk.StringVar(value="")
-        self.update_label = ttk.Label(self.box, textvariable=self.update_str_var,width=20)
+        self.update_label = ttk.Label(self.frame_bot, textvariable=self.update_str_var,width=20)
         self.update_label.grid(row=0, column=1, sticky=tk.NSEW, padx=10, pady=10)
         self.update_cmd:Callable = lambda: None
         
         # OK Button
-        self.ok_button = ttk.Button(self.box, text="OK", command=self._on_close, width=10)
+        self.ok_button = ttk.Button(self.frame_bot, text="OK", command=self._on_close, width=8)
         self.ok_button.grid(row=0, column=2, sticky=tk.NSEW, padx=10, pady=10)
         
-        # Link
-        def open_link():
-            webbrowser.open(WEBSITE + r'/?tab=readme-ov-file#%E9%BA%BB%E5%B0%86-copilot--mahjong-copilot')
-        label = tk.Label(self, text=WEBSITE, fg="blue", cursor="hand2")
-        label.pack(padx=5, pady=5, side=tk.LEFT)
-        label.bind("<Button-1>", lambda event: open_link())
+        # # Link
+        # def open_link():
+        #     webbrowser.open(WEBSITE + r'/?tab=readme-ov-file#%E9%BA%BB%E5%B0%86-copilot--mahjong-copilot')
+        # label = tk.Label(self, text=WEBSITE, fg="blue", cursor="hand2")
+        # label.pack(padx=5, pady=5, side=tk.LEFT)
+        # label.bind("<Button-1>", lambda event: open_link())
         
-        self._refresh_ui()
-    
+        self._refresh_ui()        
+              
+            
     def _check_for_update(self):
         LOGGER.info("Checking for update.")
         self.update_button.configure(state=tk.DISABLED)
@@ -84,6 +91,12 @@ class HelpWindow(tk.Toplevel):
     
     def _refresh_ui(self):
         lan = self.st.lan()
+        
+        if not self.html_text:  # Update html text if available
+            if self.updater.help_html:
+                self.html_text = self.updater.help_html
+                self.html_box.set_html(self.html_text)
+        
         match self.updater.update_status:
             case UpdateStatus.NONE:
                 self.update_str_var.set("")
@@ -108,7 +121,7 @@ class HelpWindow(tk.Toplevel):
                 self.update_str_var.set(lan.DOWNLOADING + f"  {self.updater.dl_progress}")
             case UpdateStatus.UNZIPPING:
                 self.update_str_var.set(lan.UNZIPPING)
-            case UpdateStatus.OK:
+            case UpdateStatus.PREPARED:
                 self.update_str_var.set(lan.UPDATE_PREPARED)
                 self.update_button.configure(
                     text=lan.START_UPDATE,
@@ -127,3 +140,5 @@ class HelpWindow(tk.Toplevel):
     
     def _on_close(self):
         self.destroy()
+        
+    
