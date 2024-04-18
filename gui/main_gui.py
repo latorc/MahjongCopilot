@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide
-from common.utils import RES_FOLDER, GameMode
+from common.utils import RES_FOLDER, GameMode, GAME_MODES
 from common.utils import UiState, sub_file, error_to_str
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
@@ -101,15 +101,28 @@ class MainGUI(tk.Tk):
             self.tb2, self.st.lan().AUTOPLAY, tb_ht, font_size=sw_ft_sz, command=self._on_switch_autoplay_clicked)
         self.switch_autoplay.pack(**pack_args)
         # auto join
-        self.tb2.add_sep()
         self.switch_autojoin = ToggleSwitch(
             self.tb2, self.st.lan().AUTO_JOIN_GAME, tb_ht, font_size=sw_ft_sz, command=self._on_switch_autojoin_clicked)
         self.switch_autojoin.pack(**pack_args)
+        # combo boxrd for auto join level and mode
+        _frame = tk.Frame(self.tb2)
+        _frame.pack(**pack_args)
+        self.auto_join_level_var = tk.StringVar(value=self.st.lan().GAME_LEVELS[self.st.auto_join_level])
+        options = self.st.lan().GAME_LEVELS
+        combo_autojoin_level = ttk.Combobox(_frame, textvariable=self.auto_join_level_var, values=options, state="readonly", width=8)
+        combo_autojoin_level.grid(row=0, column=0, padx=3, pady=3)   
+        combo_autojoin_level.bind("<<ComboboxSelected>>", self._on_autojoin_level_selected)        
+        mode_idx = GAME_MODES.index(self.st.auto_join_mode)
+        self.auto_join_mode_var = tk.StringVar(value=self.st.lan().GAME_MODES[mode_idx])
+        options = self.st.lan().GAME_MODES
+        combo_autojoin_mode = ttk.Combobox(_frame, textvariable=self.auto_join_mode_var, values=options, state="readonly", width=8)
+        combo_autojoin_mode.grid(row=1, column=0, padx=3, pady=3)
+        combo_autojoin_mode.bind("<<ComboboxSelected>>", self._on_autojoin_mode_selected)
+        # timer
         self.timer = Timer(self.tb2, tb_ht, sw_ft_sz, self.st.lan().AUTO_JOIN_TIMER)
         self.timer.set_callback(self.bot_manager.disable_autojoin)        # stop autojoin when time is up
         self.timer.pack(**pack_args)
-        self.tb2.add_sep()
-        
+        self.tb2.add_sep()        
                
         # === AI guidance ===
         cur_row += 1
@@ -118,14 +131,13 @@ class MainGUI(tk.Tk):
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
         
         cur_row += 1
-        self.text_ai_guide = tk.Text(
+        self.ai_guide_var = tk.StringVar()
+        self.text_ai_guide = tk.Label(
             self.grid_frame,
-            state=tk.DISABLED,
+            textvariable=self.ai_guide_var,
             font=GUI_STYLE.font_normal("Segoe UI Emoji",22),
-            height=5,
-            relief=tk.SUNKEN,
-            padx=5,
-            pady=5
+            height=5, anchor=tk.NW, justify=tk.LEFT,
+            relief=tk.SUNKEN, padx=5,pady=5,
             )
         self.text_ai_guide.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)        
@@ -136,13 +148,15 @@ class MainGUI(tk.Tk):
         _label.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
         cur_row += 1
-        self.text_state = tk.Text(
+        self.gameinfo_var = tk.StringVar()
+        self.text_gameinfo = tk.Label(
             self.grid_frame,
-            state=tk.DISABLED,
-            height=2,
+            textvariable=self.gameinfo_var,
+            height=2, anchor=tk.W, justify=tk.LEFT,
             font=GUI_STYLE.font_normal("Segoe UI Emoji",22),
+            relief=tk.SUNKEN, padx=5,pady=5,
             )
-        self.text_state.grid(row=cur_row, **grid_args)
+        self.text_gameinfo.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)
         
         # === Model info ===
@@ -156,6 +170,16 @@ class MainGUI(tk.Tk):
         self.status_bar = StatusBar(self.grid_frame, 3)
         self.status_bar.grid(row=cur_row, column=0, sticky='ew', padx=1, pady=1)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
+    
+    def _on_autojoin_level_selected(self, _event):
+        new_value = self.auto_join_level_var.get()    # convert to index
+        self.st.auto_join_level = self.st.lan().GAME_LEVELS.index(new_value)
+        
+    def _on_autojoin_mode_selected(self, _event):
+        new_mode = self.auto_join_mode_var.get()  # convert to string
+        new_mode = self.st.lan().GAME_MODES.index(new_mode)
+        new_mode = GAME_MODES[new_mode]
+        self.st.auto_join_mode = new_mode
 
     def _on_btn_start_browser_clicked(self):
         self.btn_start_browser.config(state=tk.DISABLED)
@@ -213,7 +237,7 @@ class MainGUI(tk.Tk):
             try:
                 LOGGER.info("Exiting GUI and program. saving settings and stopping threads.")
                 self.st.save_json()
-                self.bot_manager.stop(False)                
+                self.bot_manager.stop(False)
             except: #pylint:disable=bare-except
                 pass
             self.quit()
@@ -255,30 +279,28 @@ class MainGUI(tk.Tk):
             else:
                 sw.switch_off()
 
-        # Update Reaction
-        self.text_ai_guide.config(state=tk.NORMAL)
-        self.text_ai_guide.delete('1.0', tk.END)
+        # Update AI guide from Reaction
         pending_reaction = self.bot_manager.get_pending_reaction()
-        # convert this reaction into string
         if pending_reaction:
-            action_str, options = mjai_reaction_2_guide(pending_reaction, 3, self.st.lan())
-            self.text_ai_guide.insert(tk.END, f'{action_str}\n')
+            ai_guide_str, options = mjai_reaction_2_guide(pending_reaction, 3, self.st.lan())
+            ai_guide_str += '\n'
             for tile_str, weight in options:
-                self.text_ai_guide.insert(tk.END, f' {tile_str}  {weight*100:4.0f}%\n')
-        self.text_ai_guide.config(state=tk.DISABLED)
+                ai_guide_str += f" {tile_str:8}  {weight*100:4.0f}%\n"
+            self.ai_guide_var.set(ai_guide_str)
+        else:
+            self.ai_guide_var.set("")
 
         # update state: display tehai + tsumohai
         gi:GameInfo = self.bot_manager.get_game_info()
-        self.text_state.config(state=tk.NORMAL)
-        self.text_state.delete('1.0', tk.END)
         if gi and gi.my_tehai:
             tehai = gi.my_tehai
             tsumohai = gi.my_tsumohai
             hand_str = ''.join(MJAI_TILE_2_UNICODE[t] for t in tehai)
             if tsumohai:
                 hand_str += f" + {MJAI_TILE_2_UNICODE[tsumohai]}"
-            self.text_state.insert(tk.END, hand_str)
-        self.text_state.config(state=tk.DISABLED)
+            self.gameinfo_var.set(hand_str)
+        else:
+            self.gameinfo_var.set("")
 
         # Model info
         # bot/model
@@ -302,7 +324,6 @@ class MainGUI(tk.Tk):
             text = self.st.lan().AWAIT_BOT
             self.model_bar.update_column(0, text, self.icon_red)
             self.model_bar.update_column(1, 'ℹ️ ')
-
 
         ### Status bar
         # main thread
