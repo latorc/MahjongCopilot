@@ -151,7 +151,7 @@ class LanStrZHS(LanStr):
     WEB_OVERLAY = "网页 HUD"
     AUTOPLAY = "自动打牌"
     AUTO_JOIN_GAME = "自动加入"
-    AUTO_JOIN_TIMER = "自动加入设置时限"
+    AUTO_JOIN_TIMER = "自动加入定时停止"
     OPEN_LOG_FILE = "打开日志文件"
     SETTINGS = "设置"
     HELP = "帮助"
@@ -160,7 +160,7 @@ class LanStrZHS(LanStr):
     AI_OUTPUT = 'AI 提示'
     GAME_INFO = '游戏信息'
     HELP_STR = """
-一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。 目前模型只支持四人麻将游戏。 当你进入游戏后, AI会对每一步行动进行指导。
+一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。 当你进入游戏后, AI会对每一步行动进行指导。
     
 🔳 启动网页客户端: 在浏览器中启动游戏和AI助手。本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
 🔘 网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
