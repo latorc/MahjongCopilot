@@ -79,7 +79,7 @@ class ToggleSwitch(tk.Frame):
 class Timer(tk.Frame):
     """ A timer widget with separate entries for hours, minutes, and seconds """
     START="⏱"
-    STOP="⏹"
+    STOP="■"
     def __init__(self, master: tk.Frame, height: int, font_size:int=10, hover_text:str=None):
         super().__init__(master, height=height)
         self.configure(height=height)
