@@ -211,9 +211,12 @@ class MainGUI(tk.Tk):
         # Exit the app
         # pop up that confirm if the user really wants to quit
         if messagebox.askokcancel(self.st.lan().EXIT, self.st.lan().EIXT_CONFIRM):
-            LOGGER.info("Exiting GUI and program. saving settings and stopping threads.")
-            self.st.save_json()
-            self.bot_manager.stop(False)
+            try:
+                LOGGER.info("Exiting GUI and program. saving settings and stopping threads.")
+                self.st.save_json()
+                self.bot_manager.stop(False)                
+            except: #pylint:disable=bare-except
+                pass
             self.quit()
             
     def reload_gui(self):
