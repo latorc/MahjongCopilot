@@ -41,7 +41,10 @@ class HelpWindow(tk.Toplevel):
         # self.textbox.insert(tk.END, st.lan().HELP_STR)
         # self.textbox.configure(state='disabled')  # Make the text read-only
         self.html_text:str = None
-        self.html_box = HTMLScrolledText(self, html=st.lan().HELP+" Loading...", wrap=tk.CHAR, font=GUI_STYLE.font_normal(), height=25)
+        self.html_box = HTMLScrolledText(
+            self, html=st.lan().HELP+" Loading...",
+            wrap=tk.CHAR, font=GUI_STYLE.font_normal(), height=25,
+            state=tk.DISABLED)
         self.html_box.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)        
 
         self.frame_bot = tk.Frame(self, height=30)
@@ -69,7 +72,7 @@ class HelpWindow(tk.Toplevel):
         # label.pack(padx=5, pady=5, side=tk.LEFT)
         # label.bind("<Button-1>", lambda event: open_link())
         
-        self._refresh_ui()        
+        self.after_idle(self._refresh_ui)
               
             
     def _check_for_update(self):

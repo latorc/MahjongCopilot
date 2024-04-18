@@ -78,9 +78,9 @@ class Updater:
                 r'<meta[^>]*>',
                 r'<title[^>]*>.*?</title>',
                 r'<link[^>]*>',
-                # r'<figure[^>]*>',
-                # r'</figure>',                
-            ]
+                r'<img[^>]*>',
+                r'<nav[^>]*>',
+            ]   # patterns to remove
             for p in rm_patterns:
                 res_text = re.sub(p, '', res_text, flags=re.DOTALL)
             rep_patterns = {
