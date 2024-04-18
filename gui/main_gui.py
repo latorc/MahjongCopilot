@@ -6,7 +6,6 @@ GUI functions: controlling browser settings, displaying AI guidance info, game s
 
 import os
 import tkinter as tk
-from tkinter import font
 from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide

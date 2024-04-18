@@ -5,7 +5,6 @@ import sys
 import os
 import re
 import shutil
-from typing import Callable
 import zipfile
 from enum import Enum,auto
 import requests
@@ -24,13 +23,14 @@ UPDATE_FOLDER = "update"
 - Modify version file to reflect new version number"""
 
 class UpdateStatus(Enum):
+    """ Update status enum"""
     NONE = 0
     CHECKING = auto()
     NO_UPDATE = auto()
     NEW_VERSION = auto()
     DOWNLOADING = auto()
     UNZIPPING = auto()
-    PREPARED = auto()
+    PREPARED = auto()           # update download/unzipped and ready to apply
     ERROR = auto()
     
 class Updater:
@@ -128,9 +128,9 @@ class Updater:
                 web_v_int = int(''.join(f"{part:0>4}" for part in self.web_version.split(".")))
                 if web_v_int > local_v_int:
                     return True
-        except:
-            pass
-        return False
+        except: #pylint:disable=bare-except
+            return False
+        
         
     def download_file(self, fname:str) -> str:
         """ download file and update progress (blocking)
@@ -206,18 +206,18 @@ class Updater:
             update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
             cmd = f"""
             @echo off
-            echo Updating {exec_name} in 5 seconds...
-            timeout /t 5 /nobreak
-            echo Killing program {exec_name}...
+            echo Updating {exec_name} ...
+            timeout /t 3 /nobreak
+            echo Killing process {exec_name}...
             taskkill /IM {exec_name} /F
             timeout /t 3 /nobreak
             echo copying new file...
             set "sourceDir={update_folder}\*"
             set "destDir={root_folder}"
             xcopy %sourceDir% %destDir% /s /e /y
-            echo Update completed. Restarting {exec_name} and finishing in 3 seconds...            
+            echo Update completed. Restarting {exec_name}...            
             start {exec_name}
-            timeout /t 3 /nobreak
+            timeout /t 5 /nobreak
             """
             # save it to a batchfile
             batch_file = utils.sub_file(TEMP_FOLDER, "update.bat")
