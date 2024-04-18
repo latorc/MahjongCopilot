@@ -94,7 +94,7 @@ class Timer(tk.Frame):
         self.stop_time:float = None
 
         # Variables for time
-        self.hour_var = tk.StringVar(value="00")
+        self.hour_var = tk.StringVar(value="01")
         self.minute_var = tk.StringVar(value="00")
         self.second_var = tk.StringVar(value="00")
 
@@ -186,8 +186,9 @@ class Timer(tk.Frame):
                 self._stop_timer()
 
     def _clear_time(self):
-        for var in [self.hour_var, self.minute_var, self.second_var]:
-            var.set("00")
+        self.hour_var.set("01")
+        self.minute_var.set("00")
+        self.second_var.set("00")
     
     def _stop_timer(self):
         if self.timer_id is not None:
