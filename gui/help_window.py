@@ -29,7 +29,7 @@ class HelpWindow(tk.Toplevel):
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
         self.win_size = (750, 700)
         self.geometry(f"{self.win_size[0]}x{self.win_size[1]}")  # Set the window size
-        self.resizable(False, False)
+        # self.resizable(False, False)
 
         # Scrollable Text Widget for help info
         # self.textbox = ScrolledText(self, wrap=tk.WORD, font=GUI_STYLE.font_normal(), height=15)
@@ -46,19 +46,18 @@ class HelpWindow(tk.Toplevel):
 
         self.frame_bot = tk.Frame(self, height=30)
         self.frame_bot.pack(expand=True, fill=tk.X, padx=10, pady=10)
-        col_widths = [int(w*self.win_size[0]) for w in (0.15, 0.6, 0.15)]
+        col_widths = [int(w*self.win_size[0]) for w in (0.1, 0.4, 0.1)]
         for idx, width in enumerate(col_widths):
             self.frame_bot.grid_columnconfigure(idx, minsize=width, weight=1)
         
-        # Updater
+        # Updater button
         self.update_button = ttk.Button(self.frame_bot, text=st.lan().CHECK_FOR_UPDATE, state=tk.DISABLED, width=16)
         self.update_button.grid(row=0, column=0, sticky=tk.NSEW, padx=10, pady=10)
-
+        # label
         self.update_str_var = tk.StringVar(value="")
-        self.update_label = ttk.Label(self.frame_bot, textvariable=self.update_str_var,width=20)
+        self.update_label = ttk.Label(self.frame_bot, textvariable=self.update_str_var)
         self.update_label.grid(row=0, column=1, sticky=tk.NSEW, padx=10, pady=10)
         self.update_cmd:Callable = lambda: None
-        
         # OK Button
         self.ok_button = ttk.Button(self.frame_bot, text="OK", command=self._on_close, width=8)
         self.ok_button.grid(row=0, column=2, sticky=tk.NSEW, padx=10, pady=10)
