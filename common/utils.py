@@ -106,13 +106,12 @@ def install_root_cert(cert_file:str) -> tuple[bool, str]:
     """
     # Install cert. If the cert exists, system will skip installation
     if sys.platform == "win32":
-        result = subprocess.run(['certutil', '-addstore', 'Root', cert_file],
-            capture_output=True, text=True, check=False)
-
+        runas_command= f"start-process certutil -ArgumentList '-addstore','Root','{cert_file}' -verb RunAs"
+        result = subprocess.run(['powershell', '-Command', runas_command],capture_output=True, text=True, check=False,shell=True)
     elif sys.platform == "darwin":
         # TODO Test on MAC system
         result = subprocess.run(['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file],
-            capture_output=True, text=True, check=True)
+            capture_output=True, text=True, check=True,shell=True)
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)
         return False, ""
