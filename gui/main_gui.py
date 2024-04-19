@@ -233,7 +233,7 @@ class MainGUI(tk.Tk):
     def _on_exit(self):
         # Exit the app
         # pop up that confirm if the user really wants to quit
-        if messagebox.askokcancel(self.st.lan().EXIT, self.st.lan().EIXT_CONFIRM):
+        if messagebox.askokcancel(self.st.lan().EXIT, self.st.lan().EIXT_CONFIRM, parent=self):
             try:
                 LOGGER.info("Exiting GUI and program. saving settings and stopping threads.")
                 self.st.save_json()
