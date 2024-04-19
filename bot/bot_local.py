@@ -3,15 +3,14 @@
 from pathlib import Path
 import threading
 import json
-from mjai.engine import get_engine
 from common.utils import ModelFileException
 from common.mj_helper import MJAI_TYPE
 from common.log_helper import LOGGER
 try:
     import libriichi
-except: # pylint: disable=bare-except
+except ImportError:
     import riichi as libriichi
-
+from .engine import get_engine
 from .bot import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 
@@ -61,7 +60,7 @@ class BotMortalLocal(Bot):
         elif mode == GameMode.MJ3P:
             try:
                 import libriichi3p
-                from mjai.engine3p import get_engine as get_engine_3p
+                from bot.engine3p import get_engine as get_engine_3p
                 engine = get_engine_3p(self.model_files[mode])
                 self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
             except Exception as e:

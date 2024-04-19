@@ -7,7 +7,6 @@ import struct
 import base64
 from enum import Enum
 from typing import List, Dict
-from pathlib import Path
 
 from google.protobuf.json_format import MessageToDict, ParseDict
 import common.utils as utils

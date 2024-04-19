@@ -1,10 +1,9 @@
-""" Mortal Engine"""
-
-import torch
+""" Mortal engine for 3p game"""
 import numpy as np
+import torch
 from torch.distributions import Normal, Categorical
-from typing import *
-from .model import Brain, DQN
+from .model3p import Brain, DQN
+
 class MortalEngine:
     def __init__(
         self,
@@ -92,19 +91,17 @@ def sample_top_p(logits, p):
     return sampled
 
 def get_engine(model_file:str) -> MortalEngine:
-    """ Create and return Mortal engine object
-    params:
-        model_file(str): Mortal model file path"""
+    """ return engine for 3p"""
+
     # check if GPU is available
     if torch.cuda.is_available():
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
 
-    # Get the path of control_state_file = current directory / control_state_file
     state = torch.load(model_file, map_location=device)
-
-    mortal = Brain(version=state['config']['control']['version'],
+    mortal = Brain(
+        version=state['config']['control']['version'],
         conv_channels=state['config']['resnet']['conv_channels'],
         num_blocks=state['config']['resnet']['num_blocks']).eval()
     dqn = DQN(version=state['config']['control']['version']).eval()
@@ -118,9 +115,9 @@ def get_engine(model_file:str) -> MortalEngine:
         device = device,
         enable_amp = False,
         enable_quick_eval = False,
-        enable_rule_based_agari_guard = False,
-        name = 'mortal',
-        version = state['config']['control']['version'],
+        enable_rule_based_agari_guard = True,
+        name = 'mortal_3p',
+        version= state['config']['control']['version']
     )
 
     return engine

@@ -1,5 +1,4 @@
 """ Model 3p"""
-
 from functools import partial
 from typing import Optional, Tuple, Union
 import torch
