@@ -160,7 +160,7 @@ class ActionStep:
     
 @dataclass
 class ActionStepMove(ActionStep):
-    """ Move mouse to x,y"""
+    """ Move mouse to x,y (client res)"""
     x:float
     y:float
     steps:int = field(default=5)    # playwright mouse move steps
@@ -475,10 +475,13 @@ class Automation:
 
         idx = random.randint(0, 8)
         x,y = Positions.EMOJI_BUTTON
-        steps = self.steps_randomized_move_click(x,y)
+        steps = [ActionStepMove(x*self.scaler, y*self.scaler)]
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
+        steps.append(ActionStepClick())
         x,y = Positions.EMOJIS[idx]
-        steps += self.steps_randomized_move_click(x,y)
+        steps.append(ActionStepMove(x*self.scaler,y*self.scaler))
+        steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
+        steps.append(ActionStepClick())
         self._task = AutomationTask(self.executor, f"SendEmoji{idx}", f"Send emoji {idx}")
         self._task.start_action_steps(steps, None)
         self.last_emoji_time = time.time()
