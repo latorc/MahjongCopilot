@@ -5,6 +5,7 @@
 from enum import Enum
 import pathlib
 import sys
+import ctypes
 import time
 import subprocess
 import random
@@ -133,13 +134,22 @@ def list_files(folder:str, full_path:bool=False) -> list[pathlib.Path]:
             return [str(f.resolve()) for f in files]
         else:
             return [f.name for f in files]
-    except:
+    except: #pylint:disable=bare-except
         return []
     
 def random_str(length:int) -> str:
     """ Generate random string with specified length"""
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
+def set_dpi_awareness():
+    """ Set DPI Awareness """
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # for Windows 8.1 and later
+        except AttributeError:
+            ctypes.windll.user32.SetProcessDPIAware()       # for Windows Vista and later
+        except: #pylint:disable=bare-except
+            pass
 class FPSCounter:
     """ for counting frames and calculate fps"""
     def __init__(self):

@@ -6,7 +6,8 @@
 
 Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 3-person and 4-person game modes.
 
-<a href="https://github.com/latorc/MahjongCopilot/releases" target="_blank">下载</a> | <a href="https://mjcopilot.com/help" target="_blank">帮助信息</a> | <a href="https://mjcopilot.com" target="_blank">mjcopilot.com</a>
+更多信息请访问网站 Please see website for more information  
+<a href="https://mjcopilot.com/help" target="_blank">帮助信息</a> | <a href="https://mjcopilot.com" target="_blank">https://mjcopilot.com</a>
 
 ---
 

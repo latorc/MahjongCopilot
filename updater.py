@@ -3,11 +3,12 @@ import threading
 import subprocess
 import sys
 import os
+import re
 import shutil
 import zipfile
 from enum import Enum,auto
 import requests
-from common.utils import TEMP_FOLDER
+from common.utils import TEMP_FOLDER, WEBSITE
 import common.utils as utils
 from common.log_helper import LOGGER
 
@@ -22,13 +23,14 @@ UPDATE_FOLDER = "update"
 - Modify version file to reflect new version number"""
 
 class UpdateStatus(Enum):
+    """ Update status enum"""
     NONE = 0
     CHECKING = auto()
     NO_UPDATE = auto()
     NEW_VERSION = auto()
     DOWNLOADING = auto()
     UNZIPPING = auto()
-    OK = auto()
+    PREPARED = auto()           # update download/unzipped and ready to apply
     ERROR = auto()
     
 class Updater:
@@ -45,7 +47,54 @@ class Updater:
         self.dl_progress:str = ""               # downloaded percentage
         self.update_status:UpdateStatus = UpdateStatus.NONE
         self.update_exception:Exception = None
-
+        
+        self.help_html:str = None       # help html text from web
+    
+    def load_help(self):
+        """ update html in thread"""
+        def task_update():
+            url = WEBSITE + r"/help"
+            LOGGER.info("Loading help html from %s", url)
+            html_text = self.get_html(url)
+            self.help_html = html_text
+        threading.Thread(
+            name="UpdateHTML",
+            target=task_update,
+            daemon=True
+        ).start()
+    
+    def get_html(self, url:str) -> str:
+        """ get html text from url, and process it"""
+        try:        
+            response = requests.get(url, timeout=5) # Send a GET request to the URL
+            # Check if the request was successful (HTTP status code 200)
+            if response.status_code != 200:
+                return f"Request Error! Status code: {response.status_code}"
+            
+            # process text: remove/replace some tags
+            res_text = response.text
+            rm_patterns = [
+                r'<script[^>]*>.*?</script>',
+                r'<meta[^>]*>',
+                r'<title[^>]*>.*?</title>',
+                r'<link[^>]*>',
+                r'<img[^>]*>',
+                r'<nav[^>]*>',
+            ]   # patterns to remove
+            for p in rm_patterns:
+                res_text = re.sub(p, '', res_text, flags=re.DOTALL)
+            rep_patterns = {
+                r'<code[^>]*>(.*?)</code>': lambda m: f'<i>{m.group(1)}</i>',
+            }
+            for p, r in rep_patterns.items():
+                res_text = re.sub(p, r, res_text, flags=re.DOTALL)            
+            
+            return res_text        
+                
+        except Exception as e:
+            return f"Error! {e}"
+    
+    
     def check_update(self):
         """ check for update in thread. update web version number"""
         def check_ver():
@@ -53,7 +102,7 @@ class Updater:
                 self.update_status = UpdateStatus.CHECKING
                 res = requests.get(self.urlbase + VERSION_FILE, timeout=5)
                 self.web_version = res.text
-                LOGGER.debug("Local version=%s, Web version=%s", self.local_version, self.web_version)
+                LOGGER.debug("Check update: Local version=%s, Web version=%s", self.local_version, self.web_version)
                 if self.is_webversion_newer():
                     self.update_status = UpdateStatus.NEW_VERSION
                 else:
@@ -79,9 +128,9 @@ class Updater:
                 web_v_int = int(''.join(f"{part:0>4}" for part in self.web_version.split(".")))
                 if web_v_int > local_v_int:
                     return True
-        except:
-            pass
-        return False
+        except: #pylint:disable=bare-except
+            return False
+        
         
     def download_file(self, fname:str) -> str:
         """ download file and update progress (blocking)
@@ -133,7 +182,7 @@ class Updater:
                 self.update_status = UpdateStatus.UNZIPPING
                 self.unzip_file(fname)
                 # self.start_update()
-                self.update_status = UpdateStatus.OK
+                self.update_status = UpdateStatus.PREPARED
                 LOGGER.debug("Update prepared, status OK")
             except Exception as e:
                 self.update_exception = e
@@ -157,18 +206,18 @@ class Updater:
             update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
             cmd = f"""
             @echo off
-            echo Updating {exec_name} in 5 seconds...
-            timeout /t 5 /nobreak
-            echo Killing program {exec_name}...
+            echo Updating {exec_name} ...
+            timeout /t 3 /nobreak
+            echo Killing process {exec_name}...
             taskkill /IM {exec_name} /F
             timeout /t 3 /nobreak
             echo copying new file...
             set "sourceDir={update_folder}\*"
             set "destDir={root_folder}"
             xcopy %sourceDir% %destDir% /s /e /y
-            echo Update completed. Restarting {exec_name} and finishing in 3 seconds...            
+            echo Update completed. Restarting {exec_name}...            
             start {exec_name}
-            timeout /t 3 /nobreak
+            timeout /t 5 /nobreak
             """
             # save it to a batchfile
             batch_file = utils.sub_file(TEMP_FOLDER, "update.bat")

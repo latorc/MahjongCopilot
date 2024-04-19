@@ -2,8 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-
-from common.utils import MODEL_FOLDER, GAME_MODES
+from common.utils import MODEL_FOLDER
 from common.utils import list_files
 from common.log_helper import LOGGER
 from common.settings import Settings
@@ -92,11 +91,9 @@ class SettingsWindow(tk.Toplevel):
         _frame.grid(row=cur_row, column=2, columnspan=2)
         _label = ttk.Label(_frame, text=self.st.lan().UPSTREAM_PROXY)
         _label.pack(side=tk.LEFT, **pad_args)
-        # _label.grid(row=cur_row, column=2, **args_label)
         self.upstream_proxy_var = tk.StringVar(value=self.st.upstream_proxy)
         _entry = ttk.Entry(_frame, textvariable=self.upstream_proxy_var, width=std_wid*2)
-        _entry.pack(side=tk.LEFT, **pad_args)
-        # _entry.grid(row=cur_row, column=3, **args_entry)       
+        _entry.pack(side=tk.LEFT, **pad_args)   
         
         # Select language
         cur_row += 1
@@ -107,7 +104,11 @@ class SettingsWindow(tk.Toplevel):
         select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly", width=std_wid)
         select_menu.grid(row=cur_row, column=1, **args_entry)
 
-        # Select Model Type
+        # sep
+        cur_row += 1
+        sep = ttk.Separator(main_frame, orient=tk.HORIZONTAL)
+        sep.grid(row=cur_row, column=0, columnspan=4, sticky="ew", pady=5)
+        # Select Model Type        
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MODEL_TYPE)
         _label.grid(row=cur_row, column=0, **args_label)
@@ -130,8 +131,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, **args_label)
         self.model_file_3p_var = tk.StringVar(value=self.st.model_file_3p)
         select_menu2 = ttk.Combobox(main_frame, textvariable=self.model_file_3p_var, values=model_files, state="readonly", width=std_wid*3)
-        select_menu2.grid(row=cur_row, column=1, columnspan=3,  **args_entry)
-        
+        select_menu2.grid(row=cur_row, column=1, columnspan=3,  **args_entry)        
         
         # MJAPI url
         cur_row += 1
@@ -150,8 +150,7 @@ class SettingsWindow(tk.Toplevel):
         string_entry.grid(row=cur_row, column=1, **args_entry)
         # MJAPI usage
         _label = ttk.Label(main_frame, text=f"{self.st.lan().MJAPI_USAGE}: {self.st.mjapi_usage}")
-        _label.grid(row=cur_row, column=2, **args_entry)
-        
+        _label.grid(row=cur_row, column=2, **args_entry)        
         
         # MJAPI secret
         cur_row += 1
@@ -172,23 +171,15 @@ class SettingsWindow(tk.Toplevel):
         
         _label = ttk.Label(main_frame, text=self.st.lan().LOGIN_TO_REFRESH)
         _label.grid(row=cur_row, column=2, **args_entry)
-        
-        # models_str = self.settings.lan().MODEL + ": " + ','.join(self.settings.mjapi_models)
-        # text = tk.Text(main_frame, wrap=tk.NONE)
-        # text.insert(tk.END, models_str)
-        # text.configure(state=tk.DISABLED, height=1, width=30)
-        # text.grid(row=cur_row, column=2, columnspan=2, **args_label)
-        
+        # sep
+        cur_row += 1
+        sep = ttk.Separator(main_frame, orient=tk.HORIZONTAL)
+        sep.grid(row=cur_row, column=0, columnspan=4, sticky="ew", pady=5)
         ### Auto play settings
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().AUTO_PLAY_SETTINGS)
-        _label.grid(row=cur_row, column=0, **args_label)        
-        # auto play
-        self.autoplay_var = tk.BooleanVar(value=self.st.enable_automation)
-        autoplay_entry = ttk.Checkbutton(main_frame, variable=self.autoplay_var, text=self.st.lan().AUTOPLAY, width=std_wid)
-        autoplay_entry.grid(row=cur_row, column=1, **args_entry)        
+        _label.grid(row=cur_row, column=0, **args_label) 
         # random move        
-        cur_row += 1
         self.random_move_var = tk.BooleanVar(value=self.st.auto_random_move)
         ran_moves_entry = ttk.Checkbutton(
             main_frame, variable=self.random_move_var, text=self.st.lan().MOUSE_RANDOM_MOVE, width=std_wid)
@@ -232,25 +223,6 @@ class SettingsWindow(tk.Toplevel):
         delay_upper_entry = tk.Entry(main_frame, textvariable= self.delay_random_upper_var,width=std_wid)
         delay_upper_entry.grid(row=cur_row, column=2, **args_entry)
         
-        # auto join settings
-        cur_row += 1
-        _label = ttk.Label(main_frame, text=self.st.lan().AUTO_JOIN_GAME)
-        _label.grid(row=cur_row, column=0, **args_label)
-        self.auto_join_var = tk.BooleanVar(value=self.st.auto_join_game)
-        auto_join_entry = ttk.Checkbutton(main_frame, variable=self.auto_join_var, text = self.st.lan().AUTO_JOIN_GAME, width=std_wid)
-        auto_join_entry.grid(row=cur_row, column=1, **args_entry)
-        
-        self.auto_join_level_var = tk.StringVar(value=self.st.lan().GAME_LEVELS[self.st.auto_join_level])
-        options = self.st.lan().GAME_LEVELS
-        next_level = ttk.Combobox(main_frame, textvariable=self.auto_join_level_var, values=options, state="readonly", width=std_wid)
-        next_level.grid(row=cur_row, column=2, **args_entry)
-        
-        mode_idx = GAME_MODES.index(self.st.auto_join_mode)
-        self.auto_join_mode_var = tk.StringVar(value=self.st.lan().GAME_MODES[mode_idx])
-        options = self.st.lan().GAME_MODES
-        next_mode = ttk.Combobox(main_frame, textvariable=self.auto_join_mode_var, values=options, state="readonly", width=std_wid)
-        next_mode.grid(row=cur_row, column=3, **args_entry)
-        
         # tips :Settings
         cur_row += 1
         label_settings = ttk.Label(main_frame, text=self.st.lan().SETTINGS_TIPS, width=40)
@@ -258,11 +230,11 @@ class SettingsWindow(tk.Toplevel):
         
         # Buttons frame
         button_frame = ttk.Frame(self)
-        button_frame.pack(side="bottom", fill="x")
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X)
         cancel_button = ttk.Button(button_frame, text=self.st.lan().CANCEL, command=self._on_cancel)
-        cancel_button.pack(side="left", padx=20, pady=10)
+        cancel_button.pack(side=tk.LEFT, padx=20, pady=20)
         save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
-        save_button.pack(side="right", padx=20, pady=10)
+        save_button.pack(side=tk.RIGHT, padx=20, pady=20)
         
     def _on_save(self):
         # Get values from entry fields, validate, and save them
@@ -318,7 +290,6 @@ class SettingsWindow(tk.Toplevel):
             self.model_updated = True
         
         # auto play settings
-        autoplay_new = self.autoplay_var.get()
         idle_move_new = self.auto_idle_move_var.get()
         drag_dahai_new = self.auto_drag_dahai_var.get()
         auto_random_move_new = self.random_move_var.get()
@@ -332,13 +303,6 @@ class SettingsWindow(tk.Toplevel):
             return
         delay_lower_new = max(0,delay_lower_new)
         delay_upper_new = max(delay_lower_new, delay_upper_new)
-        auto_join_new = self.auto_join_var.get()
-        auto_join_level_new = self.auto_join_level_var.get()    # convert to index
-        auto_join_level_new = self.st.lan().GAME_LEVELS.index(auto_join_level_new)
-        auto_join_mode_new = self.auto_join_mode_var.get()  # convert to string
-        auto_join_mode_new = self.st.lan().GAME_MODES.index(auto_join_mode_new)
-        auto_join_mode_new = GAME_MODES[auto_join_mode_new]
-        
         
         # save settings        
         self.st.auto_launch_browser = auto_launch_new
@@ -357,7 +321,6 @@ class SettingsWindow(tk.Toplevel):
         self.st.mjapi_secret = mjapi_secret_new
         self.st.mjapi_model_select = mjapi_model_select_new
         
-        self.st.enable_automation = autoplay_new
         self.st.auto_idle_move = idle_move_new
         self.st.auto_dahai_drag = drag_dahai_new
         self.st.auto_random_move = auto_random_move_new
@@ -365,9 +328,6 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_reply_emoji_rate = reply_emoji_new        
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
-        self.st.auto_join_game = auto_join_new
-        self.st.auto_join_level = auto_join_level_new
-        self.st.auto_join_mode = auto_join_mode_new
         
         LOGGER.info("Saving Settings to file")
         self.st.save_json()

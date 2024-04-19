@@ -79,7 +79,7 @@ class ToggleSwitch(tk.Frame):
 class Timer(tk.Frame):
     """ A timer widget with separate entries for hours, minutes, and seconds """
     START="⏱"
-    STOP="⏹"
+    STOP="■"
     def __init__(self, master: tk.Frame, height: int, font_size:int=10, hover_text:str=None):
         super().__init__(master, height=height)
         self.configure(height=height)
@@ -94,7 +94,7 @@ class Timer(tk.Frame):
         self.stop_time:float = None
 
         # Variables for time
-        self.hour_var = tk.StringVar(value="00")
+        self.hour_var = tk.StringVar(value="01")
         self.minute_var = tk.StringVar(value="00")
         self.second_var = tk.StringVar(value="00")
 
@@ -186,8 +186,9 @@ class Timer(tk.Frame):
                 self._stop_timer()
 
     def _clear_time(self):
-        for var in [self.hour_var, self.minute_var, self.second_var]:
-            var.set("00")
+        self.hour_var.set("01")
+        self.minute_var.set("00")
+        self.second_var.set("00")
     
     def _stop_timer(self):
         if self.timer_id is not None:
@@ -218,10 +219,21 @@ class ToolBar(tk.Frame):
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
         btn = tk.Button(self, image=img, width=self.height, height=self.height, command=command)
         btn.image = img  # Keep a reference to prevent image from being garbage collected
+        btn.img_file = img_file
         btn.pack(side=tk.LEFT, padx=4, pady=4)
 
         add_hover_text(btn, text)
         return btn
+    
+    def set_img(self, btn:tk.Button, img_file:str):
+        """ Replace button image"""
+        if btn.img_file == img_file:
+            return
+        img = tk.PhotoImage(file = Path(RES_FOLDER) / img_file)
+        img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
+        btn.config(image=img)
+        btn.image = img  # Keep a reference
+        btn.img_file = img_file
     
     def add_sep(self):
         """ add a vertical separator bar """
