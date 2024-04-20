@@ -491,7 +491,7 @@ class Automation:
 
         idx = random.randint(0, 8)
         x,y = Positions.EMOJI_BUTTON
-        steps = [ActionStepMove(x*self.scaler, y*self.scaler)]
+        steps = [ActionStepDelay(random.uniform(1.0,2.5)), ActionStepMove(x*self.scaler, y*self.scaler)]
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
         steps.append(ActionStepClick())
         x,y = Positions.EMOJIS[idx]
