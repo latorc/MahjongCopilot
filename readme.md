@@ -98,3 +98,6 @@ python main.py
   
   MJAI: https://mjai.app
 
+## 许可 / License
+本项目使用 GNU GPL v3 许可协议。  
+协议全文请见 [LICENSE](LICENSE)
