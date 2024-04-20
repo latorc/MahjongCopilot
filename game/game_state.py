@@ -24,8 +24,7 @@ NO_EFFECT_METHODS = [
     '.lq.NotifyActivityReward',             #
     '.lq.NotifyLeaderboardPoint',           #
     '.lq.FastTest.broadcastInGame',         # emoji?
-    LiqiMethod.NotifyGameBroadcast,         # Notify: emoji? 
-    # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast', 'data': {'seat': 2, 'content': '{"emo":7}'}}
+    LiqiMethod.NotifyGameBroadcast,         # Notify: emoji    
     '.lq.NotifyPlayerConnectionState',      # 
 ]
 

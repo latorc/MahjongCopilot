@@ -383,8 +383,10 @@ class BotManager:
     def _process_idle_automation(self, liqimsg:dict):
         """ do some idle action based on liqi msg"""
         liqi_method = liqimsg['method']
-        if liqi_method == liqi.LiqiMethod.NotifyGameBroadcast:  # emoji
-            self.automation.automate_send_emoji()
+        if liqi_method == liqi.LiqiMethod.NotifyGameBroadcast:  # reply to emoji
+        # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast', 'data': {'seat': 2, 'content': '{"emo":7}'}}
+            if liqimsg["data"]["seat"] != self.game_state.seat: # not self
+                self.automation.automate_send_emoji()
         else:           # move mouse around randomly
             self.automation.automate_idle_mouse_move(0.05)
         
