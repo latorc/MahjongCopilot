@@ -65,6 +65,7 @@ class BotManager:
         # self._overlay_guide_last_update:float = 0   # last update time
         
         self.bot_need_update:bool = True              # set this True to update bot in main thread
+        self.is_loading_bot:bool = False              # is bot being loaded
         self.main_thread_exception:Exception = None
         """ Exception that had stopped the main thread"""
         self.game_exception:Exception = None   # game run time error (but does not break main thread)        
@@ -193,16 +194,16 @@ class BotManager:
     
     def _create_bot(self):
         """ create Bot object based on settings"""
-        try:
+        try:            
+            self.is_loading_bot = True
             self.bot = None
-            self.game_exception = Exception("Creating Bot...")
             self.bot = get_bot(self.st)
-            self.game_exception = None
             LOGGER.info("Created bot: %s. Supported Modes: %s", self.bot.name, self.bot.supported_modes)
         except Exception as e:
             LOGGER.warning("Failed to create bot: %s", e, exc_info=True)
             self.bot = None
             self.game_exception = e
+        self.is_loading_bot = False
 
     def is_bot_created(self):
         """ return true if self.bot is not None"""
@@ -220,11 +221,10 @@ class BotManager:
         try:
             LOGGER.info("Starting mitm proxy server, port=%d, upstream_proxy=%s", self.st.mitm_port, self.st.upstream_proxy)
             self.mitm_server.start(self.st.mitm_port,self.st.upstream_proxy)
-            LOGGER.info("Installing MITM certificate")
-            if self.mitm_server.install_mitm_cert():
-                LOGGER.info("MITM certificate installed")
-            else:
-                LOGGER.warning("MITM certificate installation failed (No Admin rights?)")
+
+            res = self.mitm_server.install_mitm_cert()
+            if not res:
+                self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)
                 
             self.liqi_parser = liqi.LiqiProto()
             if self.st.auto_launch_browser:
@@ -247,16 +247,16 @@ class BotManager:
                 self._every_loop_post_proc_msg()
 
             LOGGER.info("Shutting down browser")
-            self.browser.stop()
-            while self.browser.is_running():
-                time.sleep(0.2)
-            LOGGER.info("Browser stopped")
+            self.browser.stop(True)
                 
             LOGGER.info("Shutting down MITM")
             self.mitm_server.stop()
-            while self.mitm_server.is_running():
-                time.sleep(0.2)
-            LOGGER.info("MITM stopped")            
+
+            if self.injector.is_running():
+                LOGGER.info("Shutting down proxy injector")
+                self.injector.stop(True)
+            LOGGER.info("Bot manager thread ending.")
+         
             
         except Exception as e:
             self.main_thread_exception = e
@@ -433,7 +433,7 @@ class BotManager:
         if self.is_bot_created():
             model_text += self.st.lan().MODEL + ": " + self.bot.type.value
         else:
-            model_text += self.st.lan().AWAIT_BOT
+            model_text += self.st.lan().MODEL_NOT_LOADED
         text += '\n' + model_text
         
         # autoplay

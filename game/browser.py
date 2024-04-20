@@ -148,9 +148,13 @@ class GameBrowser:
             except queue.Empty:
                 break
             
-    def stop(self):
+    def stop(self, join_thread:bool=False):
         """ Shutdown browser thread"""
-        self._stop_event.set()
+        if self.is_running():
+            self._stop_event.set()
+            if join_thread:
+                self._browser_thread.join()
+            self._browser_thread = None
 
     def is_running(self):
         """ return True if browser thread is still running"""

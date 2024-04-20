@@ -21,24 +21,25 @@ class BotMortalLocal(Bot):
         model_files(dicty): model files for different modes {mode, file_path}
         """
         super().__init__(BotType.LOCAL, "Local Mortal Bot")   
-        self._supported_modes: list[GameMode] = list(model_files.keys())     
+        self._supported_modes: list[GameMode] = []  
         self.model_files = model_files
+        self.engines:dict[GameMode, any] = {}
         for k,v in model_files.items():
-            mode_valid:bool = True
             if not Path(v).exists() or not Path(v).is_file():
                 # test file exists
                 LOGGER.warning("Cannot find model file for mode %s:%s", k,v)
-                mode_valid = False
-            elif k == GameMode.MJ3P:
-                # test import libraries for 3p
-                try:
-                    import libriichi3p
-                except Exception as e: # pylint: disable=bare-except
-                    LOGGER.warning("Cannot import libriichi3p: %s", e)
-                    mode_valid = False
-            if not mode_valid:
-                self._supported_modes.remove(k)
-                
+            else:
+                if k == GameMode.MJ4P:
+                    self.engines[k] = get_engine(self.model_files[k])
+                elif k == GameMode.MJ3P:
+                    # test import libraries for 3p
+                    try:
+                        import libriichi3p
+                        from bot.engine3p import get_engine as get_engine_3p
+                        self.engines[k] = get_engine_3p(self.model_files[k])
+                    except Exception as e: # pylint: disable=broad-except
+                        LOGGER.warning("Cannot create engine for mode %s: %s", k, e)
+        self._supported_modes = list(self.engines.keys())
         if not self._supported_modes:
             raise ModelFileException("No valid model files found")
         
@@ -53,20 +54,23 @@ class BotMortalLocal(Bot):
     def supported_modes(self) -> list[GameMode]:
         return self._supported_modes
     
+    @property
+    def info_str(self) -> str:
+        return f"{self.name}: [{','.join([m.value for m in self._supported_modes])}]"
+    
     def _init_bot_impl(self, mode:GameMode=GameMode.MJ4P):
+        engine = self.engines.get(mode, None)
+        if not engine:
+            raise BotNotSupportingMode(mode)
+        
         if mode == GameMode.MJ4P:
-            engine = get_engine(self.model_files[mode])
             self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
         elif mode == GameMode.MJ3P:
-            try:
-                import libriichi3p
-                from bot.engine3p import get_engine as get_engine_3p
-                engine = get_engine_3p(self.model_files[mode])
-                self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
-            except Exception as e:
-                raise e
+            import libriichi3p
+            self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
         else:
-            raise BotNotSupportingMode(mode)
+            raise BotNotSupportingMode(mode)            
+            
         self.str_input_history.clear()
         
     def react(self, input_msg:dict) -> dict:

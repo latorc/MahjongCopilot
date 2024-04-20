@@ -49,6 +49,7 @@ class Updater:
         self.update_exception:Exception = None
         
         self.help_html:str = None       # help html text from web
+        self.help_exception:Exception = None
     
     def load_help(self):
         """ update html in thread"""
@@ -56,7 +57,13 @@ class Updater:
             url = WEBSITE + r"/help"
             LOGGER.info("Loading help html from %s", url)
             html_text = self.get_html(url)
-            self.help_html = html_text
+            if html_text is None:
+                self.help_html = f"Error loading help from {url}\n{self.help_exception}"
+                LOGGER.warning(self.help_html)
+            else:
+                self.help_html = html_text
+                LOGGER.info("Finished loading help html")
+                
         threading.Thread(
             name="UpdateHTML",
             target=task_update,
@@ -65,11 +72,12 @@ class Updater:
     
     def get_html(self, url:str) -> str:
         """ get html text from url, and process it"""
-        try:        
-            response = requests.get(url, timeout=5) # Send a GET request to the URL
+        try:
+            self.help_exception = None        
+            response = requests.get(url, timeout=15) # Send a GET request to the URL
             # Check if the request was successful (HTTP status code 200)
             if response.status_code != 200:
-                return f"Request Error! Status code: {response.status_code}"
+                raise ConnectionError(f"Request Error! Status code: {response.status_code}")
             
             # process text: remove/replace some tags
             res_text = response.text
@@ -89,10 +97,11 @@ class Updater:
             for p, r in rep_patterns.items():
                 res_text = re.sub(p, r, res_text, flags=re.DOTALL)            
             
-            return res_text        
+            return res_text
                 
         except Exception as e:
-            return f"Error! {e}"
+            self.help_exception = e
+            return None
     
     
     def check_update(self):

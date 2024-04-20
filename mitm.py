@@ -104,10 +104,12 @@ class MitmController:
         
         self.proxy_port = None
         self.mitm_config_folder = utils.sub_folder(Folder.MITM_CONF)
-
+        self.cert_file = utils.sub_file(Folder.MITM_CONF, 'mitmproxy-ca-cert.cer')
+        
         self.mitm_thread = None
         self.dump_master = None
         self.upstream_proxy = None
+        
         
         self.ws_data_addon = WSDataInterceptor(allowed_domains)
         
@@ -166,24 +168,30 @@ class MitmController:
     def get_message(self, block:bool=False, timeout:float=None) -> WSMessage:
         """ pop ws message from the queue. raise queue.Empty if timeout or non-blocked"""
         msg = self.ws_data_addon.message_queue.get(block, timeout)
-        return msg
-    
+        return msg    
+   
     def install_mitm_cert(self, timeout:float=5):
-        """Install mitm certificate onto the system
+        """Check MITM cert, and install if needed
         Return:
-            bool: True if installed successfully. False if failed or timeout"""
-        cert_file = utils.sub_file(Folder.MITM_CONF, 'mitmproxy-ca-cert.cer')
-        if not utils.wait_for_file(cert_file, timeout):
-            LOGGER.error(f"MITM certificate not found: {cert_file}")
+            bool: True if cert installed already or successfully. False if failed or timeout"""
+        if not utils.wait_for_file(self.cert_file, timeout):
+            LOGGER.error("MITM certificate not found: %s", self.cert_file)
             return False
+        res, text = utils.is_certificate_installed(self.cert_file)
+        if res:
+            LOGGER.info("MITM certificate already installed: %s", self.cert_file)
+            return True
         else:
-            LOGGER.debug(f"Certificate file: {cert_file}")
-            install_success, text = utils.install_root_cert(cert_file)
-            if install_success:
-                return True
-            else:
-                LOGGER.error("Failed to install MITM certificate. Please install manually. Stdout: %s", text)
-                return False
+            LOGGER.info("MITM cert not installed:\n%s", text)
+
+        LOGGER.info("Installing MITM certificate: %s", self.cert_file)
+        install_success, msg = utils.install_root_cert(self.cert_file)
+        if install_success:
+            LOGGER.info("Installed MITM certificate successfully. Output:\n%s",msg)
+            return True
+        else:
+            LOGGER.error("Failed to install MITM certificate. Please install manually. Output:\n%s",msg)
+            return False
 
             
 if __name__ == '__main__':
@@ -193,8 +201,7 @@ if __name__ == '__main__':
     LOGGER.info("Starting MITM")
     mitm.start()
     LOGGER.info("Installing certificate")
-    mitm.install_mitm_cert()
-    
+    res = mitm.install_mitm_cert()    
     LOGGER.info("MITM on:%s", mitm.is_running())
     LOGGER.info("Shutting down mitm")
     mitm.stop()

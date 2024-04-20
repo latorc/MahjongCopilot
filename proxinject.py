@@ -5,7 +5,7 @@ import subprocess
 import pathlib
 import time
 import sys
-from common.utils import Folder
+from common.utils import Folder, sub_run_args
 from common.log_helper import LOGGER
 
 class ProxyInjector:
@@ -70,13 +70,20 @@ class ProxyInjector:
                 '-n', self.p_name,
                 '-p', proxy,
             ]
+            # Set up the startup info to hide the window
+            startup_info = subprocess.STARTUPINFO()
+            startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startup_info.wShowWindow = subprocess.SW_HIDE
             process = None
             while not self._stop_event.is_set():
                 if process is None or process.poll() is not None:
                     if process is not None:
                         process.terminate()  # Politely ask the process to terminate
                         process.wait()  # Wait for process to terminate
-                    process = subprocess.Popen(cmds, shell=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    args = sub_run_args()
+                    process = subprocess.Popen(
+                        cmds, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        startupinfo=startup_info)
                 time.sleep(0.5)
                 
             if process and process.poll() is None:

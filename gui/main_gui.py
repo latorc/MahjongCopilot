@@ -236,9 +236,11 @@ class MainGUI(tk.Tk):
         # pop up that confirm if the user really wants to quit
         if messagebox.askokcancel(self.st.lan().EXIT, self.st.lan().EIXT_CONFIRM, parent=self):
             try:
-                LOGGER.info("Exiting GUI and program. saving settings and stopping threads.")
+                LOGGER.info("Exiting GUI and program")
+                self.status_bar.update_column(2, self.st.lan().EXIT + "ing...", self.icon_yellow)
+                self.update_idletasks()
                 self.st.save_json()
-                self.bot_manager.stop(False)
+                self.bot_manager.stop(True)
             except: #pylint:disable=bare-except
                 pass
             self.quit()
@@ -325,8 +327,13 @@ class MainGUI(tk.Tk):
             else:
                 self.model_bar.update_column(1, 'ℹ️' + self.bot_manager.bot.info_str)
         else:
-            text = self.st.lan().AWAIT_BOT
-            self.model_bar.update_column(0, text, self.icon_red)
+            if self.bot_manager.is_loading_bot:
+                text = self.st.lan().MODEL_LOADING
+                icon = self.icon_yellow
+            else:
+                text = self.st.lan().MODEL_NOT_LOADED
+                icon = self.icon_red
+            self.model_bar.update_column(0, text, icon)
             self.model_bar.update_column(1, 'ℹ️ ')
 
         ### Status bar
