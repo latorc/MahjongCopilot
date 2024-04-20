@@ -15,6 +15,7 @@ REM robocopy models dist\MahjongCopilot\models /E
 robocopy resources dist\MahjongCopilot\resources /E
 robocopy liqi_proto dist\MahjongCopilot\liqi_proto /E
 robocopy .\libriichi3p\ dist\MahjongCopilot\libriichi3p\ "Put libriichi3p files in this folder"
+robocopy proxinject dist\MahjongCopilot\proxinject /E
 robocopy .venv\Lib\site-packages\playwright\driver\package\.local-browsers dist\MahjongCopilot\_internal\playwright\driver\package\.local-browsers /E
 cd dist
 "C:\Program Files\7-Zip\7z.exe" a -t7z MahjongCopilot.windows.7z MahjongCopilot
