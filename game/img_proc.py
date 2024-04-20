@@ -3,7 +3,7 @@ from enum import Enum, auto
 import io
 from PIL import Image, ImageChops, ImageStat
 import common.utils as utils
-from common.utils import RES_FOLDER
+from common.utils import Folder
 from common.log_helper import LOGGER
 from .browser import GameBrowser
 
@@ -75,8 +75,8 @@ class GameVisual:
             (ImgTemp.MAIN_MENU, 'mainmenu.png', 'mainmenu_mask.png')
         ]
         for loc, img_file, mask_file in files:
-            img_file = utils.sub_file(RES_FOLDER, img_file)
-            mask_file = utils.sub_file(RES_FOLDER, mask_file)
+            img_file = utils.sub_file(Folder.RES, img_file)
+            mask_file = utils.sub_file(Folder.RES, mask_file)
             img_mainmenu = Image.open(img_file).convert('RGB')
             mask_mainmenu = Image.open(mask_file).convert('L')
             self.temp_dict[loc] = (img_mainmenu, mask_mainmenu)

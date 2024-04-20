@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide
-from common.utils import RES_FOLDER, GameMode, GAME_MODES
+from common.utils import Folder, GameMode, GAME_MODES, GameClientType
 from common.utils import UiState, sub_file, error_to_str
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
@@ -31,7 +31,7 @@ class MainGUI(tk.Tk):
         self.after_idle(self.updater.load_help)
         self.after_idle(self.updater.check_update)        # check update when idle
         
-        icon = tk.PhotoImage(file=sub_file(RES_FOLDER,'icon.png'))
+        icon = tk.PhotoImage(file=sub_file(Folder.RES,'icon.png'))
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window  
         size = (620,540)      
@@ -43,11 +43,11 @@ class MainGUI(tk.Tk):
         style = ttk.Style(self)
         GUI_STYLE.set_style_normal(style)
         # icon resources:
-        self.icon_green = sub_file(RES_FOLDER,'green.png')
-        self.icon_red = sub_file(RES_FOLDER,'red.png')
-        self.icon_yellow = sub_file(RES_FOLDER,'yellow.png')
-        self.icon_gray =sub_file(RES_FOLDER,'gray.png')
-        self.icon_ready = sub_file(RES_FOLDER,'ready.png')
+        self.icon_green = sub_file(Folder.RES,'green.png')
+        self.icon_red = sub_file(Folder.RES,'red.png')
+        self.icon_yellow = sub_file(Folder.RES,'yellow.png')
+        self.icon_gray =sub_file(Folder.RES,'gray.png')
+        self.icon_ready = sub_file(Folder.RES,'ready.png')
 
         # create window widgets
         self._create_widgets()
@@ -218,11 +218,12 @@ class MainGUI(tk.Tk):
         self.wait_window(settings_window)
         
         if settings_window.exit_ok:
-            self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
+            if settings_window.model_updated:
+                self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
             if settings_window.gui_need_reload:     # reload UI if needed
-                self.reload_gui()        
-            if settings_window.mitm_updated:
-                self.bot_manager.restart_mitm()
+                self.reload_gui()
+            # if settings_window.mitm_updated:
+            #     self.bot_manager.restart_mitm()
 
     def _on_btn_help_clicked(self):
         # open help dialog        
@@ -252,7 +253,10 @@ class MainGUI(tk.Tk):
     def _update_gui_info(self):
         """ Update GUI widgets status with latest info from bot manager"""
         if not self.bot_manager.browser.is_running():
-            self.btn_start_browser.config(state=tk.NORMAL)
+            if self.bot_manager.get_game_client_type() == GameClientType.PROXY:
+                self.btn_start_browser.config(state=tk.DISABLED)    # disable when proxy client running
+            else:
+                self.btn_start_browser.config(state=tk.NORMAL)
         else:
             self.btn_start_browser.config(state=tk.DISABLED)
 
@@ -335,13 +339,24 @@ class MainGUI(tk.Tk):
             self.status_bar.update_column(0, self.st.lan().MAIN_THREAD + fps_str, self.icon_red)        
 
         # client/browser
-        fps_disp = min(999, self.bot_manager.browser.fps_counter.fps)
-        fps_str = f"({fps_disp:3.0f})"
-        if self.bot_manager.browser.is_running():
-            self.status_bar.update_column(1, self.st.lan().BROWSER+fps_str, self.icon_green)
+        client_type = self.bot_manager.get_game_client_type()
+        if client_type == GameClientType.PLAYWRIGHT:
+            fps_disp = min(999, self.bot_manager.browser.fps_counter.fps)
+            fps_str = f"({fps_disp:3.0f})"
+            status_str = self.st.lan().BROWSER+fps_str
+            if self.bot_manager.browser.is_running():
+                icon = self.icon_green
+            else:
+                icon = self.icon_gray
+        elif client_type == GameClientType.PROXY:
+            status_str = self.st.lan().PROXY_CLIENT
+            icon = self.icon_green
         else:
-            self.status_bar.update_column(1, self.st.lan().BROWSER+fps_str, self.icon_gray)
-        # status (4th col)
+            status_str = self.st.lan().GAME_NOT_RUNNING
+            icon = self.icon_ready
+        self.status_bar.update_column(1, status_str, icon)
+            
+        # status (last col)
         status_str, icon = self._get_status_text_icon(gi)
         self.status_bar.update_column(2, status_str, icon)
         

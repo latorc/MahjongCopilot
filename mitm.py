@@ -1,3 +1,4 @@
+""" Mitm proxy server for intercepting data to/from the game server"""
 import threading
 import asyncio
 import queue
@@ -8,20 +9,22 @@ from mitmproxy.http import HTTPFlow
 from mitmproxy import options
 from mitmproxy.tools.dump import DumpMaster
 import common.utils as utils
-from common.utils import MITM_CONFDIR
+from common.utils import Folder
 from common.log_helper import LOGGER
 
-class WS_TYPE:
+class WsType:
+    """ websocket msg type"""
     START = 1
     END = 2
     MESSAGE = 3
+
 @dataclass
 class WSMessage:        
     """ Websocket message"""
     flow_id:str
     timestamp:float = None
     content:bytes = None
-    type:int = WS_TYPE.MESSAGE
+    type:int = WsType.MESSAGE
 
 class WSDataInterceptor:
     """ mitm websocket addon that intercepts data"""
@@ -53,7 +56,7 @@ class WSDataInterceptor:
     def websocket_start(self, flow:HTTPFlow):
         """ ws start handler"""
         if self.allow_url(flow.request.pretty_url):
-            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_TYPE.START))
+            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WsType.START))
         else:
             flow.kill()
             LOGGER.info("Killing flow since it is not in allowed domains: %s", flow.request.pretty_url)            
@@ -67,7 +70,7 @@ class WSDataInterceptor:
     def websocket_end(self, flow:HTTPFlow):
         """ ws flow end handler"""
         if self.allow_url(flow.request.pretty_url):
-            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WS_TYPE.END))        
+            self.message_queue.put(WSMessage(flow.id, flow.timestamp_start, None, WsType.END))        
 
     def replace_next_msg(self):
         pass
@@ -100,7 +103,7 @@ class MitmController:
                 filtering turned off if None/empty"""
         
         self.proxy_port = None
-        self.mitm_config_folder = utils.sub_folder(MITM_CONFDIR)
+        self.mitm_config_folder = utils.sub_folder(Folder.MITM_CONF)
 
         self.mitm_thread = None
         self.dump_master = None
@@ -130,12 +133,13 @@ class MitmController:
             opts = options.Options(
                 listen_port=self.proxy_port,
                 confdir=str(self.mitm_config_folder),
-                mode=[f"upstream:{self.upstream_proxy}"]
+                mode=["socks5", f"upstream:{self.upstream_proxy}"],
             )
         else:
             opts = options.Options(
                 listen_port=self.proxy_port,
-                confdir=str(self.mitm_config_folder)
+                confdir=str(self.mitm_config_folder),
+                mode=["socks5"],
             )
         self.dump_master = DumpMaster(
             opts,
@@ -168,7 +172,7 @@ class MitmController:
         """Install mitm certificate onto the system
         Return:
             bool: True if installed successfully. False if failed or timeout"""
-        cert_file = utils.sub_file(MITM_CONFDIR, 'mitmproxy-ca-cert.cer')
+        cert_file = utils.sub_file(Folder.MITM_CONF, 'mitmproxy-ca-cert.cer')
         if not utils.wait_for_file(cert_file, timeout):
             LOGGER.error(f"MITM certificate not found: {cert_file}")
             return False

@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 import time
 from common.log_helper import LOGGER
-from common.utils import sub_file, RES_FOLDER
+from common.utils import sub_file, Folder
 from .utils import GUI_STYLE, add_hover_text
 
 class ToggleSwitch(tk.Frame):
@@ -22,9 +22,9 @@ class ToggleSwitch(tk.Frame):
         
         # Load images for on and off states
         img_ht = height*0.4
-        img_on = tk.PhotoImage(file=sub_file(RES_FOLDER,'switch_on.png'))
-        img_off = tk.PhotoImage(file=sub_file(RES_FOLDER,'switch_off.png'))
-        img_mid = tk.PhotoImage(file=sub_file(RES_FOLDER,'switch_mid.png'))
+        img_on = tk.PhotoImage(file=sub_file(Folder.RES,'switch_on.png'))
+        img_off = tk.PhotoImage(file=sub_file(Folder.RES,'switch_off.png'))
+        img_mid = tk.PhotoImage(file=sub_file(Folder.RES,'switch_mid.png'))
         self.img_on = img_on.subsample(int(img_on.height()/img_ht), int(img_on.height()/img_ht))
         self.img_off = img_off.subsample(int(img_off.height()/img_ht), int(img_off.height()/img_ht))
         self.img_mid = img_mid.subsample(int(img_mid.height()/img_ht), int(img_mid.height()/img_ht))
@@ -215,7 +215,7 @@ class ToolBar(tk.Frame):
     def add_button(self, text:str, img_file:str, command) -> tk.Button:
         """ Add a button on toolbar"""
         
-        img = tk.PhotoImage(file = Path(RES_FOLDER) / img_file)
+        img = tk.PhotoImage(file = Path(Folder.RES) / img_file)
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
         btn = tk.Button(self, image=img, width=self.height, height=self.height, command=command)
         btn.image = img  # Keep a reference to prevent image from being garbage collected
@@ -229,7 +229,7 @@ class ToolBar(tk.Frame):
         """ Replace button image"""
         if btn.img_file == img_file:
             return
-        img = tk.PhotoImage(file = Path(RES_FOLDER) / img_file)
+        img = tk.PhotoImage(file = Path(Folder.RES) / img_file)
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
         btn.config(image=img)
         btn.image = img  # Keep a reference

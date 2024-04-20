@@ -460,7 +460,23 @@ class Automation:
         if self._task:
             return self._task.last_exe_time
         else:
-            return -1        
+            return -1
+        
+    def automate_retry_pending(self, game_state:GameState):
+        """ retry pending action from game state"""
+        if not self.can_automate(True, UiState.IN_GAME):
+            return
+        if time.time() - self.last_exec_time() < self.st.auto_retry_interval:
+            # interval not reached, cancel
+            return False
+        if game_state is None:
+            return False
+        pend_action = game_state.get_pending_reaction()
+        if pend_action is None:
+            return
+        LOGGER.info("Retry automating pending reaction: %s", pend_action['type'])
+        self.automate_action(pend_action, game_state)        
+                
     
     def automate_send_emoji(self):
         """ Send emoji given chance
@@ -732,7 +748,8 @@ class Automation:
     def on_end_game(self):
         """ end game handler"""
         self.stop_previous()
-        self.ui_state = UiState.GAME_ENDING
+        if self.ui_state != UiState.NOT_RUNNING:
+            self.ui_state = UiState.GAME_ENDING
         # if auto next. go to lobby, then next
         
     def on_exit_lobby(self):

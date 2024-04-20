@@ -11,6 +11,7 @@ from game.browser import GameBrowser
 from game.game_state import GameState
 from game.automation import Automation, UiState, JOIN_GAME, END_GAME
 import mitm
+import proxinject
 import liqi
 from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
 from common.log_helper import LOGGER
@@ -46,6 +47,7 @@ class BotManager:
         self.liqi_parser:liqi.LiqiProto = None
         self.mitm_port = self.st.mitm_port
         self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
+        self.injector = proxinject.ProxyInjector()
         self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
         self.automation = Automation(self.browser, self.st)
         self.bot:Bot = None
@@ -115,11 +117,20 @@ class BotManager:
         e.g. game state error / ai bot error   
         """  
         return self.game_exception
+    
+    def get_game_client_type(self) -> utils.GameClientType:
+        """ return the running game client type. return None if none is running"""
+        if self.browser.is_running():
+            return utils.GameClientType.PLAYWRIGHT
+        elif self.lobby_flow_id or self.game_flow_id:
+            return utils.GameClientType.PROXY
+        else:
+            return None
         
     def start_browser(self):
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
-        proxy = r'http://localhost:' + str(self.mitm_port)
+        proxy = r'socks5://localhost:' + str(self.mitm_port)
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
         
     def restart_mitm(self):
@@ -268,6 +279,16 @@ class BotManager:
         else:   # clear exception
             if isinstance(self.game_exception, utils.MITMException):
                 self.game_exception = None
+                
+        # check proxinject
+        if self.st.enable_proxinject:
+            if self.injector.is_running() is False:
+                LOGGER.debug("Bot manager starting proxinject")
+                self.injector.start(self.st.inject_process_name, "127.0.0.1", self.st.mitm_port)
+        else:
+            if self.injector.is_running():
+                LOGGER.debug("Bot manager stopping proxinject")
+                self.injector.stop(False)
 
         # check overlay
         if self.browser and self.browser.is_page_normal():
@@ -279,9 +300,9 @@ class BotManager:
             else:
                 if self.browser.is_overlay_working():
                     LOGGER.debug("Bot manager turning off browser overlay")
-                    self.browser.stop_overlay()    
+                    self.browser.stop_overlay()
         
-        self._retry_failed_automation()                 # retry failed automation
+        self.automation.automate_retry_pending(self.game_state)            # retry failed automation
         
         if not self.game_exception:     # skip on game error
             self.automation.decide_lobby_action()
@@ -289,21 +310,22 @@ class BotManager:
     def _process_msg(self, msg:mitm.WSMessage):
         """ process websocket message from mitm server"""
         
-        if msg.type == mitm.WS_TYPE.START:
+        if msg.type == mitm.WsType.START:
             LOGGER.debug("Websocket Flow started: %s", msg.flow_id)
             
-        elif msg.type == mitm.WS_TYPE.END:
+        elif msg.type == mitm.WsType.END:
             LOGGER.debug("Websocket Flow ended: %s", msg.flow_id)
             if msg.flow_id == self.game_flow_id:
                 LOGGER.info("Game flow ended. processing end game")
                 self._process_end_game()
+                self.game_flow_id = None
             if msg.flow_id == self.lobby_flow_id:
                 # lobby flow ended
                 LOGGER.info("Lobby flow ended.")
                 self.lobby_flow_id = None
                 self.automation.on_exit_lobby()
                 
-        elif msg.type == mitm.WS_TYPE.MESSAGE:
+        elif msg.type == mitm.WsType.MESSAGE:
             # process ws message
             try:
                 liqimsg = self.liqi_parser.parse(msg.content)
@@ -351,8 +373,8 @@ class BotManager:
                     self._do_automation(reaction)
                 else:
                     self._process_idle_automation(liqimsg)
-                if self.game_state.is_game_ended:
-                    self._process_end_game()
+                # if self.game_state.is_game_ended:
+                #     self._process_end_game()
             
             elif msg.flow_id == self.lobby_flow_id:
                 LOGGER.debug('Lobby msg: %s', liqimsg)
@@ -370,7 +392,7 @@ class BotManager:
         
     def _process_end_game(self):
         # End game processes
-        self.game_flow_id = None
+        # self.game_flow_id = None
         self.game_state = None
         if self.browser:    # fix for corner case
             self.browser.overlay_clear_guidance()
@@ -453,31 +475,6 @@ class BotManager:
             self.automation.automate_action(reaction, self.game_state)
         except Exception as e:
             LOGGER.error("Failed to automate action for %s: %s", reaction['type'], e, exc_info=True)
-            
-    def _retry_failed_automation(self):
-        # retry pending reaction if conditions are met
-        try:
-            if not self.st.enable_automation:
-                return False
-            if self.automation.is_running_execution():
-                # last action still executing, cancel
-                return False
-            if self.automation.ui_state != UiState.IN_GAME:
-                # only retry when in game
-                return False        
-            if time.time() - self.automation.last_exec_time() < self.st.auto_retry_interval:
-                # interval not reached, cancel
-                return False
-            if self.game_state is None:
-                return False
-            pend_action = self.game_state.get_pending_reaction()
-            if pend_action is None:
-                return        
-            LOGGER.info("Retry automating pending reaction: %s", pend_action['type'])
-            self.automation.automate_action(pend_action, self.game_state)
-            
-        except Exception as e:
-            LOGGER.error("Error retrying automation: %s", e, exc_info=True)
 
 
 def mjai_reaction_2_guide(
@@ -553,7 +550,7 @@ def mjai_reaction_2_guide(
                     # if it is a tile
                     name_str = get_tile_str(code)
                 elif code == MJAI_TYPE.NUKIDORA:
-                    name_str = code + MJAI_TILE_2_UNICODE['N']
+                    name_str = lan_str.mjai2str(code) + MJAI_TILE_2_UNICODE['N']
                 else:
                     name_str = lan_str.mjai2str(code)
                 

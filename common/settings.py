@@ -25,6 +25,8 @@ class Settings:
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
         self.mitm_port:int = self._get_value("mitm_port", 10999)
         self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
+        self.enable_proxinject:bool = self._get_value("enable_proxinject", False, self.valid_bool)
+        self.inject_process_name:str = self._get_value("inject_process_name", "jantama_mahjongsoul")
         self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)  # language code
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool) # not shown
         

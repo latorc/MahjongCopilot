@@ -8,7 +8,7 @@ from io import BytesIO
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 from common import utils
-from common.utils import BROWSER_DATA_FOLDER, FPSCounter
+from common.utils import Folder, FPSCounter
 from common.log_helper import LOGGER
 
 class GameBrowser:
@@ -80,7 +80,7 @@ class GameBrowser:
                 # Initilize browser
                 chromium = playwright.chromium
                 self.context = chromium.launch_persistent_context(
-                    user_data_dir=utils.sub_folder(BROWSER_DATA_FOLDER),
+                    user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
                     headless=False,
                     viewport={'width': self.width, 'height': self.height},
                     proxy=proxy_object,

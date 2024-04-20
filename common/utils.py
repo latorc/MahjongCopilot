@@ -1,8 +1,8 @@
 """ Common/utility methods
-# no logging in this file
+no logging in this file because logging might not have been initialized yet
 """
 
-from enum import Enum
+from enum import Enum, auto
 import pathlib
 import sys
 import ctypes
@@ -16,22 +16,30 @@ from .lan_str import LanStr
 # Constants
 WEBSITE = "https://mjcopilot.com"
 
-# read version string from file version
-MODEL_FOLDER = "models"
-BROWSER_DATA_FOLDER = "browser_data"
-RES_FOLDER = 'resources'
-LOG_DIR = 'log'
-MITM_CONFDIR = 'mitm_config'
-TEMP_FOLDER = 'temp'
+class Folder:
+    """ Folder name consts"""
+    MODEL = "models"
+    BROWSER_DATA = "browser_data"
+    RES = 'resources'
+    LOG = 'log'
+    MITM_CONF = 'mitm_config'
+    PROXINJECT = 'proxinject'
+    TEMP = 'temp'
 
-# for automation
-GAME_MODES = ['4E', '4S', '3E', '3S']
+
+class GameClientType(Enum):
+    """ Game client type"""
+    PLAYWRIGHT = auto()     # playwright browser
+    PROXY = auto()          # other client through mitm proxy
 
 class GameMode(Enum):
     """ Game Modes for bots/models"""
     MJ4P = "4P"
     MJ3P = "3P"
-    
+
+# for automation
+GAME_MODES = ['4E', '4S', '3E', '3S']
+
 class UiState(Enum):
     """ UI State for the game"""
     NOT_RUNNING = 0
@@ -106,12 +114,12 @@ def install_root_cert(cert_file:str) -> tuple[bool, str]:
     """
     # Install cert. If the cert exists, system will skip installation
     if sys.platform == "win32":
-        runas_command= f"start-process certutil -ArgumentList '-addstore','Root','{cert_file}' -verb RunAs"
-        result = subprocess.run(['powershell', '-Command', runas_command],capture_output=True, text=True, check=False,shell=True)
+        result = subprocess.run(['certutil', '-addstore', 'Root', cert_file],
+            capture_output=True, text=True, check=False)
     elif sys.platform == "darwin":
         # TODO Test on MAC system
         result = subprocess.run(['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file],
-            capture_output=True, text=True, check=True,shell=True)
+            capture_output=True, text=True, check=False)
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)
         return False, ""

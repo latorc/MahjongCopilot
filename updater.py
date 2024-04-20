@@ -8,7 +8,7 @@ import shutil
 import zipfile
 from enum import Enum,auto
 import requests
-from common.utils import TEMP_FOLDER, WEBSITE
+from common.utils import Folder, WEBSITE
 import common.utils as utils
 from common.log_helper import LOGGER
 
@@ -136,7 +136,7 @@ class Updater:
         """ download file and update progress (blocking)
         returns:
             str: downloaded file path"""        
-        save_file = utils.sub_file(TEMP_FOLDER, fname)
+        save_file = utils.sub_file(Folder.TEMP, fname)
         with requests.get(self.urlbase + fname, stream=True, timeout=self.timeout_dl) as res:
             res.raise_for_status()
             total_length = int(res.headers.get('content-length', 0))
@@ -203,7 +203,7 @@ class Updater:
             exec_path = sys.executable
             exec_name = os.path.basename(exec_path)
             root_folder = str(utils.sub_folder("."))
-            update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
+            update_folder = str(utils.sub_folder(Folder.TEMP)/UPDATE_FOLDER)
             cmd = f"""
             @echo off
             echo Updating {exec_name} ...
@@ -220,7 +220,7 @@ class Updater:
             timeout /t 5 /nobreak
             """
             # save it to a batchfile
-            batch_file = utils.sub_file(TEMP_FOLDER, "update.bat")
+            batch_file = utils.sub_file(Folder.TEMP, "update.bat")
             with open(batch_file, "w", encoding="utf-8") as f:
                 f.write(cmd)
             subprocess.Popen(
@@ -231,7 +231,7 @@ class Updater:
         elif sys.platform == "darwin":
             exec_name = os.path.basename(sys.executable)
             root_folder = str(utils.sub_folder("."))
-            update_folder = str(utils.sub_folder(TEMP_FOLDER)/UPDATE_FOLDER)
+            update_folder = str(utils.sub_folder(Folder.TEMP)/UPDATE_FOLDER)
             cmd = f"""
             #!/bin/bash
             echo "Updating {exec_name} in 5 seconds..."
@@ -245,7 +245,7 @@ class Updater:
             open "{root_folder}/{exec_name}"
             """
             # Save it to a shell script
-            script_file = utils.sub_file(TEMP_FOLDER, "update.sh")
+            script_file = utils.sub_file(Folder.TEMP, "update.sh")
             with open(script_file, "w", encoding='utf-8') as f:
                 f.write(cmd)
             os.chmod(script_file, 0o755)  # Make the script executable

@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from common.utils import MODEL_FOLDER
+from common.utils import Folder
 from common.utils import list_files
 from common.log_helper import LOGGER
 from common.settings import Settings
@@ -103,6 +103,12 @@ class SettingsWindow(tk.Toplevel):
         self.language_var = tk.StringVar(value=LAN_OPTIONS[self.st.language].LANGUAGE_NAME)
         select_menu = ttk.Combobox(main_frame, textvariable=self.language_var, values=options, state="readonly", width=std_wid)
         select_menu.grid(row=cur_row, column=1, **args_entry)
+        
+        # proxy inject
+        self.proxy_inject_var = tk.BooleanVar(value=self.st.enable_proxinject)
+        check_proxy_inject = ttk.Checkbutton(
+            main_frame, variable=self.proxy_inject_var, text=self.st.lan().CLIENT_INJECT_PROXY, width=std_wid*2)
+        check_proxy_inject.grid(row=cur_row, column=2, columnspan=2, **args_entry)  
 
         # sep
         cur_row += 1
@@ -118,7 +124,7 @@ class SettingsWindow(tk.Toplevel):
         select_menu.grid(row=cur_row, column=1, **args_entry)
         
         # Select Model File
-        model_files = [""] + list_files(MODEL_FOLDER)
+        model_files = [""] + list_files(Folder.MODEL)
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().AI_MODEL_FILE)
         _label.grid(row=cur_row, column=0, **args_label)        
@@ -239,9 +245,7 @@ class SettingsWindow(tk.Toplevel):
     def _on_save(self):
         # Get values from entry fields, validate, and save them
         
-        # first get new values and validate
-        auto_launch_new = self.auto_launch_var.get()
-        
+        # === Process and validate new values ===
         size_list = self.client_size_var.get().split(' x ')
         width_new = int(size_list[0])
         height_new = int(size_list[1])
@@ -290,9 +294,6 @@ class SettingsWindow(tk.Toplevel):
             self.model_updated = True
         
         # auto play settings
-        idle_move_new = self.auto_idle_move_var.get()
-        drag_dahai_new = self.auto_drag_dahai_var.get()
-        auto_random_move_new = self.random_move_var.get()
         randomized_choice_new:int = int(self.randomized_choice_var.get().split(' ')[0])
         reply_emoji_new:float = int(self.reply_emoji_var.get().split('%')[0])/100
         try:
@@ -304,14 +305,15 @@ class SettingsWindow(tk.Toplevel):
         delay_lower_new = max(0,delay_lower_new)
         delay_upper_new = max(delay_lower_new, delay_upper_new)
         
-        # save settings        
-        self.st.auto_launch_browser = auto_launch_new
+        # === save new values to setting ===        
+        self.st.auto_launch_browser = self.auto_launch_var.get()
         self.st.browser_width = width_new
         self.st.browser_height = height_new
         self.st.ms_url = ms_url_new
         self.st.mitm_port = mitm_port_new
         self.st.upstream_proxy = upstream_proxy_new
         self.st.language = language_new
+        self.st.enable_proxinject = self.proxy_inject_var.get()
         
         self.st.model_type = model_type_new
         self.st.model_file = model_file_new
@@ -321,9 +323,9 @@ class SettingsWindow(tk.Toplevel):
         self.st.mjapi_secret = mjapi_secret_new
         self.st.mjapi_model_select = mjapi_model_select_new
         
-        self.st.auto_idle_move = idle_move_new
-        self.st.auto_dahai_drag = drag_dahai_new
-        self.st.auto_random_move = auto_random_move_new
+        self.st.auto_idle_move = self.auto_idle_move_var.get()
+        self.st.auto_dahai_drag = self.auto_drag_dahai_var.get()
+        self.st.auto_random_move = self.random_move_var.get()
         self.st.ai_randomize_choice = randomized_choice_new
         self.st.auto_reply_emoji_rate = reply_emoji_new        
         self.st.delay_random_lower = delay_lower_new
