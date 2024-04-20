@@ -151,8 +151,6 @@ class BotManager:
         """ Start the overlay thread"""
         LOGGER.debug("Bot Manager enabling overlay")
         self.st.enable_overlay = True
-        self._overlay_botleft_last_update = 0
-        self._overlay_guide_last_update = 0
             
     def disable_overlay(self):
         """ disable browser overlay"""
