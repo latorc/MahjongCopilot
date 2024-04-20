@@ -442,7 +442,7 @@ class BotManager:
         else:
             autoplay_text = '⬛' + self.st.lan().AUTOPLAY + ': ' + self.st.lan().OFF
         if self.automation.is_running_execution():
-            autoplay_text += " 🖱️"
+            autoplay_text += "🖱️⏳"
         text += '\n' + autoplay_text
 
         # line 4

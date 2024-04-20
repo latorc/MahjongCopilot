@@ -19,9 +19,9 @@ robocopy proxinject dist\MahjongCopilot\proxinject /E
 robocopy .\libriichi3p\ dist\MahjongCopilot\libriichi3p\ "Put libriichi3p files in this folder"
 robocopy . .\dist\MahjongCopilot version
 robocopy .venv\Lib\site-packages\playwright\driver\package\.local-browsers dist\MahjongCopilot\_internal\playwright\driver\package\.local-browsers /E
+explorer.exe dist
 
 REM make 7z archive 
 cd dist
 "C:\Program Files\7-Zip\7z.exe" a -t7z MahjongCopilot.windows.7z MahjongCopilot
 cd..
-explorer.exe dist
