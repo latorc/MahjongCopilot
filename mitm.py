@@ -123,14 +123,21 @@ class MitmController:
         # Start thread
         self.mitm_thread = threading.Thread(
             name="MitmThread",
-            target=lambda: asyncio.run(self._run_mitm_async()),
+            target=self._run_mitm_task,
             daemon=True
         )
         self.mitm_thread.start()
-        
+    
+    def _run_mitm_task(self):
+        """Thread target: this runs the event loop for the async part."""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._run_mitm_async())
+
     
     async def _run_mitm_async(self):
         """ async run mitm proxy server"""
+        
         if self.upstream_proxy:
             opts = options.Options(
                 listen_port=self.proxy_port,
@@ -148,8 +155,14 @@ class MitmController:
             with_termlog=False,
             with_dumper=False,
         )
-        self.dump_master.addons.add(self.ws_data_addon)
-        await self.dump_master.run()
+        try:
+            self.dump_master.addons.add(self.ws_data_addon)
+            await self.dump_master.run()
+        except Exception as e:
+            LOGGER.error("Exception in starting MITM server: %s", str(e))
+        except BaseException as e:
+            LOGGER.error("Exception in starting MITM server: %s", str(e))
+            
     
     def stop(self):
         """ shutdown mitm proxy server and join thread"""        

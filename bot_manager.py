@@ -330,24 +330,24 @@ class BotManager:
             except Exception as e:
                 LOGGER.warning("Failed to parse liqi msg: %s\nError: %s", msg.content, e, exc_info=True)
                 return
-            # liqi_id = liqimsg['id']
-            liqi_type = liqimsg['type']
-            liqi_method = liqimsg['method']
+            liqi_id = liqimsg.get("id")
+            liqi_type = liqimsg.get('type')
+            liqi_method = liqimsg.get('method')
             # liqi_data = liqimsg['data']
             # liqi_datalen = len(liqimsg['data'])
             
             if liqi_method in METHODS_TO_IGNORE:
-                pass
+                ...
             
             elif (liqi_type, liqi_method) == (liqi.MsgType.RES, liqi.LiqiMethod.oauth2Login):
                 # lobby login msg
                 if self.lobby_flow_id is None:  # record first time in lobby
                     LOGGER.info("Lobby oauth2Login msg: %s", liqimsg)
-                    LOGGER.info("Lobby login successful. flow ID = %s", msg.flow_id)
+                    LOGGER.info("Lobby login done. lobby flow ID = %s", msg.flow_id)                   
                     self.lobby_flow_id = msg.flow_id
-                    self.automation.on_lobby_login(liqimsg)
+                    self.automation.on_lobby_login(liqimsg)                    
                 else:
-                    LOGGER.warning("Lobby flow %s already started. ignoring new game flow %s", self.lobby_flow_id, msg.flow_id)
+                    LOGGER.warning("Lobby flow exists %s, ignoring new lobby flow %s", self.lobby_flow_id, msg.flow_id)
             
             elif (liqi_type, liqi_method) == (liqi.MsgType.REQ, liqi.LiqiMethod.authGame):
                 # Game Start request msg: found game flow, initialize game state
@@ -375,7 +375,7 @@ class BotManager:
                 #     self._process_end_game()
             
             elif msg.flow_id == self.lobby_flow_id:
-                LOGGER.debug('Lobby msg: %s', liqimsg)
+                LOGGER.debug('Lobby msg: id=%s,type=%s,method=%s,len=%d', liqi_id, liqi_type, liqi_method, len(str(liqimsg)))
 
             else:
                 LOGGER.debug('Other msg (ignored): %s', liqimsg)
