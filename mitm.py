@@ -166,7 +166,7 @@ class MitmController:
     
     def stop(self):
         """ shutdown mitm proxy server and join thread"""        
-        if self.dump_master:
+        if self.mitm_thread and self.mitm_thread.is_alive():
             self.dump_master.shutdown()
             self.dump_master = None
             self.mitm_thread.join()
