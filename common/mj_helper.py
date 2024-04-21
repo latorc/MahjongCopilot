@@ -1,7 +1,7 @@
 # Helper methods / constants
 # that deal with tile converting / mjai message parsing / etc.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 from functools import cmp_to_key
 
@@ -272,11 +272,20 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
 @dataclass
 class GameInfo:
     """ data class containing game info"""
-    bakaze:str = None       # bakaze 场风
-    jikaze:str = None    # self_wind 自风
-    kyoku:int = None        # kyoku 局 (under bakaze)
-    honba:int = None        # honba 本场 (times of consequetive dealing)
-    my_tehai:list = None    # tiles in hand
-    my_tsumohai:str = None      # new drawn tile if any
-    reached:bool = False        # if self is in REACH state
-    is_first_round:bool = False # if self first round has not passed
+    bakaze:str = None               # bakaze 场风
+    jikaze:str = None               # self_wind 自风
+    kyoku:int = None                # kyoku 局 (under bakaze)
+    honba:int = None                # honba 本场 (times of consequetive dealing)
+    my_tehai:list = None            # tiles in hand
+    my_tsumohai:str = None          # new drawn tile if any
+    self_reached:bool = False       # if self is in REACH state
+    self_seat:int = None            # self seat index
+    player_reached:list[bool] = field(default_factory=lambda: [False]*4)  # players in REACH state
+    is_first_round:bool = False     # if self first round has not passed
+    
+    def n_other_reach(self) -> int:
+        """ number of other players in reach state"""
+        other_reach = self.player_reached.copy()
+        other_reach.pop(self.self_seat)
+        n = sum(1 for r in other_reach if r)
+        return n

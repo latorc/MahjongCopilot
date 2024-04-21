@@ -375,7 +375,9 @@ class BotManager:
                 #     self._process_end_game()
             
             elif msg.flow_id == self.lobby_flow_id:
-                LOGGER.debug('Lobby msg: id=%s,type=%s,method=%s,len=%d', liqi_id, liqi_type, liqi_method, len(str(liqimsg)))
+                LOGGER.debug(
+                    'Lobby msg(suppressed): id=%s, type=%s, method=%s, len=%d',
+                    liqi_id, liqi_type, liqi_method, len(str(liqimsg)))
 
             else:
                 LOGGER.debug('Other msg (ignored): %s', liqimsg)

@@ -43,6 +43,7 @@ class KyokuState:
         self.pending_reach_acc:dict = None  # Pending MJAI reach accepted message
         self.first_round:bool = True        # flag marking if it is the first move in new round
         self.self_in_reach:bool = False     # if self is in reach state
+        self.player_reach:list = [False]*4  # list of player reach states
 
 class GameState:
     """ Stores Majsoul game state and processes inputs outputs to/from Bot"""
@@ -90,8 +91,10 @@ class GameState:
                 honba = self.kyoku_state.honba,
                 my_tehai = self.kyoku_state.my_tehai,
                 my_tsumohai = self.kyoku_state.my_tsumohai,
-                reached = self.kyoku_state.self_in_reach,
-                is_first_round = self.kyoku_state.first_round
+                self_reached = self.kyoku_state.self_in_reach,
+                self_seat = self.seat,
+                player_reached = self.kyoku_state.player_reach.copy(),
+                is_first_round = self.kyoku_state.first_round,                
             )
             return gi
         else:   # if game not started: None
@@ -264,20 +267,21 @@ class GameState:
         """ Start kyoku """
         self.kyoku_state = KyokuState()
         self.mjai_pending_input_msgs = []
-   
-        self.kyoku_state.bakaze = MJAI_WINDS[liqi_data['data']['chang']]
-        dora_marker = mj_helper.cvt_ms2mjai(liqi_data['data']['doras'][0])
+
+        liqi_data_data = liqi_data['data']
+        self.kyoku_state.bakaze = MJAI_WINDS[liqi_data_data['chang']]
+        dora_marker = mj_helper.cvt_ms2mjai(liqi_data_data['doras'][0])
         self.kyoku_state.doras_ms = [dora_marker]
-        self.kyoku_state.honba = liqi_data['data']['ben']
-        oya = liqi_data['data']['ju']           # oya is also the seat id of East
+        self.kyoku_state.honba = liqi_data_data['ben']
+        oya = liqi_data_data['ju']           # oya is also the seat id of East
         self.kyoku_state.kyoku = oya + 1
         self.kyoku_state.jikaze  = MJAI_WINDS[(self.seat - oya)]
-        kyotaku = liqi_data['data']['liqibang']
-        self.player_scores = liqi_data['data']['scores']
+        kyotaku = liqi_data_data['liqibang']
+        self.player_scores = liqi_data_data['scores']
         if self.game_mode in [GameMode.MJ3P]:
             self.player_scores = self.player_scores + [0]
         tehais_mjai = [['?']*13]*4        
-        my_tehai_ms = liqi_data['data']['tiles']
+        my_tehai_ms = liqi_data_data['tiles']
         self.kyoku_state.my_tehai = [mj_helper.cvt_ms2mjai(tile) for tile in my_tehai_ms]
         self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)
         
@@ -323,7 +327,7 @@ class GameState:
             self.mjai_pending_input_msgs.append(tsumo_msg)
         
         self.is_round_started = True
-        return self._react_all(liqi_data['data'])
+        return self._react_all(liqi_data_data)
     
     def ms_action_prototype(self, liqi_data:dict) -> dict:
         """ process actionPrototype msg, generate mjai msg and have mjai react to it"""        
@@ -334,26 +338,27 @@ class GameState:
                 self.mjai_pending_input_msgs.append(self.kyoku_state.pending_reach_acc)
                 self.kyoku_state.pending_reach_acc = None
         
+        liqi_data_data = liqi_data['data']
         if 'data' in liqi_data:
             # Process dora events
             # According to mjai.app, in the case of an ankan, the dora event comes first, followed by the tsumo event.
-            if 'doras' in liqi_data['data']:
-                if len(liqi_data['data']['doras']) > len(self.kyoku_state.doras_ms):
+            if 'doras' in liqi_data_data:
+                if len(liqi_data_data['doras']) > len(self.kyoku_state.doras_ms):
                     self.mjai_pending_input_msgs.append(
                         {
                             'type': MJAI_TYPE.DORA,
-                            'dora_marker': mj_helper.cvt_ms2mjai(liqi_data['data']['doras'][-1])
+                            'dora_marker': mj_helper.cvt_ms2mjai(liqi_data_data['doras'][-1])
                         }
                     )
-                    self.kyoku_state.doras_ms = liqi_data['data']['doras']        
+                    self.kyoku_state.doras_ms = liqi_data_data['doras']        
         
         # LiqiAction.DealTile -> MJAI_TYPE.TSUMO
         if liqi_data_name == LiqiAction.DealTile:
-            actor = liqi_data['data']['seat']
-            if liqi_data['data']['tile'] == '':     # other player's tsumo
+            actor = liqi_data_data['seat']
+            if liqi_data_data['tile'] == '':     # other player's tsumo
                 tile_mjai = '?'
             else:           # my tsumo
-                tile_mjai = mj_helper.cvt_ms2mjai(liqi_data['data']['tile'])
+                tile_mjai = mj_helper.cvt_ms2mjai(liqi_data_data['tile'])
                 self.kyoku_state.my_tsumohai = tile_mjai
             self.mjai_pending_input_msgs.append(
                 {
@@ -362,13 +367,13 @@ class GameState:
                     'pai': tile_mjai
                 }
             )
-            return self._react_all(liqi_data['data'])
+            return self._react_all(liqi_data_data)
         
         # LiqiAction.DiscardTile -> MJAI_TYPE.DAHAI
         elif liqi_data_name == LiqiAction.DiscardTile:
-            actor = liqi_data['data']['seat']
-            tile_mjai = mj_helper.cvt_ms2mjai(liqi_data['data']['tile'])
-            tsumogiri = liqi_data['data']['moqie']
+            actor = liqi_data_data['seat']
+            tile_mjai = mj_helper.cvt_ms2mjai(liqi_data_data['tile'])
+            tsumogiri = liqi_data_data['moqie']
             if actor == self.seat:  # update self hand info
                 if self.kyoku_state.my_tsumohai:                
                     self.kyoku_state.my_tehai.append(self.kyoku_state.my_tsumohai)
@@ -376,11 +381,11 @@ class GameState:
                 self.kyoku_state.my_tehai.remove(tile_mjai)
                 self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)            
             
-            if liqi_data['data']['isLiqi']:     # Player declares reach
-                if liqi_data['data']['seat'] == self.seat:  # self reach
-                    self.kyoku_state.self_in_reach = True
-                    
-                # else:   # Other player reach
+            if liqi_data_data['isLiqi']:     # Player declares reach
+                if liqi_data_data['seat'] == self.seat:  # self reach
+                    self.kyoku_state.self_in_reach = True                    
+                
+                self.kyoku_state.player_reach[actor] = True
                 self.mjai_pending_input_msgs.append(
                     {
                         'type': MJAI_TYPE.REACH,
@@ -402,20 +407,20 @@ class GameState:
                 }
             )
                 
-            return self._react_all(liqi_data['data'])        
+            return self._react_all(liqi_data_data)        
         
         # LiqiAction.ChiPengGang -> MJAI CHI/PON/DAIMINKAN
         elif liqi_data_name == LiqiAction.ChiPengGang:
-            actor = liqi_data['data']['seat']
+            actor = liqi_data_data['seat']
             target = actor
             consumed_mjai = []
             tile_mjai = ''
-            for idx, fr in enumerate(liqi_data['data']['froms']):
+            for idx, fr in enumerate(liqi_data_data['froms']):
                 if fr != actor:
                     target = fr
-                    tile_mjai = mj_helper.cvt_ms2mjai(liqi_data['data']['tiles'][idx])
+                    tile_mjai = mj_helper.cvt_ms2mjai(liqi_data_data['tiles'][idx])
                 else:
-                    consumed_mjai.append(mj_helper.cvt_ms2mjai(liqi_data['data']['tiles'][idx]))
+                    consumed_mjai.append(mj_helper.cvt_ms2mjai(liqi_data_data['tiles'][idx]))
             if actor == self.seat:  # update my hand info
                 for c in consumed_mjai:
                     self.kyoku_state.my_tehai.remove(c)                
@@ -424,7 +429,7 @@ class GameState:
             assert target != actor
             assert len(consumed_mjai) != 0
             assert tile_mjai != ''
-            match liqi_data['data']['type']:
+            match liqi_data_data['type']:
                 case ChiPengGang.Chi:
                     assert len(consumed_mjai) == 2
                     self.mjai_pending_input_msgs.append(
@@ -459,15 +464,15 @@ class GameState:
                         }
                     )
                 case _:
-                    raise ValueError(f"Unknown ChiPengGang type {liqi_data['data']['type']}")
-            return self._react_all(liqi_data['data'])
+                    raise ValueError(f"Unknown ChiPengGang type {liqi_data_data['type']}")
+            return self._react_all(liqi_data_data)
                     
         # LiqiAction.AnGangAddGang -> MJAI ANKAN / KAKAN
         elif liqi_data_name == LiqiAction.AnGangAddGang:
-            actor = liqi_data['data']['seat']
-            match liqi_data['data']['type']:
+            actor = liqi_data_data['seat']
+            match liqi_data_data['type']:
                 case MSGangType.AnGang:
-                    tile_mjai = mj_helper.cvt_ms2mjai(liqi_data['data']['tiles'])
+                    tile_mjai = mj_helper.cvt_ms2mjai(liqi_data_data['tiles'])
                     consumed_mjai = [tile_mjai.replace("r", "")]*4
                     if tile_mjai[0] == '5' and tile_mjai[1] != 'z':
                         consumed_mjai[0] += 'r'
@@ -487,7 +492,7 @@ class GameState:
                         }
                     )
                 case MSGangType.AddGang:
-                    tile_mjai = mj_helper.cvt_ms2mjai(liqi_data['data']['tiles'])
+                    tile_mjai = mj_helper.cvt_ms2mjai(liqi_data_data['tiles'])
                     consumed_mjai = [tile_mjai.replace("r", "")] * 3
                     if tile_mjai[0] == "5" and not tile_mjai.endswith("r"):
                         consumed_mjai[0] = consumed_mjai[0] + "r"
@@ -506,11 +511,11 @@ class GameState:
                             'consumed': consumed_mjai
                         }
                     )
-            return self._react_all(liqi_data['data'])
+            return self._react_all(liqi_data_data)
         
         # (3p Mahjong only) LiqiAction.BaBei -> MJAI NUKIDORA
         elif liqi_data_name == LiqiAction.BaBei:
-            actor = liqi_data['data']['seat']
+            actor = liqi_data_data['seat']
             if actor == self.seat:      # update hand info. babei is after tsumo, so there is tsumohai
                 self.kyoku_state.my_tehai.append(self.kyoku_state.my_tsumohai)
                 self.kyoku_state.my_tsumohai = None
@@ -524,7 +529,7 @@ class GameState:
                     'pai': 'N'
                 }
             )
-            return self._react_all(liqi_data['data'])
+            return self._react_all(liqi_data_data)
         
         # LiqiAction.Hule -> MJAI END_KYOKU
         elif liqi_data_name in LiqiAction.Hule:

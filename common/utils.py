@@ -221,6 +221,19 @@ def set_dpi_awareness():
             ctypes.windll.user32.SetProcessDPIAware()       # for Windows Vista and later
         except: #pylint:disable=bare-except
             pass
+        
+def prevent_sleep():
+    """ prevent system going into sleep/screen saver"""
+    if sys.platform == "win32":
+        ES_CONTINUOUS = 0x80000000
+        ES_SYSTEM_REQUIRED = 0x00000001
+        ES_DISPLAY_REQUIRED = 0x00000002
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            ES_CONTINUOUS | 
+            ES_SYSTEM_REQUIRED | 
+            ES_DISPLAY_REQUIRED
+        )
+        
 class FPSCounter:
     """ for counting frames and calculate fps"""
     def __init__(self):

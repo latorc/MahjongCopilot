@@ -330,23 +330,29 @@ class Automation:
         delay = random.uniform(self.st.delay_random_lower, self.st.delay_random_upper)    # base delay        
         if mjai_type == MJAI_TYPE.DAHAI:
             # extra time for first round and East
-            if gi.is_first_round:
-                delay += 1.5
-                if gi.jikaze  == 'E':   # extra time for sort animation on kyoku start
-                    delay += 3.5
-            pai = mjai_action['pai']
+            if gi.is_first_round and  gi.jikaze  == 'E':
+                delay += 4.5
+                
+            extra_time:float = 0.0
             
             # more time for 19 < 28 < others
+            pai = mjai_action['pai']
             if pai in MJAI_TILES_19:
-                delay += 0.0
+                extra_time += 0.0
             elif pai in MJAI_TILES_28:
-                delay += 0.5
+                extra_time += 0.5
             else:
-                delay += 1.0
-                
+                extra_time += random.uniform(0.75, 1.0)            
+            if gi.n_other_reach() > 0:    # extra time for other reach
+                extra_time += random.uniform(0.25, 0.75)
+            extra_time = min(extra_time, 3.0)   # cap extra time
+            delay += extra_time
+                                
         elif mjai_type == MJAI_TYPE.REACH:
             delay += 1.0
         elif mjai_type == MJAI_TYPE.HORA:
+            delay += 0.0
+        elif mjai_type == MJAI_TYPE.NUKIDORA:
             delay += 0.0
         else:       # chi/pon/kan/others
             delay += 0.5
@@ -376,7 +382,7 @@ class Automation:
             mjai_action = self.randomize_action(mjai_action, gi) 
         # Dahai action
         if  mjai_type == MJAI_TYPE.DAHAI:       
-            if gi.reached:
+            if gi.self_reached:
                 # already in reach state. no need to automate dahai
                 LOGGER.info("Skip automating dahai, already in REACH")
                 game_state.last_reaction_pending = False        # cancel pending state so i won't be retried

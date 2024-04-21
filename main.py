@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+from common import utils
 from gui.main_gui import MainGUI
 from common.log_helper import LogHelper
 from common.settings import Settings
@@ -27,6 +27,7 @@ def main():
     LogHelper.config_logging()
     setting = Settings()
     # utils.set_dpi_awareness()
+    utils.prevent_sleep()
     bot_manager = BotManager(setting)
     gui = MainGUI(setting, bot_manager)
     gui.mainloop()
