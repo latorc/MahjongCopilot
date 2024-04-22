@@ -15,8 +15,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from common import utils
+
 from gui.main_gui import MainGUI
+from common import utils
 from common.log_helper import LogHelper
 from common.settings import Settings
 from bot_manager import BotManager
