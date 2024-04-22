@@ -4,7 +4,7 @@ import time
 from common.settings import Settings
 from common.log_helper import LOGGER
 from common.utils import random_str
-from common.mj_helper import MJAI_TYPE
+from common.mj_helper import MjaiType
 from .mjapi import MjapiClient
 
 from .bot import Bot, BotType, GameMode
@@ -79,9 +79,9 @@ class BotMjapi(Bot):
             return None
 
         # process self reach
-        if recurse and reaction['type'] == MJAI_TYPE.REACH and reaction['actor'] == self.seat:
+        if recurse and reaction['type'] == MjaiType.REACH and reaction['actor'] == self.seat:
             LOGGER.debug("Send reach msg to get reach_dahai.")
-            reach_msg = {'type': MJAI_TYPE.REACH, 'actor': self.seat}
+            reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
             reach_dahai = self.react(reach_msg, recurse=False)
             reaction['reach_dahai'] = self._process_reaction(reach_dahai, False)
             self.ignore_next_turn_self_reach = True
@@ -92,7 +92,7 @@ class BotMjapi(Bot):
         # input_msg['can_act'] = True
         msg_type = input_msg['type']
         if self.ignore_next_turn_self_reach:
-            if  msg_type == MJAI_TYPE.REACH and input_msg['actor'] == self.seat:
+            if  msg_type == MjaiType.REACH and input_msg['actor'] == self.seat:
                 LOGGER.debug("Ignoring repetitive self reach msg, reach msg already sent to AI last turn")
                 return None
             self.ignore_next_turn_self_reach = False
@@ -116,7 +116,7 @@ class BotMjapi(Bot):
 
     def react_batch(self, input_list: list[dict]) -> dict | None:
         if self.ignore_next_turn_self_reach and len(input_list) > 0:
-            if input_list[0]['type'] == MJAI_TYPE.REACH and input_list[0]['actor'] == self.seat:
+            if input_list[0]['type'] == MjaiType.REACH and input_list[0]['actor'] == self.seat:
                 LOGGER.debug("Ignoring repetitive self reach msg, reach msg already sent to AI last turn")
                 input_list = input_list[1:]
             self.ignore_next_turn_self_reach = False

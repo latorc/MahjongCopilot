@@ -1,9 +1,10 @@
-# Helper methods / constants
-# that deal with tile converting / mjai message parsing / etc.
+""" Helper methods / constants that deal with tile converting / mjai message parsing / etc.
+"""
 
 from dataclasses import dataclass, field
-import numpy as np
 from functools import cmp_to_key
+
+import numpy as np
 
 TILES_MS_2_MJAI = {
     '0m': '5mr',
@@ -17,6 +18,7 @@ TILES_MS_2_MJAI = {
     '6z': 'F',
     '7z': 'C'
 }
+
 TILES_MJAI_2_MS = {value: key for key, value in TILES_MS_2_MJAI.items()}    # swap keys and values
 
 def cvt_ms2mjai(ms_tile:str) -> str:
@@ -25,6 +27,7 @@ def cvt_ms2mjai(ms_tile:str) -> str:
         return TILES_MS_2_MJAI[ms_tile]
     else:
         return ms_tile
+    
 
 def cvt_mjai2ms(mjai_tile:str) -> str:
     """ convert mjai tile to majsoul tile"""
@@ -59,7 +62,7 @@ class MSGangType:
     AnGang = 3      # ankan
     AddGang = 2     # kakan/daminkan
 
-class MJAI_TYPE:
+class MjaiType:
     """ MJAI message type string constants
     ref: https://mjai.app/docs/mjai-protocol
     """
@@ -88,6 +91,7 @@ def mask_bits_to_binary_string(mask_bits):
     binary_string = binary_string.zfill(46)
     return binary_string
 
+
 def mask_bits_to_bool_list(mask_bits):
     binary_string = mask_bits_to_binary_string(mask_bits)
     bool_list = []
@@ -95,30 +99,27 @@ def mask_bits_to_bool_list(mask_bits):
         bool_list.append(bit == '1')
     return bool_list
 
+
 def eq(l, r):
     # Check for approximate equality using numpy's floating-point epsilon
     return np.abs(l - r) <= np.finfo(float).eps
 
+
 def softmax(arr, temperature=1.0):
-    arr = np.array(arr, dtype=float)  # Ensure the input is a numpy array of floats
-    
+    arr = np.array(arr, dtype=float)  # Ensure the input is a numpy array of floats    
     if arr.size == 0:
         return arr  # Return the empty array if input is empty
-
     if not eq(temperature, 1.0):
         arr /= temperature  # Scale by temperature if temperature is not approximately 1
-
     # Shift values by max for numerical stability
     max_val = np.max(arr)
-    arr = arr - max_val
-    
+    arr = arr - max_val    
     # Apply the softmax transformation
     exp_arr = np.exp(arr)
-    sum_exp = np.sum(exp_arr)
-    
-    softmax_arr = exp_arr / sum_exp
-    
+    sum_exp = np.sum(exp_arr)    
+    softmax_arr = exp_arr / sum_exp    
     return softmax_arr
+
 
 MJAI_MASK_LIST = [
     "1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m",
@@ -145,9 +146,7 @@ MJAI_TILES_34 = [
     "E",  "S",  "W",  "N",  "P",  "F",  "C",  "?"
 ]
 
-MJAI_AKA_DORAS = [
-    "5mr", "5pr", "5sr"
-]
+MJAI_AKA_DORAS = ["5mr", "5pr", "5sr"]
 
 MJAI_TILES_SORTED = [       # for sorting tiles, with aka doras
     "1m", "2m", "3m", "4m", "5mr", "5m", "6m", "7m", "8m", "9m",
@@ -161,9 +160,7 @@ MJAI_TILES_19 = [
     "E", "S", "W", "N", "P", "F", "C"
 ]
 
-MJAI_TILES_28 = [
-    "2m", "8m", "2p", "8p", "2s", "8s",
-]
+MJAI_TILES_28 = ["2m", "8m", "2p", "8p", "2s", "8s"]
 
 MJAI_WINDS = ['E', 'S', 'W', 'N']
 
@@ -179,6 +176,7 @@ MJAI_TILE_2_UNICODE = {      # https://en.wikipedia.org/wiki/Mahjong_Tiles_(Unic
     '?': '🀫'
 }
 class ActionUnicode:
+    """ unicode symbols for ms actions"""
     PASS = "✖️"
     CHI = "🟩"
     PON = "🟦"
@@ -186,16 +184,19 @@ class ActionUnicode:
     REACH = "🟧"
     AGARI = "🟥"
     RYUKYOKU = "⬛"
+    
 
 def cmp_mjai_tiles(tile1: str, tile2: str):
     """ compare function for sorting tiles"""
     return MJAI_TILES_SORTED.index(tile1) - MJAI_TILES_SORTED.index(tile2)
 
+
 def sort_mjai_tiles(mjai_tiles:list[str]) -> list[str]:
     """ sort mjai tiles"""
     return sorted(mjai_tiles, key=cmp_to_key(cmp_mjai_tiles))
 
-# sample data structure for meta
+
+# sample data structure for mjai reaction - meta
 _sample_meta = {
     "q_values":[
         -9.0919, -9.4669, -8.36597, -8.84972, -9.4357, -10.0071,
@@ -205,6 +206,7 @@ _sample_meta = {
     "is_greedy": True,
     "eval_time_ns": 357088300
 }
+
 
 def meta_to_options(meta: dict, is_3p:bool=False) -> list:
     """ Convert meta from mjai reaction msg to readable list of tiles with weights
@@ -222,11 +224,6 @@ def meta_to_options(meta: dict, is_3p:bool=False) -> list:
     mask_bits = meta['mask_bits']
     mask = mask_bits_to_bool_list(mask_bits)
     weight_values = softmax(q_values)
-    # further square the numbers and normalize
-    # weight_values = [w*w for w in weight_values]
-    # sum_weight = sum(weight_values)
-    # weight_values = [w/sum_weight for w in weight_values]
-    # sum_weight should ~= 1.0
     
     q_value_idx = 0
     option_list = []
@@ -244,12 +241,6 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
     returns:
         ([list of tehai], trumohai) in mjai tiles format"""
     # tehai34 is with tsumohai, no aka marked
-
-    """pub(super) chis: ArrayVec<[u8; 4]>,
-    pub(super) pons: ArrayVec<[u8; 4]>,
-    pub(super) minkans: ArrayVec<[u8; 4]>,
-    pub(super) ankans: ArrayVec<[u8; 4]>,
-    """
     
     tile_list = []
     for tile_id, tile_count in enumerate(tehai34):

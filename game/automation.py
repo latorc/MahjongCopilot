@@ -12,7 +12,7 @@ import random
 import threading
 from typing import Iterable, Iterator
 
-from common.mj_helper import MJAI_TYPE, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED
+from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
 from common.log_helper import LOGGER
 from common.settings import Settings
@@ -114,18 +114,18 @@ class Positions:
 
 
 MJAI_2_MS_TYPE = {
-    MJAI_TYPE.NONE: MSType.none,
+    MjaiType.NONE: MSType.none,
     
-    MJAI_TYPE.CHI: MSType.chi,
-    MJAI_TYPE.PON: MSType.pon,
-    MJAI_TYPE.DAIMINKAN: MSType.daiminkan,
-    MJAI_TYPE.HORA: MSType.hora,        # MJAI hora might also be mapped to zimo
+    MjaiType.CHI: MSType.chi,
+    MjaiType.PON: MSType.pon,
+    MjaiType.DAIMINKAN: MSType.daiminkan,
+    MjaiType.HORA: MSType.hora,        # MJAI hora might also be mapped to zimo
 
-    MJAI_TYPE.ANKAN: MSType.ankan,
-    MJAI_TYPE.KAKAN: MSType.kakan,
-    MJAI_TYPE.REACH: MSType.reach,
-    MJAI_TYPE.RYUKYOKU: MSType.ryukyoku,
-    MJAI_TYPE.NUKIDORA: MSType.nukidora,
+    MjaiType.ANKAN: MSType.ankan,
+    MjaiType.KAKAN: MSType.kakan,
+    MjaiType.REACH: MSType.reach,
+    MjaiType.RYUKYOKU: MSType.ryukyoku,
+    MjaiType.NUKIDORA: MSType.nukidora,
 }
 """ Map mjai type to Majsoul operation type """
 
@@ -148,7 +148,7 @@ None is always the lowest, at bottom-right corner"""
 
 def cvt_type_mjai_2_ms(mjai_type:str, gi:GameInfo) -> MSType:
     """ Convert mjai type str to MSType enum"""
-    if gi.my_tsumohai and mjai_type == MJAI_TYPE.HORA:
+    if gi.my_tsumohai and mjai_type == MjaiType.HORA:
         return MSType.zimo
     else:
         return MJAI_2_MS_TYPE[mjai_type]
@@ -328,7 +328,7 @@ class Automation:
         """ return the action initial delay based on action type and game info"""
         mjai_type = mjai_action['type']
         delay = random.uniform(self.st.delay_random_lower, self.st.delay_random_upper)    # base delay        
-        if mjai_type == MJAI_TYPE.DAHAI:
+        if mjai_type == MjaiType.DAHAI:
             # extra time for first round and East
             if gi.is_first_round and  gi.jikaze  == 'E':
                 delay += 4.5
@@ -348,11 +348,11 @@ class Automation:
             extra_time = min(extra_time, 3.0)   # cap extra time
             delay += extra_time
                                 
-        elif mjai_type == MJAI_TYPE.REACH:
+        elif mjai_type == MjaiType.REACH:
             delay += 1.0
-        elif mjai_type == MJAI_TYPE.HORA:
+        elif mjai_type == MjaiType.HORA:
             delay += 0.0
-        elif mjai_type == MJAI_TYPE.NUKIDORA:
+        elif mjai_type == MjaiType.NUKIDORA:
             delay += 0.0
         else:       # chi/pon/kan/others
             delay += 0.5
@@ -381,7 +381,7 @@ class Automation:
         if self.st.ai_randomize_choice:     # randomize choice
             mjai_action = self.randomize_action(mjai_action, gi) 
         # Dahai action
-        if  mjai_type == MJAI_TYPE.DAHAI:       
+        if  mjai_type == MjaiType.DAHAI:       
             if gi.self_reached:
                 # already in reach state. no need to automate dahai
                 LOGGER.info("Skip automating dahai, already in REACH")
@@ -390,8 +390,8 @@ class Automation:
             more_steps:list[ActionStep] = self.steps_action_dahai(mjai_action, gi)
         
         # "button" action
-        elif mjai_type in [MJAI_TYPE.NONE, MJAI_TYPE.CHI, MJAI_TYPE.PON, MJAI_TYPE.DAIMINKAN, MJAI_TYPE.ANKAN,
-            MJAI_TYPE.KAKAN, MJAI_TYPE.HORA, MJAI_TYPE.REACH, MJAI_TYPE.RYUKYOKU, MJAI_TYPE.NUKIDORA]:
+        elif mjai_type in [MjaiType.NONE, MjaiType.CHI, MjaiType.PON, MjaiType.DAIMINKAN, MjaiType.ANKAN,
+            MjaiType.KAKAN, MjaiType.HORA, MjaiType.REACH, MjaiType.RYUKYOKU, MjaiType.NUKIDORA]:
             liqi_operation = game_state.last_operation
             more_steps:list[ActionStep] = self.steps_button_action(mjai_action, gi, liqi_operation)
         
@@ -414,7 +414,7 @@ class Automation:
         if n == 0:
             return action
         mjai_type = action['type']
-        if mjai_type == MJAI_TYPE.DAHAI:
+        if mjai_type == MjaiType.DAHAI:
             orig_pai = action['pai']
             options:dict = action['meta_options']            # e.g. {'1m':0.95, 'P':0.045, 'N':0.005, ...}
             # get dahai options (tile only) from top 3
@@ -448,7 +448,7 @@ class Automation:
             # generate new action for changed tile
             tsumogiri = chosen_pai == gi.my_tsumohai
             new_action = {
-                'type': MJAI_TYPE.DAHAI,
+                'type': MjaiType.DAHAI,
                 'actor': action['actor'],
                 'pai': chosen_pai,
                 'tsumogiri': tsumogiri

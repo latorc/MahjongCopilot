@@ -14,7 +14,7 @@ from game.automation import Automation, UiState, JOIN_GAME, END_GAME
 import mitm
 import proxinject
 import liqi
-from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
+from common.mj_helper import MjaiType, GameInfo, MJAI_TILE_2_UNICODE, ActionUnicode, MJAI_TILES_34, MJAI_AKA_DORAS
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LanStr
@@ -501,35 +501,35 @@ def mjai_reaction_2_guide(reaction:dict, max_options:int=3, lan_str:LanStr=LanSt
     if pai:
         tile_str =  get_tile_str(pai)
     
-    if re_type == MJAI_TYPE.DAHAI:
+    if re_type == MjaiType.DAHAI:
         action_str = f"{lan_str.DISCARD}{tile_str}"
-    elif re_type == MJAI_TYPE.NONE:
+    elif re_type == MjaiType.NONE:
         action_str = ActionUnicode.PASS + lan_str.PASS
-    elif re_type == MJAI_TYPE.PON:
+    elif re_type == MjaiType.PON:
         action_str = f"{ActionUnicode.PON}{lan_str.PON}{tile_str}"
-    elif re_type == MJAI_TYPE.CHI:
+    elif re_type == MjaiType.CHI:
         comsumed = reaction['consumed']
         comsumed_strs = [f"{get_tile_str(x)}" for x in comsumed]
         action_str = f"{ActionUnicode.CHI}{lan_str.CHI}{tile_str}({''.join(comsumed_strs)})"         
-    elif re_type == MJAI_TYPE.KAKAN:
+    elif re_type == MjaiType.KAKAN:
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.KAKAN})"
-    elif re_type == MJAI_TYPE.DAIMINKAN:
+    elif re_type == MjaiType.DAIMINKAN:
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.DAIMINKAN})"
-    elif re_type == MJAI_TYPE.ANKAN:
+    elif re_type == MjaiType.ANKAN:
         tile_str = get_tile_str(reaction['consumed'][1])
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.ANKAN})"
-    elif re_type == MJAI_TYPE.REACH: # attach reach dahai options
+    elif re_type == MjaiType.REACH: # attach reach dahai options
         reach_dahai_reaction = reaction['reach_dahai']
         dahai_action_str, _dahai_options = mjai_reaction_2_guide(reach_dahai_reaction, 0, lan_str)
         action_str = f"{ActionUnicode.REACH}{lan_str.RIICHI}," + dahai_action_str
-    elif re_type == MJAI_TYPE.HORA:
+    elif re_type == MjaiType.HORA:
         if reaction['actor'] == reaction['target']:
             action_str = f"{ActionUnicode.AGARI}{lan_str.AGARI}({lan_str.TSUMO})"
         else:
             action_str = f"{ActionUnicode.AGARI}{lan_str.AGARI}({lan_str.RON})"
-    elif re_type == MJAI_TYPE.RYUKYOKU:
+    elif re_type == MjaiType.RYUKYOKU:
         action_str = f"{ActionUnicode.RYUKYOKU}{lan_str.RYUKYOKU}"
-    elif re_type == MJAI_TYPE.NUKIDORA:
+    elif re_type == MjaiType.NUKIDORA:
         action_str = f"{lan_str.NUKIDORA}{MJAI_TILE_2_UNICODE['N']}"
     else:
         action_str = lan_str.mjai2str(re_type)
@@ -543,7 +543,7 @@ def mjai_reaction_2_guide(reaction:dict, max_options:int=3, lan_str:LanStr=LanSt
                 if code in MJAI_TILES_34 or code in MJAI_AKA_DORAS:
                     # if it is a tile
                     name_str = get_tile_str(code)
-                elif code == MJAI_TYPE.NUKIDORA:
+                elif code == MjaiType.NUKIDORA:
                     name_str = lan_str.mjai2str(code) + MJAI_TILE_2_UNICODE['N']
                 else:
                     name_str = lan_str.mjai2str(code)                

@@ -6,7 +6,7 @@ from liqi import MsgType
 from liqi import LiqiProto, LiqiMethod, LiqiAction
 
 import common.mj_helper as mj_helper
-from common.mj_helper import MJAI_TYPE, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
+from common.mj_helper import MjaiType, GameInfo, MJAI_WINDS, ChiPengGang, MSGangType
 from common.log_helper import LOGGER
 from common.utils import GameMode
 from bot import Bot, reaction_convert_meta
@@ -295,7 +295,7 @@ class GameState:
             tehais_mjai[self.seat] = self.kyoku_state.my_tehai     # take first 13 tiles
 
             tsumo_msg = {
-                'type': MJAI_TYPE.TSUMO,
+                'type': MjaiType.TSUMO,
                 'actor': self.seat,
                 'pai': self.kyoku_state.my_tsumohai
                 }
@@ -303,7 +303,7 @@ class GameState:
         elif len(self.kyoku_state.my_tehai) == 13:      # self not East
             tehais_mjai[self.seat] = self.kyoku_state.my_tehai
             tsumo_msg = {
-                'type': MJAI_TYPE.TSUMO,
+                'type': MjaiType.TSUMO,
                 'actor': oya,
                 'pai': '?'
                 }
@@ -312,7 +312,7 @@ class GameState:
         
         # append messages and react
         start_kyoku_msg = {
-            'type': MJAI_TYPE.START_KYOKU,
+            'type': MjaiType.START_KYOKU,
             'bakaze': self.kyoku_state.bakaze,
             'dora_marker': dora_marker,
             'honba': self.kyoku_state.honba,
@@ -346,7 +346,7 @@ class GameState:
                 if len(liqi_data_data['doras']) > len(self.kyoku_state.doras_ms):
                     self.mjai_pending_input_msgs.append(
                         {
-                            'type': MJAI_TYPE.DORA,
+                            'type': MjaiType.DORA,
                             'dora_marker': mj_helper.cvt_ms2mjai(liqi_data_data['doras'][-1])
                         }
                     )
@@ -362,7 +362,7 @@ class GameState:
                 self.kyoku_state.my_tsumohai = tile_mjai
             self.mjai_pending_input_msgs.append(
                 {
-                    'type': MJAI_TYPE.TSUMO,
+                    'type': MjaiType.TSUMO,
                     'actor': actor,
                     'pai': tile_mjai
                 }
@@ -388,19 +388,19 @@ class GameState:
                 self.kyoku_state.player_reach[actor] = True
                 self.mjai_pending_input_msgs.append(
                     {
-                        'type': MJAI_TYPE.REACH,
+                        'type': MjaiType.REACH,
                         'actor': actor
                     }
                 )
                 # pending reach accept msg for mjai. this msg will be sent when next liqi action msg is received
                 self.kyoku_state.pending_reach_acc = {
-                    'type': MJAI_TYPE.REACH_ACCEPTED,
+                    'type': MjaiType.REACH_ACCEPTED,
                     'actor': actor
                     }
                     
             self.mjai_pending_input_msgs.append(
                 {
-                    'type': MJAI_TYPE.DAHAI,
+                    'type': MjaiType.DAHAI,
                     'actor': actor,
                     'pai': tile_mjai,
                     'tsumogiri': tsumogiri
@@ -434,7 +434,7 @@ class GameState:
                     assert len(consumed_mjai) == 2
                     self.mjai_pending_input_msgs.append(
                         {
-                            'type': MJAI_TYPE.CHI,
+                            'type': MjaiType.CHI,
                             'actor': actor,
                             'target': target,
                             'pai': tile_mjai,
@@ -445,7 +445,7 @@ class GameState:
                     assert len(consumed_mjai) == 2
                     self.mjai_pending_input_msgs.append(
                         {
-                            'type': MJAI_TYPE.PON,
+                            'type': MjaiType.PON,
                             'actor': actor,
                             'target': target,
                             'pai': tile_mjai,
@@ -456,7 +456,7 @@ class GameState:
                     assert len(consumed_mjai) == 3
                     self.mjai_pending_input_msgs.append(
                         {
-                            'type': MJAI_TYPE.DAIMINKAN,
+                            'type': MjaiType.DAIMINKAN,
                             'actor': actor,
                             'target': target,
                             'pai': tile_mjai,
@@ -486,7 +486,7 @@ class GameState:
 
                     self.mjai_pending_input_msgs.append(
                         {
-                            'type': MJAI_TYPE.ANKAN,
+                            'type': MjaiType.ANKAN,
                             'actor': actor,
                             'consumed': consumed_mjai
                         }
@@ -505,7 +505,7 @@ class GameState:
                         
                     self.mjai_pending_input_msgs.append(
                         {
-                            'type': MJAI_TYPE.KAKAN,
+                            'type': MjaiType.KAKAN,
                             'actor': actor,
                             'pai': tile_mjai,
                             'consumed': consumed_mjai
@@ -524,7 +524,7 @@ class GameState:
             
             self.mjai_pending_input_msgs.append(
                 {
-                    'type': MJAI_TYPE.NUKIDORA,
+                    'type': MjaiType.NUKIDORA,
                     'actor': actor,
                     'pai': 'N'
                 }

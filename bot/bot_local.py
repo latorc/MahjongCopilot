@@ -4,7 +4,7 @@ from pathlib import Path
 import threading
 import json
 from common.utils import ModelFileException
-from common.mj_helper import MJAI_TYPE
+from common.mj_helper import MjaiType
 from common.log_helper import LOGGER
 try:
     import libriichi
@@ -77,7 +77,7 @@ class BotMortalLocal(Bot):
         if self.mjai_bot is None:
             return None        
         if self.ignore_next_turn_self_reach:    # ignore repetitive self reach. only for the very next msg
-            if input_msg['type'] == MJAI_TYPE.REACH and input_msg['actor'] == self.seat:
+            if input_msg['type'] == MjaiType.REACH and input_msg['actor'] == self.seat:
                 LOGGER.debug("Ignoring repetitive self reach msg, reach msg already sent to AI last turn")
                 return None
             self.ignore_next_turn_self_reach = False
@@ -91,13 +91,13 @@ class BotMortalLocal(Bot):
             reaction = json.loads(react_str)
             # Special treatment for self reach output msg
             # mjai only outputs dahai msg after the reach msg
-            if reaction['type'] == MJAI_TYPE.REACH and reaction['actor'] == self.seat:  # Self reach
+            if reaction['type'] == MjaiType.REACH and reaction['actor'] == self.seat:  # Self reach
                 # get the subsequent dahai message,
                 # appeding it to the reach reaction msg as 'reach_dahai' key
                 LOGGER.debug("Send reach msg to get reach_dahai. Cannot go back to unreach!")
                 # TODO make a clone of mjai_bot so reach can be tested to get dahai without affecting the game
 
-                reach_msg = {'type': MJAI_TYPE.REACH, 'actor': self.seat}
+                reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
                 reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
                 reach_dahai = json.loads(reach_dahai_str)
                 reaction['reach_dahai'] = reach_dahai
