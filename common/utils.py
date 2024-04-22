@@ -141,7 +141,7 @@ def sub_run_args() -> dict:
         'capture_output':True, 
         'text': True,
         'check': False,
-        'shell': True,
+        'shell': False,
         'startupinfo': startup_info}
     return args
 
@@ -198,7 +198,8 @@ def install_root_cert(cert_file:str):
     """
     # Install cert. If the cert exists, system will skip installation
     if sys.platform == "win32":
-        full_command = ["certutil","-addstore","Root",f"\"{cert_file}\""]
+        print(f'"{cert_file}"')
+        full_command = ["certutil","-addstore","Root",cert_file]
         p = subprocess.run(full_command, **sub_run_args())
         
     elif sys.platform == "darwin":
