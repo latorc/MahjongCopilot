@@ -199,11 +199,12 @@ def install_root_cert(cert_file:str):
     # Install cert. If the cert exists, system will skip installation
     if sys.platform == "win32":
         print(f'"{cert_file}"')
-        # full_command = ["certutil","-addstore","Root",cert_file]
-        full_command = [
-            'powershell', '-Command', 
-            f"start-process certutil -ArgumentList '-addstore','Root','{cert_file}' -verb RunAs"
-        ]
+        full_command = ["certutil","-addstore","Root",cert_file]
+        # full_command = [
+        #     'powershell', '-Command', 
+        #     f"Start-Process 'certutil' -ArgumentList '-addstore', 'Root', '{cert_file}' -Wait -Verb 'RunAs';"
+        #     f"exit $LASTEXITCODE"
+        # ]
         p=subprocess.run(full_command, **sub_run_args())
         stdout, stderr = p.stdout, p.stderr
     elif sys.platform == "darwin":
