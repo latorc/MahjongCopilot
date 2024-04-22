@@ -171,7 +171,11 @@ class MainGUI(tk.Tk):
         self.status_bar = StatusBar(self.grid_frame, 3)
         self.status_bar.grid(row=cur_row, column=0, sticky='ew', padx=1, pady=1)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
-        
+    
+    def report_callback_exception(self, exc, val, tb):
+        """ override exception handling: write to log"""
+        LOGGER.error("GUI uncaught exception: %s", exc, exc_info=True)
+        # super().report_callback_exception(exc, val, tb)
     
     def _on_autojoin_level_selected(self, _event):
         new_value = self.auto_join_level_var.get()    # convert to index
@@ -265,6 +269,14 @@ class MainGUI(tk.Tk):
         
 
     def _update_gui_info(self):
+        """ Update GUI widgets status with latest info from bot manager"""
+        try:
+            self._update_gui_info_inner()
+        except Exception as e:
+            LOGGER.error("Error updating GUI: %s", e, exc_info=True)
+        self.after(self.gui_update_delay, self._update_gui_info)
+            
+    def _update_gui_info_inner(self):
         """ Update GUI widgets status with latest info from bot manager"""
         # start browser button state
         if not self.bot_manager.browser.is_running():
@@ -381,9 +393,6 @@ class MainGUI(tk.Tk):
         
         ### update overlay
         self.bot_manager.update_overlay()
-
-        self.after(self.gui_update_delay, self._update_gui_info)     # next update
-        
 
     def _get_status_text_icon(self, gi:GameInfo) -> tuple[str, str]:
         # Get text and icon for status bar last column, based on bot running info
