@@ -1,4 +1,4 @@
-""" Updater class"""
+""" Updater class for getting update info from website and update the main program"""
 import threading
 import subprocess
 import sys
@@ -8,19 +8,20 @@ import shutil
 import zipfile
 from enum import Enum,auto
 import requests
+
 from common.utils import Folder, WEBSITE
 import common.utils as utils
 from common.log_helper import LOGGER
 
 VERSION_FILE = "version"
 UPDATE_FILE = "MahjongCopilot.zip"
-UPDATE_FOLDER = "update"
+HELP_PATH = r"/help"
 
 """ how to release update:
 - Use Pyinstaller to pack to executables.
 - select main executable and files needed (like resources folder), zip into archive
-- Upload to build_output folder
-- Modify version file to reflect new version number"""
+- Upload zip and version file to website update folder
+"""
 
 class UpdateStatus(Enum):
     """ Update status enum"""
@@ -32,11 +33,12 @@ class UpdateStatus(Enum):
     UNZIPPING = auto()
     PREPARED = auto()           # update download/unzipped and ready to apply
     ERROR = auto()
+
     
 class Updater:
     """ handles version check and update"""
-    def __init__(self, url:str):
-        self.urlbase:str = url
+    def __init__(self, update_url:str):
+        self.urlbase:str = update_url
         if not self.urlbase.endswith("/"):
             self.urlbase += "/"
         self.timeout_dl:int = 15
@@ -50,15 +52,16 @@ class Updater:
         
         self.help_html:str = None       # help html text from web
         self.help_exception:Exception = None
+        
     
     def load_help(self):
         """ update html in thread"""
         def task_update():
-            url = WEBSITE + r"/help"
+            url = WEBSITE + HELP_PATH
             LOGGER.info("Loading help html from %s", url)
             html_text = self.get_html(url)
             if html_text is None:
-                self.help_html = f"Error loading help from {url}\n{self.help_exception}"
+                self.help_html = f"""Help Information: <a href="{url}">{url}</a><br>Error loading help.<br>{self.help_exception}"""
                 LOGGER.warning(self.help_html)
             else:
                 self.help_html = html_text
@@ -69,6 +72,7 @@ class Updater:
             target=task_update,
             daemon=True
         ).start()
+        
     
     def get_html(self, url:str) -> str:
         """ get html text from url, and process it"""
@@ -77,7 +81,7 @@ class Updater:
             response = requests.get(url, timeout=15) # Send a GET request to the URL
             # Check if the request was successful (HTTP status code 200)
             if response.status_code != 200:
-                raise ConnectionError(f"Request Error! Status code: {response.status_code}")
+                response.raise_for_status()
             
             # process text: remove/replace some tags
             res_text = response.text
@@ -96,7 +100,6 @@ class Updater:
             }
             for p, r in rep_patterns.items():
                 res_text = re.sub(p, r, res_text, flags=re.DOTALL)            
-            
             return res_text
                 
         except Exception as e:
@@ -127,12 +130,13 @@ class Updater:
             daemon=True
         )
         t.start()
+        
     
     def is_webversion_newer(self) -> bool:
-        """ check if web version is newer than local version"""
-        # convert a.b.c to 000a000b000c
+        """ check if web version is newer than local version"""        
         try:
             if self.web_version:
+                # convert a.b.c to 000a000b000c and compare
                 local_v_int = int(''.join(f"{part:0>4}" for part in self.local_version.split(".")))
                 web_v_int = int(''.join(f"{part:0>4}" for part in self.web_version.split(".")))
                 if web_v_int > local_v_int:
@@ -143,6 +147,8 @@ class Updater:
         
     def download_file(self, fname:str) -> str:
         """ download file and update progress (blocking)
+        Params:
+            fname (str): file name to download
         returns:
             str: downloaded file path"""        
         save_file = utils.sub_file(Folder.TEMP, fname)
@@ -160,6 +166,7 @@ class Updater:
                     pct = downloaded/total_length*100 if total_length > 0 else 0
                     self.dl_progress = f"{downloaded/1000/1000:.1f}/{total_length/1000/1000:.1f} MB ({pct:.1f}%)"
         return save_file
+    
                     
     def unzip_file(self, fname:str) -> str:
         """ unzip file to its folder
@@ -167,12 +174,13 @@ class Updater:
             str: extracted folder path
         """
         f_path = os.path.dirname(fname)
-        extract_path = utils.sub_folder(f_path) / UPDATE_FOLDER
+        extract_path = utils.sub_folder(f_path) / Folder.UPDATE
         if extract_path.exists():
             shutil.rmtree(extract_path)
         with zipfile.ZipFile(fname, 'r') as zip_ref:
             zip_ref.extractall(extract_path)
         return str(extract_path)
+    
                         
     def prepare_update(self):
         """ Prepare update in thread: download and unzip file"""
@@ -205,14 +213,15 @@ class Updater:
         )
         t.start()
         
+        
     def start_update(self):
-        """ start update"""
+        """ Call batch command to start update and then restart main program """
         
         if sys.platform == "win32":
             exec_path = sys.executable
             exec_name = os.path.basename(exec_path)
             root_folder = str(utils.sub_folder("."))
-            update_folder = str(utils.sub_folder(Folder.TEMP)/UPDATE_FOLDER)
+            update_folder = str(utils.sub_folder(Folder.TEMP)/Folder.UPDATE)
             cmd = f"""
             @echo off
             echo Updating {exec_name} ...
@@ -240,7 +249,7 @@ class Updater:
         elif sys.platform == "darwin":
             exec_name = os.path.basename(sys.executable)
             root_folder = str(utils.sub_folder("."))
-            update_folder = str(utils.sub_folder(Folder.TEMP)/UPDATE_FOLDER)
+            update_folder = str(utils.sub_folder(Folder.TEMP)/Folder.UPDATE)
             cmd = f"""
             #!/bin/bash
             echo "Updating {exec_name} in 5 seconds..."

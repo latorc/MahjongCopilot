@@ -7,6 +7,7 @@ The BotManager class is run in a separate thread, and provide interface methods 
 import time
 import queue
 import threading
+
 from game.browser import GameBrowser
 from game.game_state import GameState
 from game.automation import Automation, UiState, JOIN_GAME, END_GAME
@@ -22,7 +23,6 @@ from common.utils import FPSCounter
 from bot import Bot, get_bot
 
 
-
 METHODS_TO_IGNORE = [
     liqi.LiqiMethod.checkNetworkDelay,
     liqi.LiqiMethod.heartbeat,
@@ -30,13 +30,6 @@ METHODS_TO_IGNORE = [
     liqi.LiqiMethod.fetchAccountActivityData,
     liqi.LiqiMethod.fetchServerTime,
 ]
-MAJSOUL_DOMAINS = [
-    "maj-soul.com",     # China
-    "majsoul.com",      # old?
-    "mahjongsoul.com",  # Japan
-    "yo-star.com"       # English
-]
-
 
 class BotManager:
     """ Bot logic manager"""
@@ -44,8 +37,7 @@ class BotManager:
         self.st = setting
         self.game_state:GameState = None
 
-        self.liqi_parser:liqi.LiqiProto = None
-        self.mitm_port = self.st.mitm_port
+        self.liqi_parser = liqi.LiqiProto()
         self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
         self.injector = proxinject.ProxyInjector()
         self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
@@ -56,19 +48,13 @@ class BotManager:
         self._stop_event = threading.Event()
         self.fps_counter = FPSCounter()
 
-        self.lobby_flow_id:str = None               # websocket flow Id for lobby
-        self.game_flow_id = None                    # websocket flow that corresponds to the game/match
-
-        # self._overlay_botleft_text:str = None       # if new text is different, update overlay bot-left
-        # self._overlay_botleft_last_update:float = 0 # last update time
-        # self._overlay_reaction:dict = None          # update overlay guidance if new reaction is different
-        # self._overlay_guide_last_update:float = 0   # last update time
-        
-        self.bot_need_update:bool = True              # set this True to update bot in main thread
-        self.is_loading_bot:bool = False              # is bot being loaded
-        self.main_thread_exception:Exception = None
-        """ Exception that had stopped the main thread"""
-        self.game_exception:Exception = None   # game run time error (but does not break main thread)        
+        self.lobby_flow_id:str = None                   # websocket flow Id for lobby
+        self.game_flow_id = None                        # websocket flow that corresponds to the game/match
+       
+        self.bot_need_update:bool = True                # set this True to update bot in main thread
+        self.is_loading_bot:bool = False                # is bot being loaded
+        self.main_thread_exception:Exception = None     # Exception that had stopped the main thread
+        self.game_exception:Exception = None            # game run time error (but does not break main thread)        
         
         
     def start(self):
@@ -79,12 +65,14 @@ class BotManager:
             daemon=True
         )
         self._thread.start()
+        
     
     def stop(self, join_thread:bool):
         """ Stop bot manager thread"""
         self._stop_event.set()
         if join_thread:
             self._thread.join()
+            
         
     def is_running(self) -> bool:
         """ return True if bot manager thread is running"""
@@ -92,6 +80,7 @@ class BotManager:
             return True
         else:
             return False
+        
                 
     def is_in_game(self) -> bool:
         """ return True if the bot is currently in a game """
@@ -100,6 +89,7 @@ class BotManager:
         else:
             return False
         
+        
     def get_game_info(self) -> GameInfo:
         """ Get gameinfo derived from game_state. can be None"""
         if self.game_state is None:
@@ -107,10 +97,12 @@ class BotManager:
         
         return self.game_state.get_game_info()
     
+    
     def is_game_syncing(self) -> bool:
         """ is mjai syncing game messages (from disconnection) """
         if self.game_state:
             return self.game_state.is_ms_syncing
+        
     
     def get_game_error(self) -> Exception:
         """ return game error msg if any, or none if not  
@@ -118,6 +110,7 @@ class BotManager:
         e.g. game state error / ai bot error   
         """  
         return self.game_exception
+    
     
     def get_game_client_type(self) -> utils.GameClientType:
         """ return the running game client type. return None if none is running"""
@@ -128,17 +121,20 @@ class BotManager:
         else:
             return None
         
+        
     def start_browser(self):
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
-        proxy = r'socks5://localhost:' + str(self.mitm_port)
+        proxy = r'socks5://localhost:' + str(self.st.mitm_port)
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
+        
         
     def restart_mitm(self):
         """ restart mitm proxy server"""
         LOGGER.info("Restarting mitm proxy server, port=%d, upstream_proxy=%s", self.st.mitm_port, self.st.upstream_proxy)
         self.mitm_server.stop()
         self.mitm_server.start(self.st.mitm_port, self.st.upstream_proxy)
+        
         
     def get_pending_reaction(self) -> dict:
         """ returns the pending mjai output reaction (which hasn't been acted on)"""
@@ -147,22 +143,26 @@ class BotManager:
             return reaction
         else:   # None
             return None
+        
     
     def enable_overlay(self):
         """ Start the overlay thread"""
         LOGGER.debug("Bot Manager enabling overlay")
         self.st.enable_overlay = True
+        
             
     def disable_overlay(self):
         """ disable browser overlay"""
         LOGGER.debug("Bot Manager disabling overlay")
         self.st.enable_overlay = False
+        
     
     def update_overlay(self):
         """ update the overlay if conditions are met"""
         if self._update_overlay_conditions_met():
             self._update_overlay_guide()
             self._update_overlay_botleft()
+            
         
     def enable_automation(self):
         """ enable automation"""
@@ -170,27 +170,30 @@ class BotManager:
         self.st.enable_automation = True
         self.automation.decide_lobby_action()
         
+        
     def disable_automation(self):
         """ disable automation"""
         LOGGER.debug("Bot Manager disabling automation")
         self.st.enable_automation = False
         self.automation.stop_previous()
         
+        
     def enable_autojoin(self):
         """ enable autojoin"""
         LOGGER.debug("Enabling Auto Join")
         self.st.auto_join_game = True
         
+        
     def disable_autojoin(self):
         """ disable autojoin"""
         LOGGER.debug("Disabling Auto Join")
         self.st.auto_join_game = False
-        
         # stop any lobby tasks
         if self.automation.is_running_execution():
             name, _d = self.automation.running_task_info()
             if name in (JOIN_GAME, END_GAME):
                 self.automation.stop_previous()
+                
     
     def _create_bot(self):
         """ create Bot object based on settings"""
@@ -204,10 +207,12 @@ class BotManager:
             self.bot = None
             self.game_exception = e
         self.is_loading_bot = False
+        
 
     def is_bot_created(self):
         """ return true if self.bot is not None"""
         return self.bot is not None
+    
 
     def is_bot_calculating(self):
         """ return true if bot is calculating"""
@@ -215,6 +220,7 @@ class BotManager:
             return True
         else:
             return False
+        
 
     def _run(self):
         """ Keep running the main loop (blocking)"""
@@ -224,14 +230,13 @@ class BotManager:
 
             res = self.mitm_server.install_mitm_cert()
             if not res:
-                self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)
-                
-            self.liqi_parser = liqi.LiqiProto()
+                self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)                
+            
             if self.st.auto_launch_browser:
                 self.start_browser()
 
             self.fps_counter.reset()
-            while self._stop_event.is_set() is False:
+            while self._stop_event.is_set() is False:   # thread main loop
                 # keep processing majsoul game messages forwarded from mitm server
                 self.fps_counter.frame()
                 self._udpate_bot()
@@ -247,30 +252,28 @@ class BotManager:
                 self._every_loop_post_proc_msg()
 
             LOGGER.info("Shutting down browser")
-            self.browser.stop(True)
-                
+            self.browser.stop(True)                
             LOGGER.info("Shutting down MITM")
             self.mitm_server.stop()
-
             if self.injector.is_running():
                 LOGGER.info("Shutting down proxy injector")
                 self.injector.stop(True)
-            LOGGER.info("Bot manager thread ending.")
-         
+            LOGGER.info("Bot manager thread ending.")         
             
         except Exception as e:
             self.main_thread_exception = e
             LOGGER.error("Bot Manager Thread Exception: %s", e, exc_info=True)
+            
     
     def _udpate_bot(self):
         """ Wait for bot to be created"""
         if self.bot_need_update and self.is_in_game() is False:
             self._create_bot()
             self.bot_need_update = False
+            
                 
     def _every_loop_post_proc_msg(self):
         # things to do in every loop
-
         # check mitm
         if self.mitm_server.is_running() is False:
             self.game_exception = utils.MITMException("MITM server stopped")
@@ -304,6 +307,7 @@ class BotManager:
         
         if not self.game_exception:     # skip on game error
             self.automation.decide_lobby_action()
+            
         
     def _process_msg(self, msg:mitm.WSMessage):
         """ process websocket message from mitm server"""
@@ -328,7 +332,7 @@ class BotManager:
             try:
                 liqimsg = self.liqi_parser.parse(msg.content)
             except Exception as e:
-                LOGGER.warning("Failed to parse liqi msg: %s\nError: %s", msg.content, e, exc_info=True)
+                LOGGER.warning("Failed to parse liqi msg: %s\nError: %s", msg.content, e)
                 return
             liqi_id = liqimsg.get("id")
             liqi_type = liqimsg.get('type')
@@ -386,7 +390,8 @@ class BotManager:
         """ do some idle action based on liqi msg"""
         liqi_method = liqimsg['method']
         if liqi_method == liqi.LiqiMethod.NotifyGameBroadcast:  # reply to emoji
-        # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast', 'data': {'seat': 2, 'content': '{"emo":7}'}}
+        # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast',
+        # 'data': {'seat': 2, 'content': '{"emo":7}'}}
             if liqimsg["data"]["seat"] != self.game_state.seat: # not self
                 self.automation.automate_send_emoji()
         else:           # move mouse around randomly
@@ -400,7 +405,6 @@ class BotManager:
             self.browser.overlay_clear_guidance()
         self.game_exception = None
         self.automation.on_end_game()
-
             
     
     def _update_overlay_conditions_met(self) -> bool:
@@ -411,22 +415,20 @@ class BotManager:
         if self.browser.is_page_normal() is False:
             return False
         return True
+    
         
     def _update_overlay_guide(self):
         # Update overlay guide given pending reaction
-        if self.game_state is None:
-            return
-        reaction = self.game_state.get_pending_reaction()        
-
+        reaction = self.get_pending_reaction()
         if reaction:
             guide, options = mjai_reaction_2_guide(reaction, 3, self.st.lan())
             self.browser.overlay_update_guidance(guide, self.st.lan().OPTIONS_TITLE, options)
         else:
             self.browser.overlay_clear_guidance()
+            
         
     def _update_overlay_botleft(self):
-        # update overlay bottom left text
-        
+        # update overlay bottom left text        
         # maj copilot
         text = '😸' + self.st.lan().APP_TITLE
 
@@ -436,7 +438,6 @@ class BotManager:
             model_text += self.st.lan().MODEL + ": " + self.bot.type.value
         else:
             model_text += self.st.lan().MODEL_NOT_LOADED
-        text += '\n' + model_text
         
         # autoplay
         if self.st.enable_automation:
@@ -445,7 +446,6 @@ class BotManager:
             autoplay_text = '⬛' + self.st.lan().AUTOPLAY + ': ' + self.st.lan().OFF
         if self.automation.is_running_execution():
             autoplay_text += "🖱️⏳"
-        text += '\n' + autoplay_text
 
         # line 4
         if self.main_thread_exception:
@@ -459,12 +459,9 @@ class BotManager:
         elif self.is_in_game():
             line = '▶️' + self.st.lan().GAME_RUNNING
         else:
-            line = '🟢' + self.st.lan().READY_FOR_GAME
-            
-        text += '\n' + line
-        # display fps numbers and limit total width
-        # text += f"\nFPS: {self.fps_counter.fps:3.0f} / {self.browser.fps_counter.fps:3.0f}"[:18]
-
+            line = '🟢' + self.st.lan().READY_FOR_GAME            
+        
+        text = '\n'.join((text, model_text, autoplay_text, line))       
         self.browser.overlay_update_botleft(text)
 
     
@@ -479,11 +476,7 @@ class BotManager:
             LOGGER.error("Failed to automate action for %s: %s", reaction['type'], e, exc_info=True)
 
 
-def mjai_reaction_2_guide(
-    reaction:dict, 
-    max_options:int=3,
-    lan_str:LanStr=LanStr()
-    ) -> tuple[str, list]:
+def mjai_reaction_2_guide(reaction:dict, max_options:int=3, lan_str:LanStr=LanStr()) -> tuple[str, list]:
     """ Convert mjai reaction message to language specific AI guide 
     params:
         reaction(dict): reaction (output) message from mjai bot
@@ -501,10 +494,10 @@ def mjai_reaction_2_guide(
     if reaction is None:
         raise ValueError("Input reaction is None")
     re_type = reaction['type']
-    pai = reaction.get('pai', None)
+    
     def get_tile_str(mjai_tile:str):    # unicode + language specific name
         return MJAI_TILE_2_UNICODE[mjai_tile] + lan_str.mjai2str(mjai_tile)
-    
+    pai = reaction.get('pai', None)
     if pai:
         tile_str =  get_tile_str(pai)
     
@@ -517,8 +510,7 @@ def mjai_reaction_2_guide(
     elif re_type == MJAI_TYPE.CHI:
         comsumed = reaction['consumed']
         comsumed_strs = [f"{get_tile_str(x)}" for x in comsumed]
-        action_str = f"{ActionUnicode.CHI}{lan_str.CHI}{tile_str}({''.join(comsumed_strs)})"
-         
+        action_str = f"{ActionUnicode.CHI}{lan_str.CHI}{tile_str}({''.join(comsumed_strs)})"         
     elif re_type == MJAI_TYPE.KAKAN:
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.KAKAN})"
     elif re_type == MJAI_TYPE.DAIMINKAN:
@@ -554,8 +546,7 @@ def mjai_reaction_2_guide(
                 elif code == MJAI_TYPE.NUKIDORA:
                     name_str = lan_str.mjai2str(code) + MJAI_TILE_2_UNICODE['N']
                 else:
-                    name_str = lan_str.mjai2str(code)
-                
+                    name_str = lan_str.mjai2str(code)                
                 options.append((name_str, q))
         
     return (action_str, options)

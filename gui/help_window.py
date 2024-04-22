@@ -1,16 +1,12 @@
-""" Help Window"""
+""" Help Window for tkinter GUI"""
 
 from typing import Callable
-import re
-import requests
-import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkhtmlview import HTMLScrolledText
 
 from common.log_helper import LOGGER
 from common.settings import Settings
-from common.utils import WEBSITE
 from updater import Updater, UpdateStatus
 from .utils import GUI_STYLE
 
@@ -31,18 +27,9 @@ class HelpWindow(tk.Toplevel):
         self.geometry(f"{self.win_size[0]}x{self.win_size[1]}")  # Set the window size
         # self.resizable(False, False)
 
-        # Scrollable Text Widget for help info
-        # self.textbox = ScrolledText(self, wrap=tk.WORD, font=GUI_STYLE.font_normal(), height=15)
-        # self.textbox.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
-        
-        # self.textbox.tag_configure("title", font=GUI_STYLE.font_normal(size=20,weight="bold"))
-        # firstline = st.lan().APP_TITLE +  + "\n"
-        # self.textbox.insert(tk.END, firstline, "title")
-        # self.textbox.insert(tk.END, st.lan().HELP_STR)
-        # self.textbox.configure(state='disabled')  # Make the text read-only
         self.html_text:str = None
         self.html_box = HTMLScrolledText(
-            self, html=st.lan().HELP+" Loading...",
+            self, html=st.lan().HELP+st.lan().LOADING,
             wrap=tk.CHAR, font=GUI_STYLE.font_normal(), height=25,
             state=tk.DISABLED)
         self.html_box.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)        
@@ -65,13 +52,6 @@ class HelpWindow(tk.Toplevel):
         self.ok_button = ttk.Button(self.frame_bot, text="OK", command=self._on_close, width=8)
         self.ok_button.grid(row=0, column=2, sticky=tk.NSEW, padx=10, pady=10)
         
-        # # Link
-        # def open_link():
-        #     webbrowser.open(WEBSITE + r'/?tab=readme-ov-file#%E9%BA%BB%E5%B0%86-copilot--mahjong-copilot')
-        # label = tk.Label(self, text=WEBSITE, fg="blue", cursor="hand2")
-        # label.pack(padx=5, pady=5, side=tk.LEFT)
-        # label.bind("<Button-1>", lambda event: open_link())
-        
         self.after_idle(self._refresh_ui)
               
             
@@ -79,26 +59,30 @@ class HelpWindow(tk.Toplevel):
         LOGGER.info("Checking for update.")
         self.update_button.configure(state=tk.DISABLED)
         self.updater.check_update()
+        
     
     def _download_update(self):
         LOGGER.info("Download and unzip update.")
         self.update_button.configure(state=tk.DISABLED)
         self.updater.prepare_update()
         
+        
     def _start_update(self):
         LOGGER.info("Starting update process. will kill program and restart.")
         self.update_button.configure(state=tk.DISABLED)
         if messagebox.askokcancel(self.st.lan().START_UPDATE, self.st.lan().UPDATE_PREPARED):
             self.updater.start_update()
+            
     
     def _refresh_ui(self):
         lan = self.st.lan()
-        
-        if not self.html_text:  # Update html text if available
+        # Update html text if available
+        if not self.html_text:  
             if self.updater.help_html:
                 self.html_text = self.updater.help_html
                 self.html_box.set_html(self.html_text)
         
+        # update button and status
         match self.updater.update_status:
             case UpdateStatus.NONE:
                 self.update_str_var.set("")
@@ -139,8 +123,8 @@ class HelpWindow(tk.Toplevel):
                 pass
             
         self.after(100, self._refresh_ui)
+        
     
     def _on_close(self):
-        self.destroy()
-        
+        self.destroy()        
     

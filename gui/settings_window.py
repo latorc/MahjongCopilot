@@ -17,36 +17,30 @@ class SettingsWindow(tk.Toplevel):
         self.st = setting
 
         self.geometry('700x600')
-        self.minsize(700,600)
-        
+        self.minsize(700,600)        
         # self.resizable(False, False)
+        # set position: within main window
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
 
-        self.exit_ok:bool = False
-        self.gui_need_reload:bool = False
-        """ Whether a GUI refresh is needed to apply new settings"""
-
-        self.model_updated:bool = False
-        self.mitm_updated:bool = False
-        # Call create_widgets after the window is fully initialized
+        # flags
+        self.exit_save:bool = False             # save btn clicked
+        self.gui_need_reload:bool = False       #  
+        self.model_updated:bool = False         # model settings updated
+        self.mitm_updated:bool = False          # mitm settings updated
+        
+        style = ttk.Style(self)
+        GUI_STYLE.set_style_normal(style)
         self.create_widgets()
+        
 
     def create_widgets(self):
         """ Create widgets for settings dialog"""
         self.title(self.st.lan().SETTINGS)
         # Main frame
         main_frame = ttk.Frame(self, padding="20")
-        main_frame.pack(expand=True, fill="both")
-        # main_frame.columnconfigure(0, minsize=150)
-        # main_frame.columnconfigure(1, minsize=80)
-        # main_frame.columnconfigure(2, minsize=80)
-        # main_frame.columnconfigure(3, minsize=80)
-
-        # Styling
-        style = ttk.Style(self)
-        GUI_STYLE.set_style_normal(style)
+        main_frame.pack(expand=True, fill="both")        
         
         pad_args = {"padx":(3, 3), "pady":(3, 2)}
         args_label = {"sticky":"e", **pad_args}
@@ -242,9 +236,9 @@ class SettingsWindow(tk.Toplevel):
         save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
         save_button.pack(side=tk.RIGHT, padx=20, pady=20)
         
-    def _on_save(self):
-        # Get values from entry fields, validate, and save them
         
+    def _on_save(self):
+        # Get values from entry fields, validate, and save them        
         # === Process and validate new values ===
         size_list = self.client_size_var.get().split(' x ')
         width_new = int(size_list[0])
@@ -280,8 +274,7 @@ class SettingsWindow(tk.Toplevel):
         mjapi_url_new = self.mjapi_url_var.get()
         mjapi_user_new = self.mjapi_user_var.get()
         mjapi_secret_new = self.mjapi_secret_var.get()
-        mjapi_model_select_new = self.mjapi_model_select_var.get()
-        
+        mjapi_model_select_new = self.mjapi_model_select_var.get()        
         if (
             self.st.model_type != model_type_new or
             self.st.model_file != model_file_new or
@@ -331,12 +324,12 @@ class SettingsWindow(tk.Toplevel):
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
         
-        LOGGER.info("Saving Settings to file")
         self.st.save_json()
-        self.exit_ok = True
+        self.exit_save = True
         self.destroy()
+        
 
     def _on_cancel(self):
-        LOGGER.debug("Close settings window without saving")
-        self.exit_ok = False
+        LOGGER.info("Closing settings window without saving")
+        self.exit_save = False
         self.destroy()

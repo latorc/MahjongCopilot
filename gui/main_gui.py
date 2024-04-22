@@ -55,6 +55,7 @@ class MainGUI(tk.Tk):
         self.bot_manager.start()        # start the main program
         self.gui_update_delay = 50      # in ms
         self._update_gui_info()         # start updating gui info
+        
 
     def _create_widgets(self):
         """ Create all widgets in the main window"""
@@ -86,7 +87,7 @@ class MainGUI(tk.Tk):
         self.toolbar.add_sep()
         self.toolbar.add_button(self.st.lan().EXIT, 'exit.png', self._on_exit)
         
-        # === 2nd bar ===
+        # === 2nd toolbar ===
         cur_row += 1
         self.tb2 = ToolBar(self.grid_frame, tb_ht)
         self.tb2.grid(row=cur_row, **grid_args)
@@ -170,20 +171,24 @@ class MainGUI(tk.Tk):
         self.status_bar = StatusBar(self.grid_frame, 3)
         self.status_bar.grid(row=cur_row, column=0, sticky='ew', padx=1, pady=1)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
+        
     
     def _on_autojoin_level_selected(self, _event):
         new_value = self.auto_join_level_var.get()    # convert to index
         self.st.auto_join_level = self.st.lan().GAME_LEVELS.index(new_value)
+        
         
     def _on_autojoin_mode_selected(self, _event):
         new_mode = self.auto_join_mode_var.get()  # convert to string
         new_mode = self.st.lan().GAME_MODES.index(new_mode)
         new_mode = GAME_MODES[new_mode]
         self.st.auto_join_mode = new_mode
+        
 
     def _on_btn_start_browser_clicked(self):
         self.btn_start_browser.config(state=tk.DISABLED)
         self.bot_manager.start_browser()
+        
 
     def _on_switch_hud_clicked(self):
         self.switch_overlay.switch_mid()
@@ -192,12 +197,14 @@ class MainGUI(tk.Tk):
         else:
             self.bot_manager.disable_overlay()
             
+            
     def _on_switch_autoplay_clicked(self):
         self.switch_autoplay.switch_mid()
         if self.st.enable_automation:
             self.bot_manager.disable_automation()
         else:
             self.bot_manager.enable_automation()
+            
 
     def _on_switch_autojoin_clicked(self):
         self.switch_autojoin.switch_mid()
@@ -205,10 +212,12 @@ class MainGUI(tk.Tk):
             self.bot_manager.disable_autojoin()
         else:
             self.bot_manager.enable_autojoin()
+            
 
     def _on_btn_log_clicked(self):
         # LOGGER.debug('Open log')
         os.startfile(LogHelper.log_file_name)
+        
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
@@ -217,19 +226,21 @@ class MainGUI(tk.Tk):
         settings_window.grab_set()
         self.wait_window(settings_window)
         
-        if settings_window.exit_ok:
+        if settings_window.exit_save:
             if settings_window.model_updated:
                 self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
             if settings_window.gui_need_reload:     # reload UI if needed
                 self.reload_gui()
             # if settings_window.mitm_updated:
             #     self.bot_manager.restart_mitm()
+            
 
     def _on_btn_help_clicked(self):
         # open help dialog        
         help_win = HelpWindow(self, self.st, self.updater)
         help_win.transient(self)
         help_win.grab_set()
+        
     
     def _on_exit(self):
         # Exit the app
@@ -245,6 +256,7 @@ class MainGUI(tk.Tk):
                 pass
             self.quit()
             
+            
     def reload_gui(self):
         """ Clear UI compontes and rebuid widgets"""       
         for widget in self.winfo_children():
@@ -254,6 +266,7 @@ class MainGUI(tk.Tk):
 
     def _update_gui_info(self):
         """ Update GUI widgets status with latest info from bot manager"""
+        # start browser button state
         if not self.bot_manager.browser.is_running():
             if self.bot_manager.get_game_client_type() == GameClientType.PROXY:
                 self.btn_start_browser.config(state=tk.DISABLED)    # disable when proxy client running
@@ -262,7 +275,7 @@ class MainGUI(tk.Tk):
         else:
             self.btn_start_browser.config(state=tk.DISABLED)
 
-        # update help button
+        # help button
         if self.updater.update_status in (
             UpdateStatus.NEW_VERSION,
             UpdateStatus.DOWNLOADING,
@@ -273,7 +286,7 @@ class MainGUI(tk.Tk):
         else:
             self.toolbar.set_img(self.btn_help, 'help.png')
         
-        # update switches' status
+        # update switch states
         sw_list = [
             (self.switch_overlay, lambda: self.st.enable_overlay),
             (self.switch_autoplay, lambda: self.st.enable_automation),
@@ -296,7 +309,7 @@ class MainGUI(tk.Tk):
         else:
             self.ai_guide_var.set("")
 
-        # update state: display tehai + tsumohai
+        # update game info: display tehai + tsumohai
         gi:GameInfo = self.bot_manager.get_game_info()
         if gi and gi.my_tehai:
             tehai = gi.my_tehai
@@ -308,8 +321,7 @@ class MainGUI(tk.Tk):
         else:
             self.gameinfo_var.set("")
 
-        # Model info
-        # bot/model
+        # bot/model info
         if self.bot_manager.is_bot_created():
             mode_strs = []
             for m in GameMode:
@@ -326,7 +338,7 @@ class MainGUI(tk.Tk):
                 self.model_bar.update_column(1, '⌛ ' + self.st.lan().CALCULATING)
             else:
                 self.model_bar.update_column(1, 'ℹ️' + self.bot_manager.bot.info_str)
-        else:
+        else:   # bot is not ready
             if self.bot_manager.is_loading_bot:
                 text = self.st.lan().MODEL_LOADING
                 icon = self.icon_yellow
@@ -334,9 +346,9 @@ class MainGUI(tk.Tk):
                 text = self.st.lan().MODEL_NOT_LOADED
                 icon = self.icon_red
             self.model_bar.update_column(0, text, icon)
-            self.model_bar.update_column(1, 'ℹ️ ')
+            self.model_bar.update_column(1, '')
 
-        ### Status bar
+        # Status bar
         # main thread
         fps_disp = min([999, self.bot_manager.fps_counter.fps])
         fps_str = f"({fps_disp:3.0f})"
@@ -371,10 +383,11 @@ class MainGUI(tk.Tk):
         self.bot_manager.update_overlay()
 
         self.after(self.gui_update_delay, self._update_gui_info)     # next update
+        
 
     def _get_status_text_icon(self, gi:GameInfo) -> tuple[str, str]:
         # Get text and icon for status bar last column, based on bot running info
-        
+        # show info as : thread error > game error > game status
         bot_exception = self.bot_manager.main_thread_exception
         if bot_exception:
             return error_to_str(bot_exception, self.st.lan()), self.icon_red
@@ -389,11 +402,9 @@ class MainGUI(tk.Tk):
             
         if self.bot_manager.is_in_game():
             info_str = self.st.lan().GAME_RUNNING
-
             if self.bot_manager.is_game_syncing():
                 info_str += " - " + self.st.lan().SYNCING
                 return info_str, self.icon_green
-
             else:   # game in progress
                 if gi and gi.bakaze:
                     info_str += ' '.join([

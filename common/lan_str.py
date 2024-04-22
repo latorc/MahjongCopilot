@@ -14,6 +14,7 @@ class LanStr:
     OPEN_LOG_FILE = "Open Log File"
     SETTINGS = "Settings"
     HELP = "Help"
+    LOADING = "Loading..."
     EXIT = "Exit"
     EIXT_CONFIRM = "Are you sure you want to exit?"
     AI_OUTPUT = 'AI Guidance'
@@ -159,6 +160,7 @@ class LanStrZHS(LanStr):
     OPEN_LOG_FILE = "打开日志文件"
     SETTINGS = "设置"
     HELP = "帮助"
+    LOADING = "加载中..."
     EXIT = "退出"
     EIXT_CONFIRM = "确定退出程序?"
     AI_OUTPUT = 'AI 提示'

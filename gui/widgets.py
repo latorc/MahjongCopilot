@@ -4,6 +4,7 @@ from typing import Callable
 import tkinter as tk
 from tkinter import ttk
 import time
+
 from common.log_helper import LOGGER
 from common.utils import sub_file, Folder
 from .utils import GUI_STYLE, add_hover_text
@@ -15,7 +16,8 @@ class ToggleSwitch(tk.Frame):
         Params:
             master: parent widget
             text: text on the button
-            img_ht: height of the image
+            height: widget height
+            font_size: font size
             command: callback function when button is clicked"""
         super().__init__(master, height=height,width=height)
         self.pack_propagate(False)
@@ -33,7 +35,8 @@ class ToggleSwitch(tk.Frame):
         self.is_on = False
         self.img_label = tk.Label(self, image=self.img_off)
         self.img_label.pack(side="top", pady=(0, 10))
-        self.text_label = tk.Label(self, text=text, font=GUI_STYLE.font_normal(font_size))
+        font = GUI_STYLE.font_normal(size=font_size)
+        self.text_label = tk.Label(self, text=text, font=font)
         self.text_label.pack(side="top")
         if command:
             self.command = command
@@ -45,6 +48,7 @@ class ToggleSwitch(tk.Frame):
         self.default_background = self.img_label.cget("background")
         self.img_label.bind("<Enter>", self._on_enter)
         self.img_label.bind("<Leave>", self._on_leave)
+        
 
     def switch_on(self):
         """ switch on the button"""
@@ -52,6 +56,7 @@ class ToggleSwitch(tk.Frame):
             # LOGGER.debug("Turning on switch %s",self.text_label.cget("text"))
             self.is_on = True
             self.img_label.config(image=self.img_on)
+            
 
     def switch_off(self):
         """ Switch off the button"""
@@ -59,17 +64,21 @@ class ToggleSwitch(tk.Frame):
             # LOGGER.debug("Turning off switch %s",self.text_label.cget("text"))
             self.is_on = False
             self.img_label.config(image=self.img_off)
+            
 
     def switch_mid(self):
         """ Switch to middle state"""
         self.img_label.config(image=self.img_mid)
         
+        
     def _on_click(self, _event=None):
         self.command()
+        
         
     def _on_enter(self, _event=None):
         """Highlight the label when mouse enters."""
         self.img_label.config(background="light blue")
+        
 
     def _on_leave(self, _event=None):
         """Remove highlight from the label when mouse leaves."""
@@ -77,7 +86,7 @@ class ToggleSwitch(tk.Frame):
 
 
 class Timer(tk.Frame):
-    """ A timer widget with separate entries for hours, minutes, and seconds """
+    """ A timer widget in which user can input hh:mm:ss, and start timing """
     START="⏱"
     STOP="■"
     def __init__(self, master: tk.Frame, height: int, font_size:int=10, hover_text:str=None):
@@ -105,22 +114,24 @@ class Timer(tk.Frame):
         # Setup each entry
         self.entries:list[tk.Entry] = []
         self._setup_entry(self.hour_var, 23)
-        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(self.font_size), width=1).pack(**self.pack_args)
+        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(size=self.font_size), width=1).pack(**self.pack_args)
         self._setup_entry(self.minute_var, 59)
-        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(self.font_size), width=1).pack(**self.pack_args)
+        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(size=self.font_size), width=1).pack(**self.pack_args)
         self._setup_entry(self.second_var, 59)
 
         # Start/Stop button
         self.the_btn = tk.Button(
-            self, text=Timer.START, font=GUI_STYLE.font_normal(self.font_size),
+            self, text=Timer.START, font=GUI_STYLE.font_normal("Segoe UI Emoji",size=self.font_size),
             command=self._toggle_timer, width=6, padx=1, pady=1)
         self.the_btn.grid(row=1, column=0, sticky=tk.N, padx=(1, 1),pady=(1, 1))
         if self.hover_text:
             add_hover_text(self.the_btn, self.hover_text)
+            
 
     def set_callback(self, callback:Callable):
         """ Set callback function to be called when timer is stopped"""
         self.callback = callback
+        
     
     def _setup_entry(self, var:tk.StringVar, max_val: int):
         """ Helper function to setup each time entry field. """
@@ -142,7 +153,7 @@ class Timer(tk.Frame):
         entry = tk.Entry(
             self.frame_top, textvariable=var, 
             validatecommand=(self.register(validate_time), '%P'), validate='focusout',
-            font=GUI_STYLE.font_normal(self.font_size), width=2, justify=tk.CENTER, 
+            font=GUI_STYLE.font_normal(size=self.font_size), width=2, justify=tk.CENTER, 
         )
         entry.pack(**self.pack_args)
         self.entries.append(entry)
@@ -153,6 +164,7 @@ class Timer(tk.Frame):
             self._stop_timer()
         else:
             self._start_timer()
+            
 
     def _start_timer(self):
         self.timer_running = True
@@ -166,6 +178,7 @@ class Timer(tk.Frame):
             e.configure(state=tk.DISABLED)
         add_hover_text(self.the_btn, Timer.STOP)
         self._run_timer()
+        
 
     def _run_timer(self):
         """ run timer and update the time display"""
@@ -184,11 +197,13 @@ class Timer(tk.Frame):
                 if self.callback:   
                     self.callback()                
                 self._stop_timer()
+                
 
     def _clear_time(self):
         self.hour_var.set("01")
         self.minute_var.set("00")
         self.second_var.set("00")
+        
     
     def _stop_timer(self):
         if self.timer_id is not None:
@@ -205,7 +220,7 @@ class Timer(tk.Frame):
         
 
 class ToolBar(tk.Frame):
-    """ Tool bar on top for buttons"""
+    """ Tool bar for buttons"""
     def __init__(self, master, height:int=60):
         super().__init__(master)
         self.height = height
@@ -213,8 +228,7 @@ class ToolBar(tk.Frame):
     
     
     def add_button(self, text:str, img_file:str, command) -> tk.Button:
-        """ Add a button on toolbar"""
-        
+        """ Add a button on toolbar"""        
         img = tk.PhotoImage(file = Path(Folder.RES) / img_file)
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
         btn = tk.Button(self, image=img, width=self.height, height=self.height, command=command)
@@ -225,6 +239,7 @@ class ToolBar(tk.Frame):
         add_hover_text(btn, text)
         return btn
     
+    
     def set_img(self, btn:tk.Button, img_file:str):
         """ Replace button image"""
         if btn.img_file == img_file:
@@ -234,6 +249,7 @@ class ToolBar(tk.Frame):
         btn.config(image=img)
         btn.image = img  # Keep a reference
         btn.img_file = img_file
+        
     
     def add_sep(self):
         """ add a vertical separator bar """
@@ -247,7 +263,6 @@ class StatusBar(tk.Frame):
         super().__init__(master, highlightbackground='gray', highlightthickness=0)
         self.n_cols = n_cols
         self.columns:list[tk.Frame] = []
-
         # Style
         style = ttk.Style(self)
         GUI_STYLE.set_style_normal(style)
@@ -266,11 +281,6 @@ class StatusBar(tk.Frame):
             column_frame = tk.Frame(self, highlightbackground='gray', highlightthickness=1)
             column_frame.pack(side=tk.LEFT, padx=1, pady=1, expand=True, fill=tk.X)
 
-        # Load icon
-        # default_icon_file = str(sub_file(RES_FOLDER,'gray.png'))
-        # icon = tk.PhotoImage(file=default_icon_file)  # Replace "icon.png" with your icon file
-        # icon_ht = self.font_size * 2
-        # icon = icon.subsample(int(icon.height()/icon_ht), int(icon.height()/icon_ht))
         # Label with icon and text
         label = ttk.Label(column_frame, text=f'Column {index+1}', compound='left')  # Background color for label
         # label.image = icon  # Retain a reference to the image to prevent garbage collection
@@ -279,12 +289,10 @@ class StatusBar(tk.Frame):
         column_frame.label = label
 
         return column_frame
-    # def set_col_config(self, col:int, **kwargs):
-    #     if col < self.n_cols:
-    #         self.columns[col].configure()
+
     
     def update_column(self, index:int, text:str, icon_path:str=None):
-        """ Update column's icon and text"""
+        """ Update column's text and icon """
         if not 0 <= index < len(self.columns):
             return
         
