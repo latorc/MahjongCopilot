@@ -12,6 +12,7 @@ venv/
 .DS_Store
 *.build
 *.dist
+
 # Local folder/files
 browser_data/
 log/
@@ -21,6 +22,7 @@ temp/
 test/
 /dev_docs
 /_*.py
+MahjongCopilot.spec
 /settings*.json
 libriichi3p/*.pyd
 libriichi3p/*.so
