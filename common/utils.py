@@ -267,6 +267,8 @@ class FPSCounter:
     def __init__(self):
         self.lock = threading.Lock()
         self.timestamps = []  # List to hold timestamps of frame calls
+        self.last_calc_time = time.time()  # Last time fps was calculated
+        self.last_fps = 0  # Last calculated fps value
         
     def frame(self):
         """Indicates that a frame has been rendered or processed. Adds the current time to timestamps."""
@@ -281,8 +283,13 @@ class FPSCounter:
     @property
     def fps(self):
         """Returns the current frames per second, calculated as the number of frames in the past second."""
+        if time.time() - self.last_calc_time < 0.5:
+            return self.last_fps
         with self.lock:
             # Filter out timestamps that are older than 1 second from the current time
             cur_time = time.time()
             self.timestamps = [t for t in self.timestamps if cur_time - t < 1]
-            return len(self.timestamps)
+            self.last_fps = len(self.timestamps)
+            self.last_calc_time = cur_time
+            return self.last_fps
+            
