@@ -200,8 +200,9 @@ def install_root_cert(cert_file:str):
     if sys.platform == "win32":
         print(f'"{cert_file}"')
         full_command = ["certutil","-addstore","Root",cert_file]
-        p = subprocess.run(full_command, **sub_run_args())
-        
+        # p = subprocess.run(full_command, **sub_run_args())
+        p=subprocess.run(full_command, **sub_run_args())
+        stdout, stderr = p.stdout, p.stderr
     elif sys.platform == "darwin":
         # TODO Test on MAC system
         result = subprocess.run(['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file],
@@ -211,7 +212,7 @@ def install_root_cert(cert_file:str):
         return False, ""
     
     # Check if successful
-    text = '\n'.join((p.stdout.strip(), p.stderr .strip()))
+    text = f"{stdout}\n{stderr}"
     if p.returncode == 0:  # success     
         return True, text
     else:   # error        
