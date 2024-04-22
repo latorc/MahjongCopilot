@@ -8,6 +8,7 @@ import sys
 import ctypes
 import time
 import subprocess
+import threading
 import random
 import string
 from cryptography import x509
@@ -261,31 +262,27 @@ def prevent_sleep():
         
         
 class FPSCounter:
-    """ for counting frames and calculate fps"""
+    """Class for counting frames and calculating fps."""
+    
     def __init__(self):
-        self._start_time = time.time()
-        self._frame_count = 0
-        self._fps = 0
+        self.lock = threading.Lock()
+        self.timestamps = []  # List to hold timestamps of frame calls
         
-
     def frame(self):
-        """Indicates that a frame has been rendered or processed. Updates FPS if more than 1 second has passed."""
-        self._frame_count += 1
-        current_time = time.time()
-        elapsed_time = current_time - self._start_time
-
-        if elapsed_time >= 1.0:
-            self._fps = self._frame_count / elapsed_time
-            self._start_time = current_time
-            self._frame_count = 0
-            
+        """Indicates that a frame has been rendered or processed. Adds the current time to timestamps."""
+        with self.lock:
+            self.timestamps.append(time.time())
 
     def reset(self):
-        """ reset the counter"""
-        self.__init__()
-        
+        """Resets the counter by clearing all recorded timestamps."""
+        with self.lock:
+            self.timestamps.clear()
         
     @property
     def fps(self):
-        """Returns the current frames per second."""
-        return self._fps
+        """Returns the current frames per second, calculated as the number of frames in the past second."""
+        with self.lock:
+            # Filter out timestamps that are older than 1 second from the current time
+            cur_time = time.time()
+            self.timestamps = [t for t in self.timestamps if cur_time - t < 1]
+            return len(self.timestamps)
