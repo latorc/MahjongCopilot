@@ -407,8 +407,8 @@ class MainGUI(tk.Tk):
         game_error:Exception = self.bot_manager.get_game_error()
         if game_error:
             return error_to_str(game_error, self.st.lan()), self.icon_red
-        else: # no error
-            pass
+        if self.bot_manager.is_browser_zoom_off():
+            return self.st.lan().BROWSER_ZOOM_OFF, self.icon_red        
             
         if self.bot_manager.is_in_game():
             info_str = self.st.lan().GAME_RUNNING

@@ -108,6 +108,8 @@ Credits:
     MAIN_THREAD_ERROR = "Main Thread Error!"
     MODEL_NOT_SUPPORT_MODE_ERROR = "Model not supporting game mode"
     CONNECTION_ERROR = "Network Connection Error"
+    BROWSER_ZOOM_OFF = r"Set Browser Zoom level to 100% !"
+    CHECK_ZOOM = "Browser Zoom!"
     # Reaction/Actions
     PASS = "Skip"
     DISCARD = "Discard"
@@ -257,6 +259,8 @@ Github: https://github.com/latorc/MahjongCopilot
     MAIN_THREAD_ERROR = "主进程发生错误!"
     MODEL_NOT_SUPPORT_MODE_ERROR = "模型不支持游戏模式"
     CONNECTION_ERROR = "网络连接错误"
+    BROWSER_ZOOM_OFF = r"请将浏览器缩放设置成 100% 以正常运行!"
+    CHECK_ZOOM = "浏览器缩放错误!"
     
     # Reaction/Actions
     PASS = "跳过"

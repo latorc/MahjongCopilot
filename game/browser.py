@@ -35,6 +35,7 @@ class GameBrowser:
         # for tracking page info
         self._page_title:str = None
         self._last_update_time:float = 0
+        self.zoomlevel_check:float = None
         
         # overlay info
         self._canvas_id = None              # for overlay
@@ -65,7 +66,7 @@ class GameBrowser:
             args=(url, proxy),
             name="BrowserThread",
             daemon=True)
-        self._browser_thread.start()
+        self._browser_thread.start()        
 
     def _run_browser_and_action_queue(self, url:str, proxy:str):
         """ run browser and keep processing action queue (blocking)"""
@@ -111,6 +112,8 @@ class GameBrowser:
                 try:        # test if page is stil alive
                     if time.time() - self._last_update_time > 1:
                         self._page_title = self.page.title()
+                        # check zoom level
+                        self.zoomlevel_check = self.page.evaluate("() => window.devicePixelRatio")
                         self._last_update_time = time.time()
                 except Exception as e:
                     LOGGER.warning("Page error %s. exiting.", e)

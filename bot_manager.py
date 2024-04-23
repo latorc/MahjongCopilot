@@ -127,6 +127,15 @@ class BotManager:
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
+    
+    def is_browser_zoom_off(self):
+        """ check browser zoom level, return true if zoomlevel is not 1"""
+        if self.browser and self.browser.is_page_normal():
+            zoom = self.browser.zoomlevel_check
+            if zoom is not None:
+                if abs(zoom - 1) > 0.001:
+                    return True
+        return False
         
         
     def set_mitm_proxinject_update(self):
@@ -465,6 +474,8 @@ class BotManager:
             line = '❌' + self.st.lan().MAIN_THREAD_ERROR
         elif self.game_exception:
             line = '❌' + self.st.lan().GAME_ERROR
+        elif self.is_browser_zoom_off():
+            line = '❌' + self.st.lan().CHECK_ZOOM
         elif self.is_game_syncing():
             line = '⏳'+ self.st.lan().SYNCING
         elif self.is_bot_calculating():
