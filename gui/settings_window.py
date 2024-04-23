@@ -8,7 +8,7 @@ from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
 from bot.bot import BotType
-from .utils import GUI_STYLE
+from .utils import GUI_STYLE, add_hover_text
 
 class SettingsWindow(tk.Toplevel):
     """ Settings dialog window"""
@@ -77,6 +77,7 @@ class SettingsWindow(tk.Toplevel):
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MITM_PORT)
         _label.grid(row=cur_row, column=0, **args_label)
+        add_hover_text(_label, "Need restart")
         self.mitm_port_var = tk.StringVar(value=self.st.mitm_port)
         number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=std_wid)
         number_entry.grid(row=cur_row, column=1, **args_entry)
@@ -225,8 +226,8 @@ class SettingsWindow(tk.Toplevel):
         
         # tips :Settings
         cur_row += 1
-        label_settings = ttk.Label(main_frame, text=self.st.lan().SETTINGS_TIPS, width=40)
-        label_settings.grid(row=cur_row, column=1, columnspan=3, **args_entry)
+        label_settings = ttk.Label(main_frame, text=self.st.lan().SETTINGS_TIPS, width=std_wid*4)
+        label_settings.grid(row=cur_row, column=0, columnspan=4, **args_entry)
         
         # Buttons frame
         button_frame = ttk.Frame(self)
@@ -327,6 +328,8 @@ class SettingsWindow(tk.Toplevel):
         
         self.st.save_json()
         self.exit_save = True
+        if self.mitm_proxinject_updated:
+            messagebox.showinfo(self.st.lan().SETTINGS, self.st.lan().SETTINGS_TIPS, parent=self, icon='info', type='ok')
         self.destroy()
         
 

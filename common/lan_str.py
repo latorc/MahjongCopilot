@@ -53,7 +53,7 @@ Credits:
     ### Settings
     SAVE = "Save"
     CANCEL = "Cancel"
-    SETTINGS_TIPS = "A restart is needed to apply some settings"
+    SETTINGS_TIPS = "A restart is needed to apply MITM related settings"
     AUTO_LAUNCH_BROWSER = "Auto Launch Browser"
     MITM_PORT = "MITM Server Port"
     UPSTREAM_PROXY = "Upstream Proxy"
@@ -203,7 +203,7 @@ Github: https://github.com/latorc/MahjongCopilot
     # Settings
     SAVE = "保存"
     CANCEL = "取消"
-    SETTINGS_TIPS = "部分设置项重启后生效"
+    SETTINGS_TIPS = "MITM 代理相关设置项重启后生效"
     MITM_PORT = "MITM 服务端口"
     UPSTREAM_PROXY = "上游代理"
     CLIENT_SIZE = "客户端大小"

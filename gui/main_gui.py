@@ -237,6 +237,8 @@ class MainGUI(tk.Tk):
                 self.reload_gui()
             # mitm port occupy issue. Need to restart program for now
             # if settings_window.mitm_proxinject_updated:
+                # message box to tell user to restart
+                
             #     self.bot_manager.set_mitm_proxinject_update()
             
 
