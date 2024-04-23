@@ -3,7 +3,7 @@
 from pathlib import Path
 import threading
 import json
-from common.utils import ModelFileException
+from common.utils import LocalModelException
 from common.mj_helper import MjaiType
 from common.log_helper import LOGGER
 try:
@@ -30,7 +30,10 @@ class BotMortalLocal(Bot):
                 LOGGER.warning("Cannot find model file for mode %s:%s", k,v)
             else:
                 if k == GameMode.MJ4P:
-                    self.engines[k] = get_engine(self.model_files[k])
+                    try:
+                        self.engines[k] = get_engine(self.model_files[k])
+                    except Exception as e:
+                        LOGGER.warning("Cannot create engine for mode %s: %s", k, e, exc_info=True)
                 elif k == GameMode.MJ3P:
                     # test import libraries for 3p
                     try:
@@ -38,10 +41,10 @@ class BotMortalLocal(Bot):
                         from bot.engine3p import get_engine as get_engine_3p
                         self.engines[k] = get_engine_3p(self.model_files[k])
                     except Exception as e: # pylint: disable=broad-except
-                        LOGGER.warning("Cannot create engine for mode %s: %s", k, e)
+                        LOGGER.warning("Cannot create engine for mode %s: %s", k, e, exc_info=True)
         self._supported_modes = list(self.engines.keys())
         if not self._supported_modes:
-            raise ModelFileException("No valid model files found")
+            raise LocalModelException("No valid model files found")
         
         self.mjai_bot = None
         self.ignore_next_turn_self_reach:bool = False

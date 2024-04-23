@@ -64,7 +64,7 @@ class UiState(Enum):
 
 
 # === Exceptions ===    
-class ModelFileException(Exception):
+class LocalModelException(Exception):
     """ Exception for model file error"""
 
 class MITMException(Exception):
@@ -81,8 +81,8 @@ class BotNotSupportingMode(Exception):
 
 def error_to_str(error:Exception, lan:LanStr) -> str:
     """ Convert error to language specific string"""
-    if isinstance(error, ModelFileException):
-        return lan.MODEL_FILE_ERROR
+    if isinstance(error, LocalModelException):
+        return lan.LOCAL_MODEL_ERROR
     elif isinstance(error, MitmCertNotInstalled):
         return lan.MITM_CERT_NOT_INSTALLED + f"{error.args}"    
     elif isinstance(error, MITMException):

@@ -102,7 +102,7 @@ Credits:
     GAME_ENDING = "Game Ending"
     GAME_NOT_RUNNING = "Not Launched"
     # errors
-    MODEL_FILE_ERROR = "Model File not Found!"
+    LOCAL_MODEL_ERROR = "Local Model Loading Error!"
     MITM_SERVER_ERROR = "MITM Service Error!"
     MITM_CERT_NOT_INSTALLED = "Run as admin or manually install MITM cert."
     MAIN_THREAD_ERROR = "Main Thread Error!"
@@ -253,7 +253,7 @@ Github: https://github.com/latorc/MahjongCopilot
     GAME_ENDING = "游戏结束"
     GAME_NOT_RUNNING = "未启动"
     #error
-    MODEL_FILE_ERROR = "无法找到模型文件!"
+    LOCAL_MODEL_ERROR = "本地模型加载错误!"
     MITM_CERT_NOT_INSTALLED = "以管理员运行或手动安装 MITM 证书"
     MITM_SERVER_ERROR = "MITM 服务错误!"
     MAIN_THREAD_ERROR = "主进程发生错误!"
