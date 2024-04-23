@@ -112,7 +112,7 @@ class Updater:
         def check_ver():
             try:
                 self.update_status = UpdateStatus.CHECKING
-                res = requests.get(self.urlbase + VERSION_FILE, timeout=5)
+                res = requests.get(self.urlbase + VERSION_FILE, timeout=10)
                 self.web_version = res.text
                 LOGGER.debug("Check update: Local version=%s, Web version=%s", self.local_version, self.web_version)
                 if self.is_webversion_newer():

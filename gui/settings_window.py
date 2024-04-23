@@ -28,7 +28,7 @@ class SettingsWindow(tk.Toplevel):
         self.exit_save:bool = False             # save btn clicked
         self.gui_need_reload:bool = False       #  
         self.model_updated:bool = False         # model settings updated
-        self.mitm_updated:bool = False          # mitm settings updated
+        self.mitm_proxinject_updated:bool = False          # mitm settings updated
         
         style = ttk.Style(self)
         GUI_STYLE.set_style_normal(style)
@@ -246,14 +246,15 @@ class SettingsWindow(tk.Toplevel):
         # url
         ms_url_new = self.ms_url_var.get()
         
-        # mitm
+        # mitm & proxy inject
         mitm_port_new = int(self.mitm_port_var.get())
         if not self.st.valid_mitm_port(mitm_port_new):
             messagebox.showerror("⚠", self.st.lan().MITM_PORT_ERROR_PROMPT)
             return
         upstream_proxy_new = self.upstream_proxy_var.get()
-        if upstream_proxy_new != self.st.upstream_proxy or mitm_port_new != self.st.mitm_port:
-            self.mitm_updated = True
+        proxy_inject_new = self.proxy_inject_var.get()
+        if upstream_proxy_new != self.st.upstream_proxy or mitm_port_new != self.st.mitm_port or proxy_inject_new != self.st.enable_proxinject:
+            self.mitm_proxinject_updated = True
         
         # language
         language_name = self.language_var.get()
@@ -306,7 +307,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.mitm_port = mitm_port_new
         self.st.upstream_proxy = upstream_proxy_new
         self.st.language = language_new
-        self.st.enable_proxinject = self.proxy_inject_var.get()
+        self.st.enable_proxinject = proxy_inject_new
         
         self.st.model_type = model_type_new
         self.st.model_file = model_file_new

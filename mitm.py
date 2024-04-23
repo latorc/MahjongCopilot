@@ -90,6 +90,8 @@ class WSDataInterceptor:
             except:
                 return
     
+SOCKS5 = "socks5"
+HTTP = "http"
     
 class MitmController:
     """ Controlling mitm proxy server interactions and managing threads
@@ -101,25 +103,26 @@ class MitmController:
             proxy_port(int): proxy server port to open
             allowed_domains(list): Intercept data only from allowed domains. Other websocket traffic will be blocked.
                 filtering turned off if None/empty"""
-        
-        self.proxy_port = None
         self.mitm_config_folder = utils.sub_folder(Folder.MITM_CONF)
         self.cert_file = utils.sub_file(Folder.MITM_CONF, 'mitmproxy-ca-cert.cer')
         
         self.mitm_thread = None
         self.dump_master = None
+        self.proxy_port = None
+        self.mode = None
         self.upstream_proxy = None
-        
+        self.proxy_str:str = None
         
         self.ws_data_addon = WSDataInterceptor(allowed_domains)
         
-    def start(self, port:int, upstream_proxy:str=None):
+    def start(self, port:int, mode=HTTP, upstream_proxy:str=None):
         """ Start mitm server thread
         params:
             port(int): port to open
             upstream_proxy(str): upstream proxy server to forward data to. Format: http://ip:port"""
         self.proxy_port = port
-        self.upstream_proxy = upstream_proxy       
+        self.upstream_proxy = upstream_proxy
+        self.mode = mode
         # Start thread
         self.mitm_thread = threading.Thread(
             name="MitmThread",
@@ -137,37 +140,54 @@ class MitmController:
     
     async def _run_mitm_async(self):
         """ async run mitm proxy server"""
-        
-        if self.upstream_proxy:
+        ip_port = f"127.0.0.1:{self.proxy_port}"
+        up_log_str = ""
+        if self.mode==HTTP:
+            if self.upstream_proxy:
+                opts = options.Options(
+                    listen_port=self.proxy_port,
+                    confdir=str(self.mitm_config_folder),
+                    mode=[f"upstream:{self.upstream_proxy}"],
+                )
+                up_log_str = f" (upstream_proxy={self.upstream_proxy})"
+            else:
+                opts = options.Options(
+                    listen_port=self.proxy_port,
+                    confdir=str(self.mitm_config_folder),
+                )
+            self.proxy_str = f"{HTTP}://{ip_port}"
+        elif self.mode==SOCKS5:
             opts = options.Options(
                 listen_port=self.proxy_port,
                 confdir=str(self.mitm_config_folder),
-                mode=["socks5", f"upstream:{self.upstream_proxy}"],
+                mode=[SOCKS5],
             )
+            self.proxy_str = f"{SOCKS5}://{ip_port}"           
         else:
-            opts = options.Options(
-                listen_port=self.proxy_port,
-                confdir=str(self.mitm_config_folder),
-                mode=["socks5"],
-            )
+            raise ValueError(f"Unsupported mitm mode: {self.mode}")
+            
         self.dump_master = DumpMaster(
             opts,
             with_termlog=False,
             with_dumper=False,
         )
         try:
+            LOGGER.info("Starting mitm server%s, proxy=%s", up_log_str, self.proxy_str)
             self.dump_master.addons.add(self.ws_data_addon)
             await self.dump_master.run()
         except Exception as e:
-            LOGGER.error("Exception in starting MITM server: %s", str(e))
+            LOGGER.error("Exception in starting MITM server: %s", e, exc_info=True)
         except BaseException as e:
-            LOGGER.error("Exception in starting MITM server: %s", str(e))
-            
+            LOGGER.error("Exception in starting MITM server: %s", e, exc_info=True)
+        finally:
+            self.proxy_str = None
+        LOGGER.debug("mitm thread exiting")
     
     def stop(self):
         """ shutdown mitm proxy server and join thread"""        
         if self.mitm_thread and self.mitm_thread.is_alive():
             self.dump_master.shutdown()
+            del self.dump_master
             self.dump_master = None
             self.mitm_thread.join()
     

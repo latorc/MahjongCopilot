@@ -60,10 +60,10 @@ class ProxyInjector:
         """ run the injection process"""
         try:            
             proxy = f'{self.proxy_ip}:{self.proxy_port}'
-            LOGGER.info("Start injecting, process=%s, proxy=%s", self.p_name, proxy)
+            LOGGER.info("Start injecting, process=%s, proxy(socks5)=%s", self.p_name, proxy)
             pi_path = pathlib.Path(Folder.PROXINJECT) / 'proxinjector-cli.exe'
             if not pi_path.is_file():
-                raise FileNotFoundError(f"Not found: {pi_path}")    
+                raise FileNotFoundError(f"Not found: {pi_path}")
             
             cmds = [
                 str(pi_path),

@@ -232,11 +232,12 @@ class MainGUI(tk.Tk):
         
         if settings_window.exit_save:
             if settings_window.model_updated:
-                self.bot_manager.bot_need_update = True     # tell bot manager to update bot when possible
-            if settings_window.gui_need_reload:     # reload UI if needed
+                self.bot_manager.set_bot_update()
+            if settings_window.gui_need_reload:
                 self.reload_gui()
-            # if settings_window.mitm_updated:
-            #     self.bot_manager.restart_mitm()
+            # mitm port occupy issue. Need to restart program for now
+            # if settings_window.mitm_proxinject_updated:
+            #     self.bot_manager.set_mitm_proxinject_update()
             
 
     def _on_btn_help_clicked(self):

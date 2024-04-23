@@ -39,7 +39,7 @@ class BotManager:
 
         self.liqi_parser = liqi.LiqiProto()
         self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
-        self.injector = proxinject.ProxyInjector()
+        self.proxy_injector = proxinject.ProxyInjector()
         self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
         self.automation = Automation(self.browser, self.st)
         self.bot:Bot = None
@@ -52,6 +52,7 @@ class BotManager:
         self.game_flow_id = None                        # websocket flow that corresponds to the game/match
        
         self.bot_need_update:bool = True                # set this True to update bot in main thread
+        self.mitm_proxinject_need_update:bool = True    # set this True to update mitm and prox inject in main thread
         self.is_loading_bot:bool = False                # is bot being loaded
         self.main_thread_exception:Exception = None     # Exception that had stopped the main thread
         self.game_exception:Exception = None            # game run time error (but does not break main thread)        
@@ -119,21 +120,36 @@ class BotManager:
         elif self.lobby_flow_id or self.game_flow_id:
             return utils.GameClientType.PROXY
         else:
-            return None
-        
+            return None        
         
     def start_browser(self):
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
-        proxy = r'socks5://localhost:' + str(self.st.mitm_port)
+        proxy = self.mitm_server.proxy_str
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
         
         
-    def restart_mitm(self):
+    def set_mitm_proxinject_update(self):
         """ restart mitm proxy server"""
-        LOGGER.info("Restarting mitm proxy server, port=%d, upstream_proxy=%s", self.st.mitm_port, self.st.upstream_proxy)
-        self.mitm_server.stop()
-        self.mitm_server.start(self.st.mitm_port, self.st.upstream_proxy)
+        self.mitm_proxinject_need_update = True
+        
+        
+    def set_bot_update(self):
+        """ mark bot needs update"""
+        self.bot_need_update = True
+        
+    
+    def is_bot_created(self):
+        """ return true if self.bot is not None"""
+        return self.bot is not None
+        
+
+    def is_bot_calculating(self):
+        """ return true if bot is calculating"""
+        if self.game_state and self.game_state.is_bot_calculating:
+            return True
+        else:
+            return False
         
         
     def get_pending_reaction(self) -> dict:
@@ -193,8 +209,7 @@ class BotManager:
             name, _d = self.automation.running_task_info()
             if name in (JOIN_GAME, END_GAME):
                 self.automation.stop_previous()
-                
-    
+        
     def _create_bot(self):
         """ create Bot object based on settings"""
         try:            
@@ -208,30 +223,28 @@ class BotManager:
             self.game_exception = e
         self.is_loading_bot = False
         
-
-    def is_bot_created(self):
-        """ return true if self.bot is not None"""
-        return self.bot is not None
-    
-
-    def is_bot_calculating(self):
-        """ return true if bot is calculating"""
-        if self.game_state and self.game_state.is_bot_calculating:
-            return True
+    def _create_mitm_and_proxinject(self):
+        # create mitm and proxinject threads
+        # enable proxyinject requires socks5, which disables upstream proxy
+        if self.st.enable_proxinject:
+            mode = mitm.SOCKS5
+            LOGGER.debug("Enabling proxyinject requires socks5, and it disables upstream proxy")
         else:
-            return False
+            mode = mitm.HTTP
+
+        self.mitm_server.start(self.st.mitm_port, mode, self.st.upstream_proxy)
+        res = self.mitm_server.install_mitm_cert()
+        if not res:
+            self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)
+        
+        if self.st.enable_proxinject:
+            self.proxy_injector.start(self.st.inject_process_name, "127.0.0.1", self.st.mitm_port)
         
 
     def _run(self):
         """ Keep running the main loop (blocking)"""
         try:
-            LOGGER.info("Starting mitm proxy server, port=%d, upstream_proxy=%s", self.st.mitm_port, self.st.upstream_proxy)
-            self.mitm_server.start(self.st.mitm_port,self.st.upstream_proxy)
-
-            res = self.mitm_server.install_mitm_cert()
-            if not res:
-                self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)                
-            
+            # self._create_mitm_and_proxinject()
             if self.st.auto_launch_browser:
                 self.start_browser()
 
@@ -239,25 +252,25 @@ class BotManager:
             while self._stop_event.is_set() is False:   # thread main loop
                 # keep processing majsoul game messages forwarded from mitm server
                 self.fps_counter.frame()
-                self._udpate_bot()
-                try:
+                self._loop_pre_msg()
+                try:                    
                     msg = self.mitm_server.get_message()
-                    self._process_msg(msg)                
+                    self._process_msg(msg)                                  
                 except queue.Empty:
                     time.sleep(0.002)
                 except Exception as e:
                     LOGGER.error("Error processing msg: %s",e, exc_info=True)
-                    self.game_exception = e
-
-                self._every_loop_post_proc_msg()
-
+                    self.game_exception = e                    
+                self._loop_post_msg()
+                                    
+            # loop ended, clean up before exit
             LOGGER.info("Shutting down browser")
             self.browser.stop(True)                
             LOGGER.info("Shutting down MITM")
             self.mitm_server.stop()
-            if self.injector.is_running():
+            if self.proxy_injector.is_running():
                 LOGGER.info("Shutting down proxy injector")
-                self.injector.stop(True)
+                self.proxy_injector.stop(True)
             LOGGER.info("Bot manager thread ending.")         
             
         except Exception as e:
@@ -265,15 +278,25 @@ class BotManager:
             LOGGER.error("Bot Manager Thread Exception: %s", e, exc_info=True)
             
     
-    def _udpate_bot(self):
-        """ Wait for bot to be created"""
+    def _loop_pre_msg(self):
+        """ things to do every loop before processing msg"""
+        #  update bot if needed
         if self.bot_need_update and self.is_in_game() is False:
             self._create_bot()
             self.bot_need_update = False
             
+        # update mitm if needed: when no one is using mitm
+        if self.mitm_proxinject_need_update:
+            if not (self.browser.is_running()):
+                LOGGER.debug("Updating mitm and proxy injector")
+                self.proxy_injector.stop(True)
+                self.mitm_server.stop()
+                self._create_mitm_and_proxinject()
+                self.mitm_proxinject_need_update = False
+        
                 
-    def _every_loop_post_proc_msg(self):
-        # things to do in every loop
+    def _loop_post_msg(self):
+        # things to do in every loop after processing msg
         # check mitm
         if self.mitm_server.is_running() is False:
             self.game_exception = utils.MITMException("MITM server stopped")
@@ -281,16 +304,6 @@ class BotManager:
             if isinstance(self.game_exception, utils.MITMException):
                 self.game_exception = None
                 
-        # check proxinject
-        if self.st.enable_proxinject:
-            if self.injector.is_running() is False:
-                LOGGER.debug("Bot manager starting proxinject")
-                self.injector.start(self.st.inject_process_name, "127.0.0.1", self.st.mitm_port)
-        else:
-            if self.injector.is_running():
-                LOGGER.debug("Bot manager stopping proxinject")
-                self.injector.stop(False)
-
         # check overlay
         if self.browser and self.browser.is_page_normal():
             if self.st.enable_overlay:
