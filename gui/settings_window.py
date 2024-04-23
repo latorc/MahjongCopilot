@@ -77,7 +77,7 @@ class SettingsWindow(tk.Toplevel):
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MITM_PORT)
         _label.grid(row=cur_row, column=0, **args_label)
-        add_hover_text(_label, "Need restart")
+        # add_hover_text(_label, "Need restart")
         self.mitm_port_var = tk.StringVar(value=self.st.mitm_port)
         number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=std_wid)
         number_entry.grid(row=cur_row, column=1, **args_entry)
