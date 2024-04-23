@@ -257,7 +257,6 @@ class BotManager:
             if self.st.auto_launch_browser:
                 self.start_browser()
 
-            self.fps_counter.reset()
             while self._stop_event.is_set() is False:   # thread main loop
                 # keep processing majsoul game messages forwarded from mitm server
                 self.fps_counter.frame()

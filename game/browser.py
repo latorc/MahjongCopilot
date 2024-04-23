@@ -21,8 +21,7 @@ class GameBrowser:
         self.height = height
         self._action_queue = queue.Queue()       # thread safe queue for actions
         self._stop_event = threading.Event()    # set this event to stop processing actions
-        self._browser_thread = None
-        self.fps_counter = FPSCounter()
+        self._browser_thread = None        
 
         self.init_vars()
 
@@ -30,7 +29,7 @@ class GameBrowser:
         """ initialize internal variables"""
         self.context:BrowserContext = None
         self.page:Page = None        # playwright page, only used by thread        
-        self.fps_counter.reset()
+        self.fps_counter = FPSCounter()
         
         # for tracking page info
         self._page_title:str = None
@@ -105,7 +104,6 @@ class GameBrowser:
             self.context.on("page", on_page)
             
             self._clear_action_queue()
-            self.fps_counter.reset()
             # keep running actions until stop event is set
             while self._stop_event.is_set() is False:
                 self.fps_counter.frame()
