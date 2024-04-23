@@ -77,10 +77,11 @@ class MainGUI(tk.Tk):
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
         
         # start game button
+        self.toolbar.add_sep()
         self.btn_start_browser = self.toolbar.add_button(
-            self.st.lan().START_BROWSER, 'majsoul.png', self._on_btn_start_browser_clicked)
-        self.toolbar.add_sep()        
+            self.st.lan().START_BROWSER, 'majsoul.png', self._on_btn_start_browser_clicked)               
         # buttons on toolbar
+        self.toolbar.add_sep()
         self.toolbar.add_button(self.st.lan().SETTINGS, 'settings.png', self._on_btn_settings_clicked)
         self.toolbar.add_button(self.st.lan().OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
         self.btn_help = self.toolbar.add_button(self.st.lan().HELP, 'help.png', self._on_btn_help_clicked)
@@ -102,6 +103,7 @@ class MainGUI(tk.Tk):
             self.tb2, self.st.lan().AUTOPLAY, tb_ht, font_size=sw_ft_sz, command=self._on_switch_autoplay_clicked)
         self.switch_autoplay.pack(**pack_args)
         # auto join
+        self.tb2.add_sep()
         self.switch_autojoin = ToggleSwitch(
             self.tb2, self.st.lan().AUTO_JOIN_GAME, tb_ht, font_size=sw_ft_sz, command=self._on_switch_autojoin_clicked)
         self.switch_autojoin.pack(**pack_args)
