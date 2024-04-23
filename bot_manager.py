@@ -225,6 +225,7 @@ class BotManager:
             self.is_loading_bot = True
             self.bot = None
             self.bot = get_bot(self.st)
+            self.game_exception = None
             LOGGER.info("Created bot: %s. Supported Modes: %s", self.bot.name, self.bot.supported_modes)
         except Exception as e:
             LOGGER.warning("Failed to create bot: %s", e, exc_info=True)
