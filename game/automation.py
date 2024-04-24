@@ -340,14 +340,14 @@ class Automation:
             
             # more time for 19 < 28 < others
             pai = mjai_action['pai']
-            if pai in MJAI_TILES_19:
+            if pai in MJAI_TILES_19 or pai == gi.my_tsumohai :
                 extra_time += 0.0
             elif pai in MJAI_TILES_28:
                 extra_time += 0.5
             else:
                 extra_time += random.uniform(0.75, 1.0)            
             if gi.n_other_reach() > 0:    # extra time for other reach
-                extra_time += random.uniform(0.25, 0.75)
+                extra_time += random.uniform(0.20, 0.30) * gi.n_other_reach()
             extra_time = min(extra_time, 3.0)   # cap extra time
             delay += extra_time
                                 
@@ -357,6 +357,10 @@ class Automation:
             delay += 0.0
         elif mjai_type == MjaiType.NUKIDORA:
             delay += 0.0
+        elif mjai_type == MjaiType.RYUKYOKU: # Excessive speed in RYUKYOKU
+            if gi.jikaze  == 'E':
+                delay += 1.5
+            delay += 2.0
         else:       # chi/pon/kan/others
             delay += 0.5
         
@@ -498,11 +502,13 @@ class Automation:
         if roll > self.st.auto_reply_emoji_rate:   # send when roll < rate
             return
 
+        steps.append(ActionStepDelay(random.uniform(0.5, 0.7)))
         idx = random.randint(0, 8)
         x,y = Positions.EMOJI_BUTTON
         steps = [ActionStepDelay(random.uniform(1.0,2.5)), ActionStepMove(x*self.scaler, y*self.scaler)]
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
         steps.append(ActionStepClick())
+        steps.append(ActionStepDelay(random.uniform(0.5, 0.7)))
         x,y = Positions.EMOJIS[idx]
         steps.append(ActionStepMove(x*self.scaler,y*self.scaler))
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
