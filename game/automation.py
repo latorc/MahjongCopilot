@@ -357,7 +357,7 @@ class Automation:
             delay += 0.0
         elif mjai_type == MjaiType.NUKIDORA:
             delay += 0.0
-        elif mjai_type == MjaiType.RYUKYOKU: # Excessive speed in RYUKYOKU
+        elif mjai_type == MjaiType.RYUKYOKU: # more time for RYUKYOKU
             if gi.jikaze  == 'E':
                 delay += 1.5
             delay += 2.0
@@ -502,13 +502,12 @@ class Automation:
         if roll > self.st.auto_reply_emoji_rate:   # send when roll < rate
             return
 
-        steps.append(ActionStepDelay(random.uniform(0.5, 0.7)))
+        
         idx = random.randint(0, 8)
         x,y = Positions.EMOJI_BUTTON
-        steps = [ActionStepDelay(random.uniform(1.0,2.5)), ActionStepMove(x*self.scaler, y*self.scaler)]
+        steps = [ActionStepDelay(random.uniform(1.5, 3.0)), ActionStepMove(x*self.scaler, y*self.scaler)]
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
         steps.append(ActionStepClick())
-        steps.append(ActionStepDelay(random.uniform(0.5, 0.7)))
         x,y = Positions.EMOJIS[idx]
         steps.append(ActionStepMove(x*self.scaler,y*self.scaler))
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
