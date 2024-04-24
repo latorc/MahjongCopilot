@@ -66,7 +66,7 @@ class Updater:
             LOGGER.info("Loading help html from %s", url)
             html_text = self.get_html(url)
             if html_text is None:
-                self.help_html = f"""Help Information: <a href="{url}">{url}</a><br>Error loading help.<br>{self.help_exception}"""
+                self.help_html = f"""Error loading <a href="{url}">{url}help</a><br>{self.help_exception}"""
                 LOGGER.warning(self.help_html)
             else:
                 self.help_html = html_text

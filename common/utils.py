@@ -206,11 +206,12 @@ def install_root_cert(cert_file:str):
         #     f"exit $LASTEXITCODE"
         # ]
         p=subprocess.run(full_command, **sub_run_args())
-        stdout, stderr = p.stdout, p.stderr
+        stdout, stderr = p.stdout, p.stderr        
     elif sys.platform == "darwin":
         # TODO Test on MAC system
-        result = subprocess.run(['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file],
+        p = subprocess.run(['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file],
             capture_output=True, text=True, check=False)
+        stdout, stderr = p.stdout, p.stderr
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)
         return False, ""

@@ -340,14 +340,14 @@ class Automation:
             
             # more time for 19 < 28 < others
             pai = mjai_action['pai']
-            if pai in MJAI_TILES_19:
+            if pai in MJAI_TILES_19 or pai == gi.my_tsumohai :
                 extra_time += 0.0
             elif pai in MJAI_TILES_28:
                 extra_time += 0.5
             else:
                 extra_time += random.uniform(0.75, 1.0)            
             if gi.n_other_reach() > 0:    # extra time for other reach
-                extra_time += random.uniform(0.25, 0.75)
+                extra_time += random.uniform(0.20, 0.30) * gi.n_other_reach()
             extra_time = min(extra_time, 3.0)   # cap extra time
             delay += extra_time
                                 
@@ -357,6 +357,10 @@ class Automation:
             delay += 0.0
         elif mjai_type == MjaiType.NUKIDORA:
             delay += 0.0
+        elif mjai_type == MjaiType.RYUKYOKU: # more time for RYUKYOKU
+            if gi.jikaze  == 'E':
+                delay += 1.5
+            delay += 2.0
         else:       # chi/pon/kan/others
             delay += 0.5
         
@@ -498,9 +502,10 @@ class Automation:
         if roll > self.st.auto_reply_emoji_rate:   # send when roll < rate
             return
 
+        
         idx = random.randint(0, 8)
         x,y = Positions.EMOJI_BUTTON
-        steps = [ActionStepDelay(random.uniform(1.0,2.5)), ActionStepMove(x*self.scaler, y*self.scaler)]
+        steps = [ActionStepDelay(random.uniform(1.5, 3.0)), ActionStepMove(x*self.scaler, y*self.scaler)]
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
         steps.append(ActionStepClick())
         x,y = Positions.EMOJIS[idx]
@@ -736,12 +741,12 @@ class Automation:
             total_dx, total_dy: total distance to wheel move"""
         # break the wheel action into several steps
         steps = []
-        times = random.randint(2, 5)
+        times = random.randint(3, 6)
         for _i in range(times):
             dx = total_dx / times
             dy = total_dy / times
             steps.append(ActionStepWheel(dx, dy))
-            steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
+            steps.append(ActionStepDelay(random.uniform(0.05, 0.10)))
         return steps
 
     def on_lobby_login(self, _liqimsg:dict):
@@ -827,8 +832,8 @@ class Automation:
             wx,wy = Positions.LEVELS[1]         # wheel at this position
             for step in self.steps_randomized_move(wx,wy):
                 yield step
-            yield ActionStepDelay(random.uniform(0.5, 1))
-            for step in self.steps_random_wheels(0, 800):
+            yield ActionStepDelay(random.uniform(0.5, 0.9))
+            for step in self.steps_random_wheels(0, 1000):
                 yield step
             yield ActionStepDelay(random.uniform(0.5, 1))                
         x,y = Positions.LEVELS[self.st.auto_join_level]
