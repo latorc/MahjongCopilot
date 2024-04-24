@@ -43,8 +43,13 @@ class Updater:
             self.urlbase += "/"
         self.timeout_dl:int = 15
         # read version number from file "version"
-        with open(utils.sub_file(".", VERSION_FILE), 'r', encoding='utf-8') as f:
-            self.local_version = str(f.read()).strip()
+        try:
+            self.local_version = None
+            with open(utils.sub_file(".", VERSION_FILE), 'r', encoding='utf-8') as f:
+                self.local_version = str(f.read()).strip()
+        except:#pylint:disable=bare-except
+            LOGGER.error("Cannot read version file!")
+            
         self.web_version:str = '0'
         self.dl_progress:str = ""               # downloaded percentage
         self.update_status:UpdateStatus = UpdateStatus.NONE
