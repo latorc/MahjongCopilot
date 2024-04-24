@@ -225,7 +225,10 @@ class AutomationTask:
         if isinstance(step, ActionStepMove):
             self.executor.mouse_move(step.x, step.y, step.steps, True)
         elif isinstance(step, ActionStepClick):
-            self.executor.mouse_click(step.delay, True)
+            # self.executor.mouse_click(step.delay, True)
+            self.executor.mouse_down(True)
+            time.sleep(step.delay/1000) # sleep here instead of in browser thread
+            self.executor.mouse_up(True)
         elif isinstance(step, ActionStepMouseDown):
             self.executor.mouse_down(True)
         elif isinstance(step, ActionStepMouseUp):
