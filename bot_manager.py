@@ -52,7 +52,7 @@ class BotManager:
         self.game_flow_id = None                        # websocket flow that corresponds to the game/match
        
         self.bot_need_update:bool = True                # set this True to update bot in main thread
-        self.mitm_proxinject_need_update:bool = True    # set this True to update mitm and prox inject in main thread
+        self.mitm_proxinject_need_update:bool = False    # set this True to update mitm and prox inject in main thread
         self.is_loading_bot:bool = False                # is bot being loaded
         self.main_thread_exception:Exception = None     # Exception that had stopped the main thread
         self.game_exception:Exception = None            # game run time error (but does not break main thread)        
@@ -137,10 +137,10 @@ class BotManager:
                     return True
         return False
         
-        
-    def set_mitm_proxinject_update(self):
-        """ restart mitm proxy server"""
-        self.mitm_proxinject_need_update = True
+    # mitm restart not working for now. disable this.        
+    # def set_mitm_proxinject_update(self):
+    #     """ restart mitm proxy server"""
+    #     self.mitm_proxinject_need_update = True
         
         
     def set_bot_update(self):
@@ -254,7 +254,7 @@ class BotManager:
     def _run(self):
         """ Keep running the main loop (blocking)"""
         try:
-            # self._create_mitm_and_proxinject()
+            self._create_mitm_and_proxinject()
             if self.st.auto_launch_browser:
                 self.start_browser()
 

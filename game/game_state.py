@@ -138,7 +138,7 @@ class GameState:
         liqi_data = liqi_msg['data']
         
         # SyncGame
-        if liqi_method == LiqiMethod.syncGame or liqi_method == LiqiMethod.enterGame:
+        if (liqi_method == LiqiMethod.syncGame or liqi_method == LiqiMethod.enterGame) and liqi_type == MsgType.RES:
             # syncGame: disconnect and reconnect
             # enterGame: enter game late, while others have started
             return self.ms_sync_game(liqi_data)
@@ -151,14 +151,13 @@ class GameState:
         # All players are ready
         elif liqi_method == LiqiMethod.fetchGamePlayerState:
             if liqi_type == MsgType.RES:
-                # liqi_data['stateList'] should be ['READY', 'READY', 'READY', 'READY']:
+                # seems it's always all ready: 'data': {'stateList': ['READY', 'READY', 'READY', 'READY']}
                 return None
         
         # Game Start
         elif liqi_method == LiqiMethod.authGame:
             if liqi_type == MsgType.REQ:
-                # request game info (first entering game)
-                # self.__init__()
+                # request entering game. account id for seat index
                 self.account_id = liqi_data['accountId']
                 return None
             elif liqi_type == MsgType.RES:
@@ -168,7 +167,7 @@ class GameState:
                 raise RuntimeError(f'Unexpected liqi message, method={liqi_method}, type={liqi_type}')
         
         # Actions
-        elif liqi_method == LiqiMethod.ActionPrototype:
+        elif liqi_method == LiqiMethod.ActionPrototype: # assert all ActionPrototype are notify type
             # We assume here, when there is new action, last reaction has done/expired
             self.last_reaction_pending = False
             
@@ -183,6 +182,8 @@ class GameState:
                         LOGGER.warning("operation seat %s != self.seat %s", liqi_data['data']['operation']['seat'], self.seat)
                     if 'operationList' not in liqi_data['data']['operation']:
                         LOGGER.warning("No operation List: %s", liqi_data['data']['operation'])
+            else:
+                LOGGER.warning("No data in liqi_data: %s", liqi_data)
             
             if liqi_data['name'] == LiqiAction.NewRound:
                 self.kyoku_state.first_round = True
@@ -190,9 +191,7 @@ class GameState:
             
             else:   # other rounds                             
                 self.kyoku_state.first_round = False        # not first round       
-                return self.ms_action_prototype(liqi_data)
-            
-            
+                return self.ms_action_prototype(liqi_data) 
         
         # end_game
         elif liqi_method == LiqiMethod.NotifyGameEndResult:
@@ -236,6 +235,7 @@ class GameState:
         try:
             self.mode_id = liqi_data['gameConfig']['meta']['modeId']
         except Exception:
+            LOGGER.warning("No modeId in liqi_data['gameConfig']['meta']['modeId']")
             self.mode_id = -1
 
         seatList:list = liqi_data['seatList']

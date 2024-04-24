@@ -736,12 +736,12 @@ class Automation:
             total_dx, total_dy: total distance to wheel move"""
         # break the wheel action into several steps
         steps = []
-        times = random.randint(2, 5)
+        times = random.randint(3, 6)
         for _i in range(times):
             dx = total_dx / times
             dy = total_dy / times
             steps.append(ActionStepWheel(dx, dy))
-            steps.append(ActionStepDelay(random.uniform(0.05, 0.11)))
+            steps.append(ActionStepDelay(random.uniform(0.05, 0.10)))
         return steps
 
     def on_lobby_login(self, _liqimsg:dict):
@@ -827,8 +827,8 @@ class Automation:
             wx,wy = Positions.LEVELS[1]         # wheel at this position
             for step in self.steps_randomized_move(wx,wy):
                 yield step
-            yield ActionStepDelay(random.uniform(0.5, 1))
-            for step in self.steps_random_wheels(0, 800):
+            yield ActionStepDelay(random.uniform(0.5, 0.9))
+            for step in self.steps_random_wheels(0, 1000):
                 yield step
             yield ActionStepDelay(random.uniform(0.5, 1))                
         x,y = Positions.LEVELS[self.st.auto_join_level]
