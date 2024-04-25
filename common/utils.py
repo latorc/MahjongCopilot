@@ -37,6 +37,7 @@ class Folder:
     PROXINJECT = 'proxinject'
     UPDATE = "update"
     TEMP = 'temp'
+    CRX = 'crx'
 
 
 class GameClientType(Enum):
