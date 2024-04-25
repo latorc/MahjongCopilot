@@ -741,7 +741,7 @@ class Automation:
             total_dx, total_dy: total distance to wheel move"""
         # break the wheel action into several steps
         steps = []
-        times = random.randint(3, 6)
+        times = random.randint(4, 6)
         for _i in range(times):
             dx = total_dx / times
             dy = total_dy / times
@@ -751,8 +751,9 @@ class Automation:
 
     def on_lobby_login(self, _liqimsg:dict):
         """ lobby login handler"""
-        self.stop_previous()
-        self.ui_state = UiState.MAIN_MENU
+        if self.ui_state != UiState.IN_GAME:
+            self.stop_previous()
+            self.ui_state = UiState.MAIN_MENU
 
     def on_enter_game(self):
         """ enter game handler"""
@@ -768,8 +769,9 @@ class Automation:
         
     def on_exit_lobby(self):
         """ exit lobby handler"""
-        self.stop_previous()
-        self.ui_state = UiState.NOT_RUNNING
+        if self.ui_state != UiState.IN_GAME:
+            self.stop_previous()
+            self.ui_state = UiState.NOT_RUNNING
    
     def automate_end_game(self):
         """Automate Game end go back to menu"""  

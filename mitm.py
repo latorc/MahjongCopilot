@@ -86,7 +86,8 @@ class WSDataInterceptor:
                     LOGGER.warning("Majsoul Aliyun Error (killed): %s", str(qs))
                     flow.kill()
                 else:
-                    LOGGER.debug("Majsoul Aliyun Log detected, len = %d", len(str(qs)))
+                    # LOGGER.debug("Majsoul Aliyun Log detected, len = %d", len(str(qs)))
+                    LOGGER.debug("Majsoul Aliyun Log: %s", qs)
             except:
                 return
     
