@@ -23,6 +23,7 @@ class Settings:
         self.browser_width:int = self._get_value("browser_width", 1280)
         self.browser_height:int = self._get_value("browser_height", 720)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
+        self.enable_chrome_ext:bool = self._get_value("enable_chrome_ext", False, self.valid_bool)
         self.mitm_port:int = self._get_value("mitm_port", 10999)
         self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
         self.enable_proxinject:bool = self._get_value("enable_proxinject", False, self.valid_bool)

@@ -9,7 +9,7 @@ from io import BytesIO
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 from common import utils
-from common.utils import Folder, FPSCounter
+from common.utils import Folder, FPSCounter, list_children
 from common.log_helper import LOGGER
 
 class GameBrowser:
@@ -45,11 +45,13 @@ class GameBrowser:
     def __del__(self):
         self.stop()
 
-    def start(self, url:str, proxy:str=None, width:int=None, height:int=None):
+    def start(self, url:str, proxy:str=None, width:int=None, height:int=None, enable_chrome_ext:bool=False):
         """ Launch the browser in a thread, and start processing action queue
         params:
             url(str): url of the page to open upon browser launch
             proxy(str): proxy server to use. e.g. http://1.2.3.4:555"
+            width, height: viewport width and height
+            enable_ext: True to enable chrome extensions
         """
         # using thread here to avoid playwright sync api not usable in async context (textual) issue
         if self.is_running():
@@ -63,35 +65,34 @@ class GameBrowser:
         self._stop_event.clear()
         self._browser_thread = threading.Thread(
             target=self._run_browser_and_action_queue,
-            args=(url, proxy),
+            args=(url, proxy, enable_chrome_ext),
             name="BrowserThread",
             daemon=True)
         self._browser_thread.start()
 
-    # enable_extensions: bool
-    # 设置为True时会自动遍历目录下crx文件夹内的插件文件夹，并将绝对路径保存到extension_list中
-    # 需要将对应插件改为zip格式后解压到crx文件夹内，如:crx/tampermonkey
-    def _run_browser_and_action_queue(self, url:str, proxy:str, enable_extensions:bool=False):
+
+    def _run_browser_and_action_queue(self, url:str, proxy:str, enable_chrome_ext:bool=False):
         """ run browser and keep processing action queue (blocking)"""
-        global disable_extensions_except_args, load_extension_args
+        
         if proxy:
             proxy_object = {"server": proxy}
         else:
             proxy_object = None
 
-        # 遍历Folder.CRX文件夹下的所有插件文件夹，将绝对路径保存到extension_list中
-        if enable_extensions:
-            extensions_list = []
-            for root, dirs, files in os.walk(utils.sub_folder(Folder.CRX)):
-                for extension_dir in dirs:
-                    extensions_list.append(os.path.join(root, extension_dir))
+        # read all subfolder names from Folder.CRX and form extension list
+        if enable_chrome_ext:
+            extensions_list = list_children(Folder.CHROME_EXT, True, False, True)
+            # extensions_list = []
+            # for root, dirs, files in os.walk(utils.sub_folder(Folder.CHROME_EXT)):
+            #     for extension_dir in dirs:
+            #         extensions_list.append(os.path.join(root, extension_dir))
             LOGGER.info('Extensions loaded: %s', extensions_list)
             disable_extensions_except_args = "--disable-extensions-except=" + ",".join(extensions_list)
             load_extension_args = "--load-extension=" + ",".join(extensions_list)
 
         LOGGER.info('Starting Chromium, viewport=%dx%d, proxy=%s', self.width, self.height, proxy)
         with sync_playwright() as playwright:
-            if enable_extensions:
+            if enable_chrome_ext:
                 try:
                     # Initilize browser
                     chromium = playwright.chromium
@@ -133,13 +134,13 @@ class GameBrowser:
             except Exception as e:
                 LOGGER.error('Error opening page. Check if certificate is installed. \n%s',e)
 
-            # Do not allow new page tab
-            def on_page(page:Page):
-                LOGGER.info("Closing additional page. Only one Majsoul page is allowed")
-                page.close()
+            # # Do not allow new page tab
+            # def on_page(page:Page):
+            #     LOGGER.info("Closing additional page. Only one Majsoul page is allowed")
+            #     page.close()
 
-            if not enable_extensions:
-                self.context.on("page", on_page)
+            # if not enable_extensions:
+            #     self.context.on("page", on_page)
 
             self._clear_action_queue()
             # keep running actions until stop event is set

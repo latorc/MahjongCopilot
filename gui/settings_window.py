@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from common.utils import Folder
-from common.utils import list_files
+from common.utils import list_children
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
@@ -70,8 +70,14 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.st.lan().MAJSOUL_URL)
         _label.grid(row=cur_row, column=0, **args_label)
         self.ms_url_var = tk.StringVar(value=self.st.ms_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=std_wid*4)
-        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
+        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=std_wid*3)
+        string_entry.grid(row=cur_row, column=1,columnspan=2,  **args_entry)
+        # extensions
+        self.enable_extension_var = tk.BooleanVar(value=self.st.enable_chrome_ext)
+        auto_launch_entry = ttk.Checkbutton(
+            main_frame, variable=self.enable_extension_var,
+            text=self.st.lan().ENABLE_CHROME_EXT, width=std_wid+1)
+        auto_launch_entry.grid(row=cur_row, column=3, **args_entry)
         
         # mitm port
         cur_row += 1
@@ -119,7 +125,7 @@ class SettingsWindow(tk.Toplevel):
         select_menu.grid(row=cur_row, column=1, **args_entry)
         
         # Select Model File
-        model_files = [""] + list_files(Folder.MODEL)
+        model_files = [""] + list_children(Folder.MODEL)
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().AI_MODEL_FILE)
         _label.grid(row=cur_row, column=0, **args_label)        
@@ -305,6 +311,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.browser_width = width_new
         self.st.browser_height = height_new
         self.st.ms_url = ms_url_new
+        self.st.enable_chrome_ext = self.enable_extension_var.get()
         self.st.mitm_port = mitm_port_new
         self.st.upstream_proxy = upstream_proxy_new
         self.st.language = language_new
