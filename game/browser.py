@@ -538,8 +538,6 @@ class GameBrowser:
             res_queue: queue for saving the image buff data"""
         if self.is_page_normal():
             try:
-                # save_file = utils.sub_folder(TEMP_FOLDER)/"screenshot.png"
-                # self.page.screenshot(path=save_file)
                 ss_bytes:BytesIO = self.page.screenshot(timeout=time_ms)
                 res_queue.put(ss_bytes)
             except Exception as e:
