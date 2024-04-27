@@ -19,12 +19,17 @@ class BotMjapi(Bot):
 
     """ MJAPI based mjai bot"""
     def __init__(self, setting:Settings) -> None:
-        super().__init__("MJAPI Bot - " + setting.mjapi_url)
+        super().__init__("MJAPI Bot")
         self.st = setting
+        self.api_usage = None
         self.mjapi = MjapiClient(self.st.mjapi_url)
         self._login_or_reg()
         self.id = -1
         self.ignore_next_turn_self_reach:bool = False
+        
+    @property
+    def info_str(self):
+        return f"{self.name} [{self.st.mjapi_user}] (Usage: {self.api_usage})"
         
     def _login_or_reg(self):
         if not self.st.mjapi_user:
@@ -54,7 +59,7 @@ class BotMjapi(Bot):
                 self.st.mjapi_model_select, model_list[-1])
             self.st.mjapi_model_select = model_list[-1]
         self.model_name = self.st.mjapi_model_select
-        self.st.mjapi_usage = self.mjapi.get_usage()
+        self.api_usage = self.mjapi.get_usage()
         self.st.save_json()
         LOGGER.info("Login to MJAPI successful with user: %s, model_name=%s", self.st.mjapi_user, self.model_name)
 

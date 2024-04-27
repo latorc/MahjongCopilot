@@ -45,8 +45,7 @@ class Settings:
         self.mjapi_user:str = self._get_value("mjapi_user", "")
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
         self.mjapi_models:list = self._get_value("mjapi_models",[])
-        self.mjapi_model_select:str = self._get_value("mjapi_model_select","")
-        self.mjapi_usage:int = self._get_value("mjapi_usage", None)
+        self.mjapi_model_select:str = self._get_value("mjapi_model_select","baseline")
         
         # Automation settings
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)

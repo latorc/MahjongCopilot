@@ -167,10 +167,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, **args_label)
         self.mjapi_user_var = tk.StringVar(value=self.st.mjapi_user)
         string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var, width=std_wid)
-        string_entry.grid(row=cur_row, column=1, **args_entry)
-        # MJAPI usage
-        _label = ttk.Label(main_frame, text=f"{self.st.lan().MJAPI_USAGE}: {self.st.mjapi_usage}")
-        _label.grid(row=cur_row, column=2, **args_entry)        
+        string_entry.grid(row=cur_row, column=1, **args_entry)   
         
         # MJAPI secret
         cur_row += 1
@@ -191,6 +188,7 @@ class SettingsWindow(tk.Toplevel):
         
         _label = ttk.Label(main_frame, text=self.st.lan().LOGIN_TO_REFRESH)
         _label.grid(row=cur_row, column=2, **args_entry)
+        
         # sep
         cur_row += 1
         sep = ttk.Separator(main_frame, orient=tk.HORIZONTAL)
