@@ -3,19 +3,81 @@
 import json
 import gzip
 import requests
-from common.utils import BotNotSupportingMode
-from bot import GameMode
+from common.utils import BotNotSupportingMode, GameMode
+
 
 class MortalEngineAkagiOt:
     """ Mortal Engine for Akagi OT"""
-    def __init__(self, api_key:str = None, server:str = None, mode:GameMode=GameMode.MJ4P):
+    def __init__(
+        self,
+        api_key:str = None, server:str = None, mode:GameMode=GameMode.MJ4P):
+        
+        self.name = "MortalEngineAkagiOt"
+        self.is_oracle = False
+        self.version = 4
+        self.enable_quick_eval = False
+        self.enable_rule_based_agari_guard = False
+        
+#         boltzmann_temp:
+# 1
+# brain:
+# Brain(
+#   (encoder): ResNet(
+#     (net): Sequential(
+#       (0): Conv1d(1012, 256, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+#       (1): ResBlock(
+#         (res_unit): Sequential(
+#           (0): BatchNorm1d(256, eps=0.001, momentum=0.01, affine=True, track_running_stats=True)
+#           (1): Mish(inplace=True)
+#           (2): Conv1d(256, 256, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+#           (3): BatchNorm1d(256, eps=0.001, momentum=0.01, affine=True, track_running_stats=True)
+#           (4): Mish(inplace=True)
+#           (5): Conv1d(256, 256, kernel_size=(3,), stride=(1,), padding=(1,), bias=False)
+#         )
+#         (ca): ChannelAttention(
+#           (shared_mlp): Sequential(
+#             (0): Linear(in_features=256, out_features=16, bias=True)
+#             (1): Mish(inplace=True)
+#             (2): Linear(in_features=16, out_features=256, bias=True)
+#           )
+#         )
+#       )
+#       (2): ResBlock(
+#         (res_unit): Sequential(
+#           (0): BatchNorm1d(256, eps=0.001, momentum=0.01, a...
+# device:
+# device(type='cpu')
+# dqn:
+# DQN(
+#   (net): Linear(in_features=1024, out_features=47, bias=True)
+# )
+# enable_amp:
+# False
+# enable_quick_eval:
+# False
+# enable_rule_based_agari_guard:
+# False
+# engine_type:
+# 'mortal'
+# is_oracle:
+# False
+# name:
+# 'mortal'
+# stochastic_latent:
+# False
+# top_p:
+# 1
+# version:
+# 4
+        
+        
         self.api_key = api_key
         self.server = server
         self.mode = mode
         if self.mode == GameMode.MJ4P:
-            self.path = r"/react_batch"
+            self.api_path = r"/react_batch"
         elif self.mode == GameMode.MJ3P:
-            self.path = r"/react_batch_3p"
+            self.api_path = r"/react_batch_3p"
         else:
             raise BotNotSupportingMode(self.mode)
 
@@ -34,10 +96,10 @@ class MortalEngineAkagiOt:
             'Content-Encoding': 'gzip',
         }
         
-        r = requests.post(f'{self.server}/react_batch',
+        r = requests.post(f'{self.server}{self.api_path}',
             headers=headers,
             data=compressed_data,
-            timeout=2)
+            timeout=3)
         if r.status_code != 200:
             r.raise_for_status()
         r_json = r.json()

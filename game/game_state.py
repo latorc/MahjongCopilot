@@ -254,13 +254,13 @@ class GameState:
         self.seat = seatList.index(self.account_id)
         self.mjai_bot.init_bot(self.seat, self.game_mode)
         # Start_game has no effect for mjai bot, omit here
-        # self.mjai_pending_input_msgs.append(
-        #     {
-        #         'type': MJAI_TYPE.START_GAME,
-        #         'id': self.seat
-        #     }
-        # )        
-        # self._react_all()
+        self.mjai_pending_input_msgs.append(
+            {
+                'type': MjaiType.START_GAME,
+                'id': self.seat
+            }
+        )        
+        self._react_all()
         return None     # no reaction for start_game     
     
     def ms_new_round(self, liqi_data:dict) -> dict:
@@ -593,12 +593,16 @@ class GameState:
         if data: 
             if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
                 return None
-        if len(self.mjai_pending_input_msgs) == 1:
-            LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs[0])
-            output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
-        else:
-            LOGGER.info("Bot in (batch):\n%s", '\n'.join(str(m) for m in self.mjai_pending_input_msgs))
-            output_reaction = self.mjai_bot.react_batch(self.mjai_pending_input_msgs)
+        try:
+            if len(self.mjai_pending_input_msgs) == 1:
+                LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs[0])
+                output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
+            else:
+                LOGGER.info("Bot in (batch):\n%s", '\n'.join(str(m) for m in self.mjai_pending_input_msgs))
+                output_reaction = self.mjai_bot.react_batch(self.mjai_pending_input_msgs)
+        except Exception as e:
+            LOGGER.error("Bot react error: %s", e, exc_info=True)
+            output_reaction = None
         self.mjai_pending_input_msgs = [] # clear intput queue
         
         if output_reaction is None:
