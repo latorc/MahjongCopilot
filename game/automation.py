@@ -365,7 +365,7 @@ class Automation:
             delay += 0.5
         
         subtract = max(0, subtract-0.5)
-        delay = max(0.5, delay-subtract)    # minimal delay =0.5
+        delay = max(0, delay-subtract)    # minimal delay =0
         # LOGGER.debug("Subtract=%.2f, Delay=%.2f", subtract, delay)
         return delay
      
@@ -412,8 +412,13 @@ class Automation:
         delay = self.get_delay(mjai_action, gi, game_state.last_reaction_time)  # initial delay
         action_steps:list[ActionStep] = [ActionStepDelay(delay)]
         action_steps.extend(more_steps)
-        pai = mjai_action.get('pai',"")      
-        desc = f"Automating action {mjai_type} {pai} (step = {op_step}, calc_time={game_state.last_reaction_time:.2f}s, delay={delay:.2f}s)" 
+        pai = mjai_action.get('pai',"")  
+        calc_time = game_state.last_reaction_time
+        desc = (
+            f"Automating action {mjai_type} {pai}"
+            f" (step={op_step},"
+            f" calc_time={calc_time:.2f}s, delay={delay:.2f}s, total_delay={calc_time+delay:.2f}s)"
+        )
         self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
         self._task.start_action_steps(action_steps, game_state)
         return True

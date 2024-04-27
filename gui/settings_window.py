@@ -16,8 +16,8 @@ class SettingsWindow(tk.Toplevel):
         super().__init__(parent)
         self.st = setting
 
-        self.geometry('700x600')
-        self.minsize(700,600)        
+        self.geometry('700x675')
+        self.minsize(700,675)        
         # self.resizable(False, False)
         # set position: within main window
         parent_x = parent.winfo_x()
@@ -138,6 +138,20 @@ class SettingsWindow(tk.Toplevel):
         self.model_file_3p_var = tk.StringVar(value=self.st.model_file_3p)
         select_menu2 = ttk.Combobox(main_frame, textvariable=self.model_file_3p_var, values=model_files, state="readonly", width=std_wid*3)
         select_menu2.grid(row=cur_row, column=1, columnspan=3,  **args_entry)        
+        # Akagi OT
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AKAGI_OT_URL)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.akagiot_url_var = tk.StringVar(value=self.st.akagi_ot_url)
+        string_entry = ttk.Entry(main_frame, textvariable=self.akagiot_url_var, width=std_wid*4)
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
+        # Akagi OT API Key
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AKAGI_OT_APIKEY)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.akagiot_apikey_var = tk.StringVar(value=self.st.akagi_ot_apikey)
+        string_entry = ttk.Entry(main_frame, textvariable=self.akagiot_apikey_var, width=std_wid*4)
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)        
         
         # MJAPI url
         cur_row += 1
@@ -278,6 +292,8 @@ class SettingsWindow(tk.Toplevel):
         model_type_new = self.model_type_var.get()
         model_file_new = self.model_file_var.get()
         mode_file_3p_new = self.model_file_3p_var.get()
+        akagi_url_new = self.akagiot_url_var.get()
+        akagi_apikey_new = self.akagiot_apikey_var.get()
         mjapi_url_new = self.mjapi_url_var.get()
         mjapi_user_new = self.mjapi_user_var.get()
         mjapi_secret_new = self.mjapi_secret_var.get()
@@ -286,6 +302,8 @@ class SettingsWindow(tk.Toplevel):
             self.st.model_type != model_type_new or
             self.st.model_file != model_file_new or
             self.st.model_file_3p != mode_file_3p_new or
+            self.st.akagi_ot_url != akagi_url_new or
+            self.st.akagi_ot_apikey != akagi_apikey_new or
             self.st.mjapi_url != mjapi_url_new or
             self.st.mjapi_user != mjapi_user_new or
             self.st.mjapi_secret != mjapi_secret_new or 
@@ -319,6 +337,8 @@ class SettingsWindow(tk.Toplevel):
         self.st.model_type = model_type_new
         self.st.model_file = model_file_new
         self.st.model_file_3p = mode_file_3p_new
+        self.st.akagi_ot_url = akagi_url_new
+        self.st.akagi_ot_apikey = akagi_apikey_new
         self.st.mjapi_url = mjapi_url_new
         self.st.mjapi_user = mjapi_user_new
         self.st.mjapi_secret = mjapi_secret_new

@@ -25,7 +25,7 @@ class Settings:
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/",self.valid_url)
         self.enable_chrome_ext:bool = self._get_value("enable_chrome_ext", False, self.valid_bool)
         self.mitm_port:int = self._get_value("mitm_port", 10999, self.valid_mitm_port)
-        self.upstream_proxy:str = self._get_value("upstream_proxy","",self.valid_url)  # mitm upstream proxy server e.g. http://ip:port
+        self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
         self.enable_proxinject:bool = self._get_value("enable_proxinject", False, self.valid_bool)
         self.inject_process_name:str = self._get_value("inject_process_name", "jantama_mahjongsoul")
         self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)  # language code
@@ -46,7 +46,7 @@ class Settings:
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
         self.mjapi_models:list = self._get_value("mjapi_models",[])
         self.mjapi_model_select:str = self._get_value("mjapi_model_select","")
-        self.mjapi_usage:int = self._get_value("mjapi_usage", None, lambda x: x>0)
+        self.mjapi_usage:int = self._get_value("mjapi_usage", None)
         
         # Automation settings
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
