@@ -2,16 +2,11 @@
 
 from pathlib import Path
 import threading
-import json
-from common.utils import LocalModelException, BotNotSupportingMode
-from common.mj_helper import MjaiType
+
+from common.utils import LocalModelException
 from common.log_helper import LOGGER
-try:
-    import libriichi
-except ImportError:
-    import riichi as libriichi
 from bot.local.engine import get_engine
-from bot.bot import Bot, BotMjai, GameMode
+from bot.bot import BotMjai, GameMode
 
 
 class BotMortalLocal(BotMjai):

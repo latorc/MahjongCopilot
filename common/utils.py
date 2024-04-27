@@ -13,7 +13,7 @@ import random
 import string
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from requests.exceptions import ConnectionError, ReadTimeout
+import requests
 
 from .lan_str import LanStr
 
@@ -90,10 +90,10 @@ def error_to_str(error:Exception, lan:LanStr) -> str:
         return lan.MITM_SERVER_ERROR    
     elif isinstance(error, BotNotSupportingMode):
         return lan.MODEL_NOT_SUPPORT_MODE_ERROR + f' {error.args[0].value}'
-    elif isinstance(error, ConnectionError):
+    elif isinstance(error, requests.exceptions.ConnectionError):
         return lan.CONNECTION_ERROR + f': {error}'
-    elif isinstance(error, ReadTimeout):
-        return lan.CONNECTION_ERROR + f': {error}'        
+    elif isinstance(error, requests.exceptions.ReadTimeout):
+        return lan.CONNECTION_ERROR + f': {error}'
     else:
         return str(error)
 
@@ -177,7 +177,7 @@ def is_certificate_installed(cert_file:str) -> tuple[bool, str]:
         else:   # unsupported platform
             return False
         args = sub_run_args()
-        result = subprocess.run(cmd, **args)
+        result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
         # Check if the command output indicates the certificate was found
         if result.returncode==0:
             if store_found_phrase in result.stdout or store_found_phrase.lower() in result.stdout:
@@ -210,8 +210,8 @@ def install_root_cert(cert_file:str):
         stdout, stderr = p.stdout, p.stderr        
     elif sys.platform == "darwin":
         # TODO Test on MAC system
-        p = subprocess.run(['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file],
-            capture_output=True, text=True, check=False)
+        cmd = ['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file]
+        p = subprocess.run(cmd, capture_output=True, text=True, check=False)
         stdout, stderr = p.stdout, p.stderr
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)

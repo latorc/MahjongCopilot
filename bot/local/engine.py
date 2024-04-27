@@ -5,6 +5,7 @@ from torch.distributions import Normal, Categorical
 from bot.local.model import Brain, DQN
 
 class MortalEngine:
+    """ Mortal Engine for local Bot 4p"""
     def __init__(
         self,
         brain,

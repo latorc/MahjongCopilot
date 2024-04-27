@@ -125,7 +125,7 @@ class MjapiClient:
         path = '/mjai/batch'
         return self._post_act(path, seq, actions)
 
-    def _post_act(self, path, seq, actions):
+    def _post_act(self, path, _seq, actions):
         # post request to MJAPI and process response/errors
         response = requests.post(self.base_url + path, json=actions, headers=self.headers, timeout=self.timeout)
         if response.content:

@@ -2,6 +2,8 @@
 This module processes Majsoul game state and take liqi messages as inputs,
 and interfaces with AI bot to generate reactions.
 """
+import time
+
 from liqi import MsgType
 from liqi import LiqiProto, LiqiMethod, LiqiAction
 
@@ -71,6 +73,7 @@ class GameState:
         ### about last reaction
         self.last_reaction:dict = None          # last bot output reaction
         self.last_reaction_pending:bool = True  # reaction pending until there is new liqi msg indicating the reaction is done/expired
+        self.last_reaction_time:float = None    # last bot reaction calculation time
         self.last_operation:dict = None         # liqi msg 'operation' element
         self.last_op_step:int = None            # liqi msg 'step' element
         
@@ -124,11 +127,14 @@ class GameState:
             dict: Mjai message in dict format (i.e. AI's reaction) if any. May be None.
         """
         self.is_bot_calculating = True
+        start_time = time.time()
         reaction = self._input_inner(liqi_msg)
+        time_used = time.time() - start_time
         if reaction is not None:
             # Update last_reaction (not none) and set it to pending
             self.last_reaction = reaction
             self.last_reaction_pending = True
+            self.last_reaction_time = time_used
         self.is_bot_calculating = False
         return reaction
     

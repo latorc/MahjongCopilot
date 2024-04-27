@@ -1,4 +1,5 @@
 """ Model related classes that support Mortal engine """
+#pylint:disable=no-member, C0115, C0116
 from itertools import permutations
 from functools import partial
 from typing import Optional, Tuple, Union

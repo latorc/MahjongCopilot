@@ -1,7 +1,7 @@
 """ Bot for Akagi online-trained API"""
 import requests
 from common.log_helper import LOGGER
-from bot.bot import Bot, BotMjai, GameMode
+from bot.bot import BotMjai, GameMode
 from bot.akagiot.engine import MortalEngineAkagiOt
     
     

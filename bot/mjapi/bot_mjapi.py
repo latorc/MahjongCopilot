@@ -126,7 +126,7 @@ class BotMjapi(Bot):
         for (i, start) in enumerate(range(0, len(input_list), BotMjapi.batch_size)):
             reaction = self._react_batch_impl(
                 input_list[start:start + BotMjapi.batch_size],
-                can_act=(i + 1 == num_batches))
+                can_act= i + 1 == num_batches)
         return reaction
 
     def _react_batch_impl(self, input_list, can_act):

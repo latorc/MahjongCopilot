@@ -1,4 +1,5 @@
 """ Model 3p"""
+#pylint:disable=no-member, C0115, C0116
 from functools import partial
 from typing import Optional, Tuple, Union
 import torch
@@ -226,6 +227,4 @@ class DQN(nn.Module):
         mask_sum = mask.sum(-1, keepdim=True)
         a_mean = a_sum / mask_sum
         q = (v + a - a_mean).masked_fill(~mask, -torch.inf)
-        return q
-    
-
+        return q   
