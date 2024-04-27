@@ -29,7 +29,7 @@ class BotMjapi(Bot):
         
     @property
     def info_str(self):
-        return f"{self.name} [{self.st.mjapi_user}] (Usage: {self.api_usage})"
+        return f"{self.name} [{self.st.mjapi_model_select}] (Usage: {self.api_usage})"
         
     def _login_or_reg(self):
         if not self.st.mjapi_user:
