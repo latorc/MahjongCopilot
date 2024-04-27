@@ -457,7 +457,7 @@ class BotManager:
         # Model
         model_text = '🤖'
         if self.is_bot_created():
-            model_text += self.st.lan().MODEL + ": " + self.bot.type.value
+            model_text += self.st.lan().MODEL + ": " + self.st.model_type
         else:
             model_text += self.st.lan().MODEL_NOT_LOADED
         

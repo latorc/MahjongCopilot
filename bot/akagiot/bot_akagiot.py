@@ -1,8 +1,14 @@
 """ Bot for Akagi online-trained API"""
 import requests
 from common.log_helper import LOGGER
+from common.utils import BotNotSupportingMode
 from bot.bot import Bot, GameMode
-
+try:
+    import libriichi
+except ImportError:
+    import riichi as libriichi
+    
+    
 class BotAkagiOt(Bot):
     """ Bot implementation for Akagi online-trained API """
     
@@ -10,6 +16,7 @@ class BotAkagiOt(Bot):
         super().__init__("Akagi OT API Bot")
         self.url = url
         self.apikey = apikey
+        self.engines:dict[GameMode, any] = {}
         self._check()
         
     def _check(self):
@@ -36,8 +43,16 @@ class BotAkagiOt(Bot):
        
     def _init_bot_impl(self, mode:GameMode=GameMode.MJ4P):
         """ Initialize the bot before the game starts."""
-        
-        
+        engine = self.engines.get(mode, None)
+        if not engine:
+            raise BotNotSupportingMode(mode)
+        if mode == GameMode.MJ4P:
+            self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
+        elif mode == GameMode.MJ3P:
+            import libriichi3p
+            self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
+        else:
+            raise BotNotSupportingMode(mode)      
 
     
     def react(self, input_msg:dict) -> dict | None:

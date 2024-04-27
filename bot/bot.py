@@ -1,9 +1,11 @@
 """ Bot represents a mjai protocol bot
 implement wrappers for supportting different bot types
 """
+import json
 from abc import ABC, abstractmethod
 
-from common.mj_helper import meta_to_options 
+from common.log_helper import LOGGER
+from common.mj_helper import meta_to_options, MjaiType
 from common.utils import GameMode, BotNotSupportingMode
 
 
@@ -72,3 +74,69 @@ class Bot(ABC):
         last_reaction = self.react(input_list[-1])
         return last_reaction
 
+
+class BotMjai(Bot):
+    """ base class for libriichi.mjai Bots"""
+    def __init__(self, name:str) -> None:
+        super().__init__(name)
+        
+        self.mjai_bot = None
+        self.ignore_next_turn_self_reach:bool = False
+        
+    
+    @property
+    def info_str(self) -> str:
+        return f"{self.name}: [{','.join([m.value for m in self.supported_modes])}]"
+    
+    
+    def _get_engine(self, mode:GameMode):
+        # return MortalEngine object
+        raise NotImplementedError("Subclass must implement this method")
+    
+    
+    def _init_bot_impl(self, mode:GameMode=GameMode.MJ4P):
+        engine = self._get_engine(mode)
+        if not engine:
+            raise BotNotSupportingMode(mode)
+        if mode == GameMode.MJ4P:
+            try:
+                import libriichi
+            except:
+                import riichi as libriichi
+            self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
+        elif mode == GameMode.MJ3P:
+            import libriichi3p
+            self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
+        else:
+            raise BotNotSupportingMode(mode)          
+            
+        
+    def react(self, input_msg:dict) -> dict:
+        if self.mjai_bot is None:
+            return None        
+        if self.ignore_next_turn_self_reach:    # ignore repetitive self reach. only for the very next msg
+            if input_msg['type'] == MjaiType.REACH and input_msg['actor'] == self.seat:
+                LOGGER.debug("Ignoring repetitive self reach msg, reach msg already sent to AI last turn")
+                return None
+            self.ignore_next_turn_self_reach = False
+            
+        str_input = json.dumps(input_msg)
+
+        react_str = self.mjai_bot.react(str_input)
+        if react_str is None:
+            return None
+        reaction = json.loads(react_str)
+        # Special treatment for self reach output msg
+        # mjai only outputs dahai msg after the reach msg
+        if reaction['type'] == MjaiType.REACH and reaction['actor'] == self.seat:  # Self reach
+            # get the subsequent dahai message,
+            # appeding it to the reach reaction msg as 'reach_dahai' key
+            LOGGER.debug("Send reach msg to get reach_dahai. Cannot go back to unreach!")
+            # TODO make a clone of mjai_bot so reach can be tested to get dahai without affecting the game
+
+            reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
+            reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
+            reach_dahai = json.loads(reach_dahai_str)
+            reaction['reach_dahai'] = reach_dahai
+            self.ignore_next_turn_self_reach = True     # ignore very next reach msg
+        return reaction
