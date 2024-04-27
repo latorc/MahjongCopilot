@@ -58,8 +58,9 @@ class MortalEngineAkagiOt:
                     headers=headers,
                     data=compressed_data,
                     timeout=self.timeout)
+                break
             except requests.exceptions.Timeout:
-                LOGGER.warning("AkagiOT api timeout, retry %d/%d", attempt+1, self.retries)
+                LOGGER.warning("AkagiOT api timeout, attempt %d/%d", attempt+1, self.retries)
                 r = None
                 continue
         
