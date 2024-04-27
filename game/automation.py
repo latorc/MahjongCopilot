@@ -327,7 +327,7 @@ class Automation:
             
         return True
         
-    def get_delay(self, mjai_action:dict, gi:GameInfo):
+    def get_delay(self, mjai_action:dict, gi:GameInfo, subtract:float=0.0):
         """ return the action initial delay based on action type and game info"""
         mjai_type = mjai_action['type']
         delay = random.uniform(self.st.delay_random_lower, self.st.delay_random_upper)    # base delay        
@@ -364,6 +364,9 @@ class Automation:
         else:       # chi/pon/kan/others
             delay += 0.5
         
+        subtract = max(0, subtract-0.5)
+        delay = max(0, delay-subtract)    # minimal delay =0
+        # LOGGER.debug("Subtract=%.2f, Delay=%.2f", subtract, delay)
         return delay
      
         
@@ -406,11 +409,16 @@ class Automation:
             LOGGER.error("No automation for unrecognized mjai type: %s", mjai_type)
             return False
         
-        delay = self.get_delay(mjai_action, gi)  # initial delay
+        delay = self.get_delay(mjai_action, gi, game_state.last_reaction_time)  # initial delay
         action_steps:list[ActionStep] = [ActionStepDelay(delay)]
         action_steps.extend(more_steps)
-        pai = mjai_action.get('pai',"")      
-        desc = f"Automating action {mjai_type} {pai} (step = {op_step}, delay={delay:.2f}s)" 
+        pai = mjai_action.get('pai',"")  
+        calc_time = game_state.last_reaction_time
+        desc = (
+            f"Automating action {mjai_type} {pai}"
+            f" (step={op_step},"
+            f" calc_time={calc_time:.2f}s, delay={delay:.2f}s, total_delay={calc_time+delay:.2f}s)"
+        )
         self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
         self._task.start_action_steps(action_steps, game_state)
         return True
@@ -741,7 +749,7 @@ class Automation:
             total_dx, total_dy: total distance to wheel move"""
         # break the wheel action into several steps
         steps = []
-        times = random.randint(3, 6)
+        times = random.randint(4, 6)
         for _i in range(times):
             dx = total_dx / times
             dy = total_dy / times
@@ -751,8 +759,9 @@ class Automation:
 
     def on_lobby_login(self, _liqimsg:dict):
         """ lobby login handler"""
-        self.stop_previous()
-        self.ui_state = UiState.MAIN_MENU
+        if self.ui_state != UiState.IN_GAME:
+            self.stop_previous()
+            self.ui_state = UiState.MAIN_MENU
 
     def on_enter_game(self):
         """ enter game handler"""
@@ -768,8 +777,9 @@ class Automation:
         
     def on_exit_lobby(self):
         """ exit lobby handler"""
-        self.stop_previous()
-        self.ui_state = UiState.NOT_RUNNING
+        if self.ui_state != UiState.IN_GAME:
+            self.stop_previous()
+            self.ui_state = UiState.NOT_RUNNING
    
     def automate_end_game(self):
         """Automate Game end go back to menu"""  

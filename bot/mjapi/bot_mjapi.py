@@ -5,10 +5,9 @@ from common.settings import Settings
 from common.log_helper import LOGGER
 from common.utils import random_str
 from common.mj_helper import MjaiType
-from .mjapi import MjapiClient
+from bot.mjapi.mjapi import MjapiClient
 
-from .bot import Bot, BotType, GameMode
-
+from bot.bot import Bot, GameMode
 
 
 class BotMjapi(Bot):
@@ -20,22 +19,27 @@ class BotMjapi(Bot):
 
     """ MJAPI based mjai bot"""
     def __init__(self, setting:Settings) -> None:
-        super().__init__(BotType.MJAPI, "MJAPI Bot - " + setting.mjapi_url)
+        super().__init__("MJAPI Bot")
         self.st = setting
+        self.api_usage = None
         self.mjapi = MjapiClient(self.st.mjapi_url)
         self._login_or_reg()
         self.id = -1
         self.ignore_next_turn_self_reach:bool = False
         
+    @property
+    def info_str(self):
+        return f"{self.name} [{self.st.mjapi_user}] (Usage: {self.api_usage})"
+        
     def _login_or_reg(self):
         if not self.st.mjapi_user:
             self.st.mjapi_user = random_str(6)
-            LOGGER.info("Set random mjapi username:%s", self.st.mjapi_user)        
-        try:
+            LOGGER.info("Created  random mjapi username:%s", self.st.mjapi_user)        
+        if self.st.mjapi_secret:    # login
+            LOGGER.debug("Logging in with user: %s", self.st.mjapi_user)
             self.mjapi.login(self.st.mjapi_user, self.st.mjapi_secret)
-        except Exception as e:
-            LOGGER.warning("Error login: %s", e)            
-            # try register            
+        else:         # try register  
+            LOGGER.debug("Registering in with user: %s", self.st.mjapi_user)          
             res_reg = self.mjapi.register(self.st.mjapi_user)
             self.st.mjapi_secret = res_reg['secret']
             self.st.save_json()
@@ -55,7 +59,7 @@ class BotMjapi(Bot):
                 self.st.mjapi_model_select, model_list[-1])
             self.st.mjapi_model_select = model_list[-1]
         self.model_name = self.st.mjapi_model_select
-        self.st.mjapi_usage = self.mjapi.get_usage()
+        self.api_usage = self.mjapi.get_usage()
         self.st.save_json()
         LOGGER.info("Login to MJAPI successful with user: %s, model_name=%s", self.st.mjapi_user, self.model_name)
 
@@ -127,7 +131,7 @@ class BotMjapi(Bot):
         for (i, start) in enumerate(range(0, len(input_list), BotMjapi.batch_size)):
             reaction = self._react_batch_impl(
                 input_list[start:start + BotMjapi.batch_size],
-                can_act=(i + 1 == num_batches))
+                can_act= i + 1 == num_batches)
         return reaction
 
     def _react_batch_impl(self, input_list, can_act):

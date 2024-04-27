@@ -2,6 +2,8 @@
 This module processes Majsoul game state and take liqi messages as inputs,
 and interfaces with AI bot to generate reactions.
 """
+import time
+
 from liqi import MsgType
 from liqi import LiqiProto, LiqiMethod, LiqiAction
 
@@ -71,6 +73,7 @@ class GameState:
         ### about last reaction
         self.last_reaction:dict = None          # last bot output reaction
         self.last_reaction_pending:bool = True  # reaction pending until there is new liqi msg indicating the reaction is done/expired
+        self.last_reaction_time:float = None    # last bot reaction calculation time
         self.last_operation:dict = None         # liqi msg 'operation' element
         self.last_op_step:int = None            # liqi msg 'step' element
         
@@ -124,11 +127,14 @@ class GameState:
             dict: Mjai message in dict format (i.e. AI's reaction) if any. May be None.
         """
         self.is_bot_calculating = True
+        start_time = time.time()
         reaction = self._input_inner(liqi_msg)
+        time_used = time.time() - start_time
         if reaction is not None:
             # Update last_reaction (not none) and set it to pending
             self.last_reaction = reaction
             self.last_reaction_pending = True
+            self.last_reaction_time = time_used
         self.is_bot_calculating = False
         return reaction
     
@@ -254,13 +260,13 @@ class GameState:
         self.seat = seatList.index(self.account_id)
         self.mjai_bot.init_bot(self.seat, self.game_mode)
         # Start_game has no effect for mjai bot, omit here
-        # self.mjai_pending_input_msgs.append(
-        #     {
-        #         'type': MJAI_TYPE.START_GAME,
-        #         'id': self.seat
-        #     }
-        # )        
-        # self._react_all()
+        self.mjai_pending_input_msgs.append(
+            {
+                'type': MjaiType.START_GAME,
+                'id': self.seat
+            }
+        )        
+        self._react_all()
         return None     # no reaction for start_game     
     
     def ms_new_round(self, liqi_data:dict) -> dict:
@@ -593,12 +599,16 @@ class GameState:
         if data: 
             if 'operation' not in data or 'operationList' not in data['operation'] or len(data['operation']['operationList']) == 0:
                 return None
-        if len(self.mjai_pending_input_msgs) == 1:
-            LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs[0])
-            output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
-        else:
-            LOGGER.info("Bot in (batch):\n%s", '\n'.join(str(m) for m in self.mjai_pending_input_msgs))
-            output_reaction = self.mjai_bot.react_batch(self.mjai_pending_input_msgs)
+        try:
+            if len(self.mjai_pending_input_msgs) == 1:
+                LOGGER.info("Bot in: %s", self.mjai_pending_input_msgs[0])
+                output_reaction = self.mjai_bot.react(self.mjai_pending_input_msgs[0])
+            else:
+                LOGGER.info("Bot in (batch):\n%s", '\n'.join(str(m) for m in self.mjai_pending_input_msgs))
+                output_reaction = self.mjai_bot.react_batch(self.mjai_pending_input_msgs)
+        except Exception as e:
+            LOGGER.error("Bot react error: %s", e, exc_info=True)
+            output_reaction = None
         self.mjai_pending_input_msgs = [] # clear intput queue
         
         if output_reaction is None:

@@ -126,7 +126,7 @@ class BotManager:
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
-        self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height)
+        self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
     
     def is_browser_zoom_off(self):
         """ check browser zoom level, return true if zoomlevel is not 1"""
@@ -457,7 +457,7 @@ class BotManager:
         # Model
         model_text = '🤖'
         if self.is_bot_created():
-            model_text += self.st.lan().MODEL + ": " + self.bot.type.value
+            model_text += self.st.lan().MODEL + ": " + self.st.model_type
         else:
             model_text += self.st.lan().MODEL_NOT_LOADED
         

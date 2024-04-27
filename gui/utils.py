@@ -1,6 +1,10 @@
 """ GUI common/utility functions"""
-from tkinter import ttk, font
 import tkinter as tk
+from tkinter import ttk, font
+from PIL import Image, ImageDraw, ImageFont, ImageTk
+
+from common.mj_helper import MJAI_TILE_2_UNICODE, ActionUnicode
+
 
 class GuiStyle:
     """ GUI Style Class"""
@@ -63,5 +67,64 @@ def _on_leave_hover(wdg:tk.Widget):
     if hasattr(wdg, "original_bg"):
         wdg.configure(background=wdg.original_bg)
         
+
+def crop_image_from_top_left(image:Image, width, height):
+    # Get the size of the original image
+    original_width, original_height = image.size
+    
+    # Calculate the coordinates of the cropping box
+    left = 0
+    top = 0
+    right = min(original_width, width)
+    bottom = min(original_height, height)
+    
+    # Crop the image
+    cropped_image = image.crop((left, top, right, bottom))    
+    return cropped_image
+
+def text_to_image(size:int, text:str, width:int=800, height:int=600):
+    """ create image based on the text content"""
+    
+    # draw emojis and regular text in different fonts
+    ft_emj = ImageFont.truetype(font="seguiemj.ttf", size=size)
+    ft_txt = ImageFont.truetype(font="msyh.ttf", size=size)
+    line_spacing = int(size/2)
+    pad_x = int(size/2)
+    pad_y = int(size/2)
+    dummy_img = Image.new("RGBA", (1, 1))
+    dummy_draw = ImageDraw.Draw(dummy_img)   
+
+    cur_x = pad_x
+    cur_y = pad_y + line_spacing
+    
+    # Create the image with calculated dimensions
+    im = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(im)
+    
+    # draw text each line and each character, record line width and total height
+    max_width = 1
+    lines = text.split("\n")
+    for l in lines:
+        for c in l:
+            if c in MJAI_TILE_2_UNICODE.values():
+                ft = ft_emj
+            else:
+                ft = ft_txt
+            bbox = dummy_draw.textbbox((0, 0), c, font=ft, embedded_color=True, spacing=line_spacing)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+            draw.text((cur_x,cur_y), c, font=ft, embedded_color=True, anchor="lm", fill="black", spacing=line_spacing)
+            cur_x += text_w
+        max_width = max(cur_x,max_width)
+        cur_x = pad_x
+        cur_y += size + line_spacing
+        
+    # crop image to fit the text
+    max_width += pad_x
+    max_height = cur_y - line_spacing   # mid > top    
+    im = crop_image_from_top_left(im, max_width, max_height)
+
+    return ImageTk.PhotoImage(im)
+
 
 GUI_STYLE = GuiStyle()

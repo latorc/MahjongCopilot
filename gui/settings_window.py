@@ -3,11 +3,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from common.utils import Folder
-from common.utils import list_files
+from common.utils import list_children
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
-from bot.bot import BotType
+from bot import MODEL_TYPE_STRINGS
 from .utils import GUI_STYLE, add_hover_text
 
 class SettingsWindow(tk.Toplevel):
@@ -16,8 +16,8 @@ class SettingsWindow(tk.Toplevel):
         super().__init__(parent)
         self.st = setting
 
-        self.geometry('700x600')
-        self.minsize(700,600)        
+        self.geometry('700x675')
+        self.minsize(700,675)        
         # self.resizable(False, False)
         # set position: within main window
         parent_x = parent.winfo_x()
@@ -70,8 +70,14 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.st.lan().MAJSOUL_URL)
         _label.grid(row=cur_row, column=0, **args_label)
         self.ms_url_var = tk.StringVar(value=self.st.ms_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=std_wid*4)
-        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
+        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=std_wid*3)
+        string_entry.grid(row=cur_row, column=1,columnspan=2,  **args_entry)
+        # extensions
+        self.enable_extension_var = tk.BooleanVar(value=self.st.enable_chrome_ext)
+        auto_launch_entry = ttk.Checkbutton(
+            main_frame, variable=self.enable_extension_var,
+            text=self.st.lan().ENABLE_CHROME_EXT, width=std_wid+1)
+        auto_launch_entry.grid(row=cur_row, column=3, **args_entry)
         
         # mitm port
         cur_row += 1
@@ -113,13 +119,12 @@ class SettingsWindow(tk.Toplevel):
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MODEL_TYPE)
         _label.grid(row=cur_row, column=0, **args_label)
-        options = [type.value for type in BotType]
         self.model_type_var = tk.StringVar(value=self.st.model_type)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly", width=std_wid)
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=MODEL_TYPE_STRINGS, state="readonly", width=std_wid)
         select_menu.grid(row=cur_row, column=1, **args_entry)
         
         # Select Model File
-        model_files = [""] + list_files(Folder.MODEL)
+        model_files = [""] + list_children(Folder.MODEL)
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().AI_MODEL_FILE)
         _label.grid(row=cur_row, column=0, **args_label)        
@@ -133,6 +138,20 @@ class SettingsWindow(tk.Toplevel):
         self.model_file_3p_var = tk.StringVar(value=self.st.model_file_3p)
         select_menu2 = ttk.Combobox(main_frame, textvariable=self.model_file_3p_var, values=model_files, state="readonly", width=std_wid*3)
         select_menu2.grid(row=cur_row, column=1, columnspan=3,  **args_entry)        
+        # Akagi OT
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AKAGI_OT_URL)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.akagiot_url_var = tk.StringVar(value=self.st.akagi_ot_url)
+        string_entry = ttk.Entry(main_frame, textvariable=self.akagiot_url_var, width=std_wid*4)
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
+        # Akagi OT API Key
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AKAGI_OT_APIKEY)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.akagiot_apikey_var = tk.StringVar(value=self.st.akagi_ot_apikey)
+        string_entry = ttk.Entry(main_frame, textvariable=self.akagiot_apikey_var, width=std_wid*4)
+        string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)        
         
         # MJAPI url
         cur_row += 1
@@ -148,10 +167,7 @@ class SettingsWindow(tk.Toplevel):
         _label.grid(row=cur_row, column=0, **args_label)
         self.mjapi_user_var = tk.StringVar(value=self.st.mjapi_user)
         string_entry = ttk.Entry(main_frame, textvariable=self.mjapi_user_var, width=std_wid)
-        string_entry.grid(row=cur_row, column=1, **args_entry)
-        # MJAPI usage
-        _label = ttk.Label(main_frame, text=f"{self.st.lan().MJAPI_USAGE}: {self.st.mjapi_usage}")
-        _label.grid(row=cur_row, column=2, **args_entry)        
+        string_entry.grid(row=cur_row, column=1, **args_entry)   
         
         # MJAPI secret
         cur_row += 1
@@ -172,6 +188,7 @@ class SettingsWindow(tk.Toplevel):
         
         _label = ttk.Label(main_frame, text=self.st.lan().LOGIN_TO_REFRESH)
         _label.grid(row=cur_row, column=2, **args_entry)
+        
         # sep
         cur_row += 1
         sep = ttk.Separator(main_frame, orient=tk.HORIZONTAL)
@@ -273,6 +290,8 @@ class SettingsWindow(tk.Toplevel):
         model_type_new = self.model_type_var.get()
         model_file_new = self.model_file_var.get()
         mode_file_3p_new = self.model_file_3p_var.get()
+        akagi_url_new = self.akagiot_url_var.get()
+        akagi_apikey_new = self.akagiot_apikey_var.get()
         mjapi_url_new = self.mjapi_url_var.get()
         mjapi_user_new = self.mjapi_user_var.get()
         mjapi_secret_new = self.mjapi_secret_var.get()
@@ -281,6 +300,8 @@ class SettingsWindow(tk.Toplevel):
             self.st.model_type != model_type_new or
             self.st.model_file != model_file_new or
             self.st.model_file_3p != mode_file_3p_new or
+            self.st.akagi_ot_url != akagi_url_new or
+            self.st.akagi_ot_apikey != akagi_apikey_new or
             self.st.mjapi_url != mjapi_url_new or
             self.st.mjapi_user != mjapi_user_new or
             self.st.mjapi_secret != mjapi_secret_new or 
@@ -305,6 +326,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.browser_width = width_new
         self.st.browser_height = height_new
         self.st.ms_url = ms_url_new
+        self.st.enable_chrome_ext = self.enable_extension_var.get()
         self.st.mitm_port = mitm_port_new
         self.st.upstream_proxy = upstream_proxy_new
         self.st.language = language_new
@@ -313,6 +335,8 @@ class SettingsWindow(tk.Toplevel):
         self.st.model_type = model_type_new
         self.st.model_file = model_file_new
         self.st.model_file_3p = mode_file_3p_new
+        self.st.akagi_ot_url = akagi_url_new
+        self.st.akagi_ot_apikey = akagi_apikey_new
         self.st.mjapi_url = mjapi_url_new
         self.st.mjapi_user = mjapi_user_new
         self.st.mjapi_secret = mjapi_secret_new

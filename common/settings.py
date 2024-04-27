@@ -20,10 +20,11 @@ class Settings:
         self.update_url:str = self._get_value("update_url", "https://update.mjcopilot.com", self.valid_url) # not shown
         self.auto_launch_browser:bool = self._get_value("auto_launch_browser", False, self.valid_bool)
         self.gui_set_dpi:bool = self._get_value("gui_set_dpi", True, self.valid_bool)
-        self.browser_width:int = self._get_value("browser_width", 1280)
-        self.browser_height:int = self._get_value("browser_height", 720)
-        self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/")
-        self.mitm_port:int = self._get_value("mitm_port", 10999)
+        self.browser_width:int = self._get_value("browser_width", 1280, lambda x: 0 < x < 19999)
+        self.browser_height:int = self._get_value("browser_height", 720, lambda x: 0 < x < 19999)
+        self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/",self.valid_url)
+        self.enable_chrome_ext:bool = self._get_value("enable_chrome_ext", False, self.valid_bool)
+        self.mitm_port:int = self._get_value("mitm_port", 10999, self.valid_mitm_port)
         self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
         self.enable_proxinject:bool = self._get_value("enable_proxinject", False, self.valid_bool)
         self.inject_process_name:str = self._get_value("inject_process_name", "jantama_mahjongsoul")
@@ -36,13 +37,15 @@ class Settings:
         # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
         self.model_file_3p:str = self._get_value("model_file_3p", "mortal_3p.pth")
+        # akagi ot model
+        self.akagi_ot_url:str = self._get_value("akagi_ot_url", "")
+        self.akagi_ot_apikey:str = self._get_value("akagi_ot_apikey", "")
         # for mjapi
-        self.mjapi_url:str = self._get_value("mjapi_url", "https://mjai.7xcnnw11phu.eu.org")
+        self.mjapi_url:str = self._get_value("mjapi_url", "https://mjai.7xcnnw11phu.eu.org", self.valid_url)
         self.mjapi_user:str = self._get_value("mjapi_user", "")
         self.mjapi_secret:str = self._get_value("mjapi_secret", "")
         self.mjapi_models:list = self._get_value("mjapi_models",[])
-        self.mjapi_model_select:str = self._get_value("mjapi_model_select","")
-        self.mjapi_usage:int = self._get_value("mjapi_usage", None)        
+        self.mjapi_model_select:str = self._get_value("mjapi_model_select","baseline")
         
         # Automation settings
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
@@ -149,8 +152,8 @@ class Settings:
         
     def valid_url(self, url:str) -> bool:
         """ validate url"""
-        if not url.startswith("https://"):
-            return False
-        return True
-        
-    
+        valid_prefix = ["https://", "http://"]
+        for p in valid_prefix:
+            if url.startswith(p):
+                return True
+        return False

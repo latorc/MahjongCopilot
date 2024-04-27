@@ -18,28 +18,11 @@ class LanStr:
     EXIT = "Exit"
     EIXT_CONFIRM = "Are you sure you want to exit?"
     AI_OUTPUT = 'AI Guidance'
-    GAME_INFO = 'Game Info'
-    HELP_STR = """
-A Mahjong AI assistant for Majsoul, based on Mortal Mahjong AI. Currently the model only supports 4-person Mahjong game. When you enter a game in Majsoul, AI will give you step-by-step guidance.
-
-🔳 Start Web Client: Start the game in browser with AI assistant. This program uses built-in Chromium browser. First time entering Majsoul will take a while to download game assets.
-🔘 Web Overlay: Show/Hide the AI Guidance overlayed on Web Page.
-🔘 Autoplay: Enable/Disable Autoplay. Autoplay clicks on the browser according to AI guidance.
-🔘 Autojoin: Auto join next game given settings.
-🔳 Settings: View and configure settings.
-🔳 Open Log File: Open the log file with system default program.
-
-Project Website (Download & Help): https://mjcopilot.com     
-Github: https://github.com/latorc/MahjongCopilot
-    
-Credits:
-· Mortal: https://github.com/Equim-chan/Mortal
-· Akagi: https://github.com/shinkuan/Akagi
-· Mahjong Soul API: https://github.com/MahjongRepository/mahjong_soul_api
-· MJAI: https://mjai.app
-"""
+    GAME_INFO = 'Game Info'    
     ON = "On"
     OFF = "Off"
+    
+    # help
     DOWNLOAD_UPDATE = "Download Update"
     START_UPDATE = "Update & Restart"
     CHECK_FOR_UPDATE = "Check Update"
@@ -59,12 +42,15 @@ Credits:
     UPSTREAM_PROXY = "Upstream Proxy"
     CLIENT_SIZE = "Client Size"
     MAJSOUL_URL = "Majsoul URL"
+    ENABLE_CHROME_EXT = "Enable Chrome Extensioins"
     LANGUAGE = "Display Language"
     CLIENT_INJECT_PROXY = "Auto Proxy Majsoul Windows Client"
     MODEL_TYPE = "AI Model Type"
     AI_MODEL_FILE = "Local Model File (4P)"
     AI_MODEL_FILE_3P = "Local Model File (3P)"
-    MJAPI_URL = "MJAPI URL"
+    AKAGI_OT_URL = "AkagiOT Server URL"
+    AKAGI_OT_APIKEY = "AkagiOT API Key"
+    MJAPI_URL = "MJAPI Server URL"
     MJAPI_USER = "MJAPI User"
     MJAPI_USAGE = "API Usage"
     MJAPI_SECRET = "MJAPI Secret"
@@ -166,39 +152,20 @@ class LanStrZHS(LanStr):
     EXIT = "退出"
     EIXT_CONFIRM = "确定退出程序?"
     AI_OUTPUT = 'AI 提示'
-    GAME_INFO = '游戏信息'
-    HELP_STR = """
-一款雀魂麻将 AI 助手, 基于 Mortal 麻将 AI。 当你进入游戏后, AI会对每一步行动进行指导。
-    
-🔳 启动网页客户端: 在浏览器中启动游戏和AI助手。本程序使用自带的 Chromium 浏览器。 首次进入雀魂时, 会因为下载游戏资源而耗时较长。
-🔘 网页 Hud: 显示/隐藏网页中覆盖显示的 AI 指导信息。
-🔘 自动打牌: 打开/关闭自动打牌, 自动点击浏览器根据 AI 提示打牌。
-🔘 自动加入: 根据设置的条件, 自动加入下一局游戏
-🔳 设置: 查看和修改设置选项。
-🔳 打开日志文件: 用系统默认程序打开日志文件。
-    
-本项目网址 (下载和帮助): https://mjcopilot.com 
-Github: https://github.com/latorc/MahjongCopilot
-    
-鸣谢:
-· Mortal: https://github.com/Equim-chan/Mortal
-· Akagi: https://github.com/shinkuan/Akagi
-· Mahjong Soul API: https://github.com/MahjongRepository/mahjong_soul_api
-· MJAI: https://mjai.app
-"""
+    GAME_INFO = '游戏信息'    
     ON = "开"
     OFF = "关"
+    
+    # help
     DOWNLOAD_UPDATE = "下载更新"
     START_UPDATE = "开始更新"
-    UPDATE_AVAILABLE = "有新的更新可用"
-    
+    UPDATE_AVAILABLE = "有新的更新可用"    
     CHECK_FOR_UPDATE = "检查更新"
     CHECKING_UPDATE = "正在检查更新..."
     NO_UPDATE_FOUND = "未发现更新"
     UNZIPPING = "解压中..."
     DOWNLOADING = "下载中..."
-    UPDATE_PREPARED = "更新已准备好。点击按钮更新并重启。"
-    
+    UPDATE_PREPARED = "更新已准备好。点击按钮更新并重启。"    
     
     # Settings
     SAVE = "保存"
@@ -208,15 +175,18 @@ Github: https://github.com/latorc/MahjongCopilot
     UPSTREAM_PROXY = "上游代理"
     CLIENT_SIZE = "客户端大小"
     MAJSOUL_URL = "雀魂网址"
+    ENABLE_CHROME_EXT = "启用浏览器插件"
     LANGUAGE = "显示语言"
     CLIENT_INJECT_PROXY = "自动代理雀魂 Windows 客户端" 
     MODEL_TYPE = "AI 模型类型"
     AI_MODEL_FILE = "本地模型文件(四麻)"
     AI_MODEL_FILE_3P = "本地模型文件(三麻)"
-    MJAPI_URL = "MJAPI 网址"
+    AKAGI_OT_URL = "AkagiOT 服务器地址"
+    AKAGI_OT_APIKEY = "AkagiOT API Key"
+    MJAPI_URL = "MJAPI 服务器地址"
     MJAPI_USER = "MJAPI 用户名"
     MJAPI_USAGE = "API 用量"
-    MJAPI_SECRET = "MJAPI 秘密 Secret"
+    MJAPI_SECRET = "MJAPI 密钥"
     MJAPI_MODEL_SELECT = "MJAPI 模型选择"
     LOGIN_TO_REFRESH = "登录后刷新"
     AUTO_LAUNCH_BROWSER = "自动启动浏览器"
