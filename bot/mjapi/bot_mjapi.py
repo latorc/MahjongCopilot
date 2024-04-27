@@ -68,7 +68,7 @@ class BotMjapi(Bot):
         if self.initialized:
             self.mjapi.stop_bot()
         if self.mjapi.token:    # update usage and logout on deleting
-            self.st.mjapi_usage = self.mjapi.get_usage()
+            self.api_usage = self.mjapi.get_usage()
             self.st.save_json()
             self.mjapi.logout()
 
