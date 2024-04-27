@@ -1,22 +1,17 @@
 """ Bot represents a mjai protocol bot
 implement wrappers for supportting different bot types
 """
-from enum import Enum
 from abc import ABC, abstractmethod
 
-import common.mj_helper as mj_helper
+from common.mj_helper import meta_to_options 
 from common.utils import GameMode, BotNotSupportingMode
 
-class BotType(Enum):
-    """ Model type for bot"""
-    LOCAL = "Local"
-    MJAPI = "MJAPI"
 
 def reaction_convert_meta(reaction:dict, is_3p:bool=False):
     """ add meta_options to reaction """
     if 'meta' in reaction:
         meta = reaction['meta']
-        reaction['meta_options'] = mj_helper.meta_to_options(meta, is_3p)
+        reaction['meta_options'] = meta_to_options(meta, is_3p)
 
 class Bot(ABC):
     """ Bot Interface class
@@ -26,8 +21,7 @@ class Bot(ABC):
     which is a 'dahai' msg, representing the subsequent dahai action after reach
     """
 
-    def __init__(self, bot_type:BotType, name:str="Bot") -> None:
-        self.type = bot_type
+    def __init__(self, name:str="Bot") -> None:
         self.name = name
         self._initialized:bool = False
         self.seat:int = None

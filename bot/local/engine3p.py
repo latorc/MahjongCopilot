@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 from torch.distributions import Normal, Categorical
-from .model3p import Brain, DQN
+from bot.local.model3p import Brain, DQN
 
 class MortalEngine:
     def __init__(

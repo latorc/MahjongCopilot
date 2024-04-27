@@ -7,7 +7,7 @@ from common.utils import list_children
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
-from bot.bot import BotType
+from bot import MODEL_TYPE_STRINGS
 from .utils import GUI_STYLE, add_hover_text
 
 class SettingsWindow(tk.Toplevel):
@@ -119,9 +119,8 @@ class SettingsWindow(tk.Toplevel):
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MODEL_TYPE)
         _label.grid(row=cur_row, column=0, **args_label)
-        options = [type.value for type in BotType]
         self.model_type_var = tk.StringVar(value=self.st.model_type)
-        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=options, state="readonly", width=std_wid)
+        select_menu = ttk.Combobox(main_frame, textvariable=self.model_type_var, values=MODEL_TYPE_STRINGS, state="readonly", width=std_wid)
         select_menu.grid(row=cur_row, column=1, **args_entry)
         
         # Select Model File

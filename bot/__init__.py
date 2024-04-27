@@ -1,3 +1,3 @@
 """ mjai protocol bot implementations"""
-from .common import *
+from .factory import *
 from .bot import *

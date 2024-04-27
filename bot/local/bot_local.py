@@ -3,15 +3,15 @@
 from pathlib import Path
 import threading
 import json
-from common.utils import LocalModelException
+from common.utils import LocalModelException, BotNotSupportingMode
 from common.mj_helper import MjaiType
 from common.log_helper import LOGGER
 try:
     import libriichi
 except ImportError:
     import riichi as libriichi
-from .engine import get_engine
-from .bot import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from bot.local.engine import get_engine
+from bot.bot import Bot, GameMode
 
 
 class BotMortalLocal(Bot):
@@ -20,7 +20,7 @@ class BotMortalLocal(Bot):
         """ params:
         model_files(dicty): model files for different modes {mode, file_path}
         """
-        super().__init__(BotType.LOCAL, "Local Mortal Bot")   
+        super().__init__("Local Mortal Bot")   
         self._supported_modes: list[GameMode] = []  
         self.model_files = model_files
         self.engines:dict[GameMode, any] = {}
@@ -38,7 +38,7 @@ class BotMortalLocal(Bot):
                     # test import libraries for 3p
                     try:
                         import libriichi3p
-                        from bot.engine3p import get_engine as get_engine_3p
+                        from bot.local.engine3p import get_engine as get_engine_3p
                         self.engines[k] = get_engine_3p(self.model_files[k])
                     except Exception as e: # pylint: disable=broad-except
                         LOGGER.warning("Cannot create engine for mode %s: %s", k, e, exc_info=True)

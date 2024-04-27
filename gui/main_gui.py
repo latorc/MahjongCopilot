@@ -347,7 +347,7 @@ class MainGUI(tk.Tk):
                 else:
                     mode_strs.append('✖' + m.value)
             mode_str = ' | '.join(mode_strs)
-            text = f"{self.st.lan().MODEL}: {self.bot_manager.bot.type.value} ({mode_str})"
+            text = f"{self.st.lan().MODEL}: {self.st.model_type} ({mode_str})"
             self.model_bar.update_column(0, text, self.icon_green)
             if self.bot_manager.is_game_syncing():
                 self.model_bar.update_column(1, '⌛ ' + self.st.lan().SYNCING)

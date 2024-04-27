@@ -5,10 +5,9 @@ from common.settings import Settings
 from common.log_helper import LOGGER
 from common.utils import random_str
 from common.mj_helper import MjaiType
-from .mjapi import MjapiClient
+from bot.mjapi.mjapi import MjapiClient
 
-from .bot import Bot, BotType, GameMode
-
+from bot.bot import Bot, GameMode
 
 
 class BotMjapi(Bot):
@@ -20,7 +19,7 @@ class BotMjapi(Bot):
 
     """ MJAPI based mjai bot"""
     def __init__(self, setting:Settings) -> None:
-        super().__init__(BotType.MJAPI, "MJAPI Bot - " + setting.mjapi_url)
+        super().__init__("MJAPI Bot - " + setting.mjapi_url)
         self.st = setting
         self.mjapi = MjapiClient(self.st.mjapi_url)
         self._login_or_reg()
@@ -30,12 +29,12 @@ class BotMjapi(Bot):
     def _login_or_reg(self):
         if not self.st.mjapi_user:
             self.st.mjapi_user = random_str(6)
-            LOGGER.info("Set random mjapi username:%s", self.st.mjapi_user)        
-        try:
+            LOGGER.info("Created  random mjapi username:%s", self.st.mjapi_user)        
+        if self.st.mjapi_secret:    # login
+            LOGGER.debug("Logging in with user: %s", self.st.mjapi_user)
             self.mjapi.login(self.st.mjapi_user, self.st.mjapi_secret)
-        except Exception as e:
-            LOGGER.warning("Error login: %s", e)            
-            # try register            
+        else:         # try register  
+            LOGGER.debug("Registering in with user: %s", self.st.mjapi_user)          
             res_reg = self.mjapi.register(self.st.mjapi_user)
             self.st.mjapi_secret = res_reg['secret']
             self.st.save_json()
