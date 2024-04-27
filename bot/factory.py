@@ -21,7 +21,7 @@ def get_bot(settings:Settings) -> Bot:
             }
             bot = BotMortalLocal(model_files)
         case "AkagiOT":
-            bot = BotAkagiOt() #TBA.
+            bot = BotAkagiOt(settings.akagi_ot_url, settings.akagi_ot_apikey)
         case "MJAPI":
             bot = BotMjapi(settings)
         case _:

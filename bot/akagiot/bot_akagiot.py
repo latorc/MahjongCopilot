@@ -1,5 +1,6 @@
 """ Bot for Akagi online-trained API"""
 import requests
+from common.log_helper import LOGGER
 from bot.bot import Bot, GameMode
 
 class BotAkagiOt(Bot):
@@ -19,7 +20,7 @@ class BotAkagiOt(Bot):
         r = requests.post(f"{self.url}/check", headers=headers, timeout=5)
         r_json = r.json()
         if r_json["result"] == "success":
-            return True
+            LOGGER.info("Akagi OT API check success")
         
     @property
     def supported_modes(self) -> list[GameMode]:
