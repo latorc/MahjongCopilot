@@ -38,6 +38,8 @@ class Folder:
     UPDATE = "update"
     TEMP = 'temp'
     CHROME_EXT = 'chrome_ext'
+    CHROME_DB = 'browser_data/Default/Local Storage/leveldb'
+    ACCOUNT_RECORDS='account_switch'
 
 
 class GameClientType(Enum):
@@ -108,7 +110,7 @@ def sub_folder(folder_name:str) -> pathlib.Path:
         
     subfolder = base_path / folder_name
     if not subfolder.exists():
-        subfolder.mkdir(exist_ok=True)
+        subfolder.mkdir(parents=True,exist_ok=True)
     return subfolder.resolve()
 
 
@@ -243,6 +245,17 @@ def list_children(folder:str, full_path:bool=False, incl_file:bool=True, incl_di
     except: #pylint:disable=bare-except
         return []
 
+    
+def list_folders(folder:str, full_path:bool=False) -> list[pathlib.Path]:
+    """Return a list of directories in the given folder."""
+    try:
+        folders = [f for f in pathlib.Path(folder).iterdir() if f.is_dir()]
+        if full_path:
+            return [str(f.resolve()) for f in folders]
+        else:
+            return [f.name for f in folders]
+    except:
+        return []
     
 def random_str(length:int) -> str:
     """ Generate random string with specified length"""

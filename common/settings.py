@@ -47,6 +47,8 @@ class Settings:
         self.mjapi_models:list = self._get_value("mjapi_models",[])
         self.mjapi_model_select:str = self._get_value("mjapi_model_select","baseline")
         
+        self.account:str = self._get_value("account", "")
+
         # Automation settings
         self.enable_automation:bool = self._get_value("enable_automation", False, self.valid_bool)
         self.auto_idle_move:bool = self._get_value("auto_idle_move", False, self.valid_bool)
