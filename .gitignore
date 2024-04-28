@@ -26,4 +26,4 @@ MahjongCopilot.spec
 /settings*.json
 libriichi3p/*.pyd
 libriichi3p/*.so
-chrome_ext/
+chrome_ext/*/
