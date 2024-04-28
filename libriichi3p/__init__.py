@@ -5,8 +5,7 @@ import platform
 import importlib.util
 from common.utils import sub_file
 
-assert sys.version_info >= (3, 10), "Python version must be 3.10 or higher"
-assert sys.version_info <= (3, 12), "Python version must be 3.12 or lower"
+assert (3,10)<=sys.version_info[:2] <= (3,12), "Python version must be between 3.10 and 3.12"
 
 def load_module():
     """ Determine system specifics and load the appropriate module file"""
