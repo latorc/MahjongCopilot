@@ -2,6 +2,7 @@
 import datetime
 import logging
 import queue
+
 from .utils import Folder, sub_file
 
 DEFAULT_LOGGER_NAME = 'majsoul_copilot'

@@ -8,4 +8,5 @@ pillow
 riichi>=0.1.1
 tkhtmlview
 pyinstaller
+aliyun-log-python-sdk
 

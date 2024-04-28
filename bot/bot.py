@@ -73,6 +73,10 @@ class Bot(ABC):
             self.react(msg)
         last_reaction = self.react(input_list[-1])
         return last_reaction
+    
+    def log_game_result(self, mode_id: int, rank: int, score: int):
+        """ log game results"""
+        return
 
 
 class BotMjai(Bot):
