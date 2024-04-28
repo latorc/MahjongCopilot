@@ -572,9 +572,15 @@ class GameState:
         
     def ms_game_end_results(self, liqi_data:dict) -> dict:
         """ End game in normal way (getting results)"""
-        if 'result' in liqi_data:
-            # process end result
-            pass
+        try:
+            for idx, player in enumerate(liqi_data['result']['players']):
+                if player['seat'] == self.seat:
+                    rank = idx + 1
+                    score = player['partPoint1']
+                    mode = self.mode_id
+                    self.mjai_bot.log_game_result(mode, rank, score)
+        except Exception as e:
+            LOGGER.warning("Error finding scores in game results: %s",e, exc_info=True)
         
         # self.mjai_pending_input_msgs.append(
         #     {

@@ -90,7 +90,7 @@ class HelpWindow(tk.Toplevel):
             case UpdateStatus.CHECKING:
                 self.update_str_var.set(lan.CHECKING_UPDATE)
             case UpdateStatus.NO_UPDATE:
-                self.update_str_var.set(lan.NO_UPDATE_FOUND)
+                self.update_str_var.set(lan.NO_UPDATE_FOUND + f" v{self.updater.web_version}")
                 self.update_button.configure(
                     text = lan.CHECK_FOR_UPDATE,
                     state=tk.NORMAL,
