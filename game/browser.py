@@ -9,7 +9,7 @@ from io import BytesIO
 from playwright._impl._errors import TargetClosedError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 from common import utils
-from common.utils import Folder, FPSCounter, list_children
+from common.utils import Folder, FPSCounter, list_children, sub_folder
 from common.log_helper import LOGGER
 
 class GameBrowser:
@@ -25,6 +25,7 @@ class GameBrowser:
         self._browser_thread = None
 
         self.init_vars()
+        
 
     def init_vars(self):
         """ initialize internal variables"""
@@ -41,9 +42,11 @@ class GameBrowser:
         self._canvas_id = None              # for overlay
         self._last_botleft_text = None
         self._last_guide = None
+        
 
     def __del__(self):
         self.stop()
+        
 
     def start(self, url:str, proxy:str=None, width:int=None, height:int=None, enable_chrome_ext:bool=False):
         """ Launch the browser in a thread, and start processing action queue
@@ -78,55 +81,43 @@ class GameBrowser:
             proxy_object = {"server": proxy}
         else:
             proxy_object = None
-
+        
+        browser_args=[
+            # '--no-sandbox'
+            '--noerrdialogs',            
+            '--disable-session-crashed-bubble',
+            '--disable-infobars',
+            '--no-default-browser-check',
+            '--no-first-run',
+            '--enable-webgl',
+            '--ignore-gpu-blacklist',
+            '--use-gl=desktop',
+            '--enable-features=NetworkService,NetworkServiceInProcess'            
+        ]
+        
         # read all subfolder names from Folder.CRX and form extension list
         if enable_chrome_ext:
             extensions_list = list_children(Folder.CHROME_EXT, True, False, True)
-            # extensions_list = []
-            # for root, dirs, files in os.walk(utils.sub_folder(Folder.CHROME_EXT)):
-            #     for extension_dir in dirs:
-            #         extensions_list.append(os.path.join(root, extension_dir))
             LOGGER.info('Extensions loaded: %s', extensions_list)
             disable_extensions_except_args = "--disable-extensions-except=" + ",".join(extensions_list)
             load_extension_args = "--load-extension=" + ",".join(extensions_list)
+            browser_args.append(disable_extensions_except_args)
+            browser_args.append(load_extension_args)  
 
         LOGGER.info('Starting Chromium, viewport=%dx%d, proxy=%s', self.width, self.height, proxy)
         with sync_playwright() as playwright:
-            if enable_chrome_ext:
-                try:
-                    # Initilize browser
-                    chromium = playwright.chromium
-                    self.context = chromium.launch_persistent_context(
-                        user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
-                        headless=False,
-                        viewport={'width': self.width, 'height': self.height},
-                        proxy=proxy_object,
-                        ignore_default_args=["--enable-automation"],
-                        args=[
-                            "--noerrdialogs",
-                            "--no-sandbox",
-                            disable_extensions_except_args,
-                            load_extension_args
-                        ]
-                    )
-                except Exception as e:
-                    LOGGER.error('Error launching the browser: %s', e, exc_info=True)
-                    return
-            else:
-                try:
-                    # Initilize browser
-                    chromium = playwright.chromium
-                    self.context = chromium.launch_persistent_context(
-                        user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
-                        headless=False,
-                        viewport={'width': self.width, 'height': self.height},
-                        proxy=proxy_object,
-                        ignore_default_args=["--enable-automation"],
-                        args=["--noerrdialogs", "--no-sandbox"]
-                    )
-                except Exception as e:
-                    LOGGER.error('Error launching the browser: %s', e, exc_info=True)
-                    return
+            # Initilize browser
+            chromium = playwright.chromium
+            self.context = chromium.launch_persistent_context(
+                user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
+                headless=False,
+                viewport={'width': self.width, 'height': self.height},
+                proxy=proxy_object,
+                chromium_sandbox=True,
+                downloads_path=sub_folder(Folder.TEMP),
+                ignore_default_args=["--enable-automation"],
+                args=browser_args
+            )
 
             try:
                 self.page = self.context.new_page()
@@ -139,46 +130,55 @@ class GameBrowser:
             #     LOGGER.info("Closing additional page. Only one Majsoul page is allowed")
             #     page.close()
 
-            # if not enable_extensions:
-            #     self.context.on("page", on_page)
-
             self._clear_action_queue()
             # keep running actions until stop event is set
             while self._stop_event.is_set() is False:
                 self.fps_counter.frame()
-                try:        # test if page is stil alive
-                    if time.time() - self._last_update_time > 1:
-                        self._page_title = self.page.title()
-                        # check zoom level
-                        self.zoomlevel_check = self.page.evaluate("() => window.devicePixelRatio")
-                        self._last_update_time = time.time()
-                except Exception as e:
-                    LOGGER.warning("Page error %s. exiting.", e)
+                if self._check_page() is False:
                     break
-
                 try:
                     action = self._action_queue.get_nowait()
                     action()
-                    # LOGGER.debug("Browser action %s",str(action))
                 except queue.Empty:
                     time.sleep(0.002)
                 except Exception as e:
                     LOGGER.error('Error processing action: %s', e, exc_info=True)
 
             # stop event is set: close browser
-            LOGGER.debug("Closing browser")
-            try:
-                if self.page.is_closed() is False:
-                    self.page.close()
-                if self.context:
-                    self.context.close()
-            except TargetClosedError as e:
-                # ok if closed already
-                pass
-            except Exception as e:
-                LOGGER.error('Error closing browser: %s', e ,exc_info=True)
-            self.init_vars()
+            LOGGER.debug("Brower loop exited. Closing browser")
+            self._close_and_clean_up()
+        
         return
+    
+    
+    def _check_page(self) -> bool:
+        # if page is OK, return True
+        try:        # test if page is stil alive
+            if time.time() - self._last_update_time > 1.0:
+                self._page_title = self.page.title()
+                # check zoom level
+                self.zoomlevel_check = self.page.evaluate("() => window.devicePixelRatio")
+                self._last_update_time = time.time()
+                return True
+        except Exception as e:
+            LOGGER.warning("Page error %s. exiting.", e)
+            return False
+        
+        
+    def _close_and_clean_up(self):
+        # close browser and clean up
+        try:
+            if self.page.is_closed() is False:
+                self.page.close()
+            if self.context:
+                self.context.close()
+        except TargetClosedError:
+            # ok if closed already
+            pass
+        except Exception as e:
+            LOGGER.error('Error closing browser: %s', e ,exc_info=True)
+        self.init_vars()
+    
 
     def _clear_action_queue(self):
         """ Clear the action queue"""
@@ -187,6 +187,7 @@ class GameBrowser:
                 self._action_queue.get_nowait()
             except queue.Empty:
                 break
+            
 
     def stop(self, join_thread:bool=False):
         """ Shutdown browser thread"""
@@ -195,6 +196,7 @@ class GameBrowser:
             if join_thread:
                 self._browser_thread.join()
             self._browser_thread = None
+            
 
     def is_running(self):
         """ return True if browser thread is still running"""
@@ -202,6 +204,7 @@ class GameBrowser:
             return True
         else:
             return False
+        
 
     def is_page_normal(self):
         """ return True if page is loaded """
@@ -210,6 +213,7 @@ class GameBrowser:
                 return True
         else:
             return False
+        
 
     def is_overlay_working(self):
         """ return True if overlay is on and working"""
@@ -218,6 +222,7 @@ class GameBrowser:
         if self._canvas_id is None:
             return False
         return True
+    
 
     def mouse_move(self, x:int, y:int, steps:int=5, blocking:bool=False):
         """ Queue action: mouse move to (x,y) on viewport
@@ -226,6 +231,7 @@ class GameBrowser:
         self._action_queue.put(lambda: self._action_mouse_move(x, y, steps, finish_event))
         if blocking:
             finish_event.wait()
+            
 
     def mouse_click(self, delay:float=80, blocking:bool=False):
         """ Queue action: mouse click at (x,y) on viewport
@@ -234,6 +240,7 @@ class GameBrowser:
         self._action_queue.put(lambda: self._action_mouse_click(delay, finish_event))
         if blocking:
             finish_event.wait()
+            
 
     def mouse_down(self, blocking:bool=False):
         """ Queue action: mouse down on page"""
@@ -241,6 +248,7 @@ class GameBrowser:
         self._action_queue.put(lambda: self._action_mouse_down(finish_event))
         if blocking:
             finish_event.wait()
+            
 
     def mouse_up(self,blocking:bool=False):
         """ Queue action: mouse up on page"""
@@ -248,6 +256,7 @@ class GameBrowser:
         self._action_queue.put(lambda: self._action_mouse_up(finish_event))
         if blocking:
             finish_event.wait()
+            
 
     def mouse_wheel(self, dx:float, dy:float, blocking:bool=False):
         """ Queue action for mouse wheel"""
@@ -255,20 +264,24 @@ class GameBrowser:
         self._action_queue.put(lambda: self._action_mouse_wheel(dx, dy, finish_event))
         if blocking:
             finish_event.wait()
+            
 
     def auto_hu(self):
         """ Queue action: Autohu action"""
         self._action_queue.put(self._action_autohu)
+        
 
     def start_overlay(self):
         """ Queue action: Start showing the overlay"""
         self._last_botleft_text = None
         self._last_guide = None
         self._action_queue.put(self._action_start_overlay)
+        
 
     def stop_overlay(self):
         """ Queue action: Stop showing the overlay"""
         self._action_queue.put(self._action_stop_overlay)
+        
 
     def overlay_update_guidance(self, guide_str:str, option_subtitle:str, options:list):
         """ Queue action: update text area
@@ -279,12 +292,14 @@ class GameBrowser:
         if self._last_guide == (guide_str, option_subtitle, options):  # skip if same guide
             return
         self._action_queue.put(lambda: self._action_overlay_update_guide(guide_str, option_subtitle, options))
+        
 
     def overlay_clear_guidance(self):
         """ Queue action: clear overlay text area"""
         if self._last_guide is None:  # skip if already cleared
             return
         self._action_queue.put(self._action_overlay_clear_guide)
+        
 
     def overlay_update_botleft(self, text:str):
         """ update bot-left corner text area
@@ -314,11 +329,13 @@ class GameBrowser:
             return None
         else:
             return res
+        
 
     def _action_mouse_move(self, x:int, y:int, steps:int, finish_event:threading.Event):
         """ move mouse to (x,y) with steps, and set finish_event when done"""
         self.page.mouse.move(x=x, y=y, steps=steps)
         finish_event.set()
+        
 
     def _action_mouse_click(self, delay:float, finish_event:threading.Event):
         """ mouse click on page at (x,y)"""
@@ -327,24 +344,29 @@ class GameBrowser:
         time.sleep(delay/1000)
         self.page.mouse.up()
         finish_event.set()
+        
 
     def _action_mouse_down(self, finish_event:threading.Event):
         """ mouse down on page"""
         self.page.mouse.down()
         finish_event.set()
+        
 
     def _action_mouse_up(self, finish_event:threading.Event):
         """ mouse up on page"""
         self.page.mouse.up()
         finish_event.set()
+        
 
     def _action_mouse_wheel(self, dx:float, dy:float, finish_event:threading.Event):
         self.page.mouse.wheel(dx, dy)
         finish_event.set()
+        
 
     def _action_autohu(self):
         """ call autohu function in page"""
         self.page.evaluate("() => view.DesktopMgr.Inst.setAutoHule(true)")
+        
 
     def _action_start_overlay(self):
         """ Display overlay on page. Will ignore if already exist, or page is None"""
@@ -368,6 +390,7 @@ class GameBrowser:
             document.body.appendChild(canvas);            
             }})()"""
         self.page.evaluate(js_code)
+        
 
     def _action_stop_overlay(self):
         """ Remove overlay from page"""
@@ -384,6 +407,7 @@ class GameBrowser:
         self._canvas_id = None
         self._botleft_text = None
         self._last_guide = None
+        
 
     def _overlay_text_params(self):
         font_size = int(self.height/45)  # e.g., 22
@@ -393,6 +417,7 @@ class GameBrowser:
         box_top = int(self.height * 0.44)  # Distance from the top
         box_left = int(self.width * 0.14)  # Distance from the left
         return (font_size, line_space, min_box_width, initial_box_height, box_top, box_left)
+    
 
     def _action_overlay_update_guide(self, line1: str, option_title: str, options: list[tuple[str, float]]):
         if not self.is_overlay_working():
@@ -451,6 +476,7 @@ class GameBrowser:
         }})();"""
         self.page.evaluate(js_code)
         self._last_guide = (line1, option_title, options)
+        
 
     def _action_overlay_clear_guide(self):
         """ delete text and the background box"""
@@ -470,6 +496,7 @@ class GameBrowser:
         }});"""
         self.page.evaluate(js_code)
         self._last_guide = None
+        
 
     def _action_overlay_update_botleft(self, text:str=None):
         if self.is_overlay_working() is False:
@@ -524,6 +551,7 @@ class GameBrowser:
         }})()"""
         self.page.evaluate(js_code)
         self._last_botleft_text = text
+        
 
     def _overlay_update_indicators(self, bars:list):
         """ Update the indicators on overlay """
