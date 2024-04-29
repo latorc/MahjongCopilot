@@ -83,15 +83,12 @@ class GameBrowser:
             proxy_object = None
         
         browser_args=[
-            # '--no-sandbox'
+            '--no-sandbox',
             '--noerrdialogs',            
             '--disable-session-crashed-bubble',
             '--disable-infobars',
             '--no-default-browser-check',
             '--no-first-run',
-            '--enable-webgl',
-            '--ignore-gpu-blacklist',
-            '--use-gl=desktop',
             '--enable-features=NetworkService,NetworkServiceInProcess'            
         ]
         
@@ -113,10 +110,9 @@ class GameBrowser:
                 headless=False,
                 viewport={'width': self.width, 'height': self.height},
                 proxy=proxy_object,
-                chromium_sandbox=True,
-                downloads_path=sub_folder(Folder.TEMP),
+                # downloads_path=sub_folder(Folder.TEMP),
                 ignore_default_args=["--enable-automation"],
-                args=browser_args
+                args=browser_args,
             )
 
             try:
