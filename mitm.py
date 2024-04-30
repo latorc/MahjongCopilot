@@ -230,10 +230,9 @@ class MitmController:
             
 if __name__ == '__main__':
     # Test code
-    utils.initialize_logging('MITM_TEST')    
-    mitm = MitmController(8999)
+    mitm = MitmController()
     LOGGER.info("Starting MITM")
-    mitm.start()
+    mitm.start(8999)
     LOGGER.info("Installing certificate")
     res = mitm.install_mitm_cert()    
     LOGGER.info("MITM on:%s", mitm.is_running())
