@@ -6,7 +6,7 @@ QQ群：834105526 <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=Mec
 Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 3-person and 4-person game modes.
 
 下载、帮助和更多信息请访问网站 Please see website for download, help, and more information  
-<a href="https://mjcopilot.com/help" target="_blank">帮助信息</a> | <a href="https://mjcopilot.com" target="_blank">https://mjcopilot.com</a>
+<a href="https://mjcopilot.com/help" target="_blank">帮助信息 Help Info </a> | <a href="https://mjcopilot.com" target="_blank">https://mjcopilot.com</a>
 
 ---
 
@@ -35,34 +35,33 @@ Features:
 1. 克隆 repo
 2. 安装 Python 虚拟环境。Python 版本推荐 3.11.
 3. 安装 requirements.txt 中的依赖。
-4. 主程序入口: main.py
-
-示例脚本：
-
-```batch
-git clone https://github.com/latorc/MahjongCopilot.git
-cd MahjongCopilot
-python -m venv venv
-CALL venv\Scripts\activate.bat
-pip install -r requirements.txt
-python main.py
-```
+4. 安装 Playwright + Chromium
+5. 主程序入口: main.py
 
 ### To Develope
 
 1. Clone the repo
 2. Install Python virtual environment. Python version 3.11 recommended.
 3. Install dependencies from requirements.txt
-4. Main entry: main.py
+4. Install Playwright + Chromium
+5. Main entry: main.py
 
+### 示例脚本 Sample script：
 ```batch
 git clone https://github.com/latorc/MahjongCopilot.git
 cd MahjongCopilot
 python -m venv venv
 CALL venv\Scripts\activate.bat
 pip install -r requirements.txt
+set PLAYWRIGHT_BROWSERS_PATH=0
+playwright install chromium
 python main.py
 ```
+### 配置模型
+本程序支持几种模型来源。其中，本地模型（Local）是基于 Akagi 兼容的 Mortal 模型。要获取 Akagi 的模型，请参见 <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a> 的说明。
+### Model Configuration
+This program supports different types of AI models. The 'Local' Model type uses Mortal models compatible with Akagi. To acquire Akagi's models, please refer to <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a>.
+
 
 ## 截图 / Screenshots
 
@@ -80,6 +79,14 @@ python main.py
 ## 设计 / Design
 
 ![](assets/design_struct.png)
+
+  
+目录说明 Description for folders：
+* gui: tkinter GUI 相关类 / tkinter GUI related classes
+* game: 雀魂游戏相关类 / classes related to Majsoul game
+* bot: AI 模型和机器人实现 / implementations for AI models and bots 
+* common: 共同使用的支持代码 commonly used supporting code
+* libriichi & libriichi3p: 编译完成的 libriichi 库文件 / For compiled libriichi libraries
 
 ## 鸣谢 / Credit
 
