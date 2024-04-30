@@ -9,12 +9,15 @@ from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
 from bot import MODEL_TYPE_STRINGS
 from .utils import GUI_STYLE, add_hover_text
+from bot_manager import BotManager
+import account_manager
 
 class SettingsWindow(tk.Toplevel):
     """ Settings dialog window"""
-    def __init__(self, parent:tk.Frame, setting:Settings):
+    def __init__(self, parent:tk.Frame, setting:Settings, bot_manager:BotManager):
         super().__init__(parent)
         self.st = setting
+        self.bot_manager = bot_manager
 
         self.geometry('700x675')
         self.minsize(700,675)        
@@ -29,6 +32,7 @@ class SettingsWindow(tk.Toplevel):
         self.gui_need_reload:bool = False       #  
         self.model_updated:bool = False         # model settings updated
         self.mitm_proxinject_updated:bool = False          # mitm settings updated
+        self.account_updated:bool = False
         
         style = ttk.Style(self)
         GUI_STYLE.set_style_normal(style)
@@ -153,6 +157,23 @@ class SettingsWindow(tk.Toplevel):
         string_entry = ttk.Entry(main_frame, textvariable=self.akagiot_apikey_var, width=std_wid*4)
         string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)        
         
+        # Select Account
+        # Inpute Account Name
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().ACCOUNT_SWITCH)
+        _label.grid(row=cur_row, column=0, **args_label)
+        options =account_manager.listUser()
+        self.account_var = tk.StringVar(value=self.st.account)
+        self.select_menu_account = ttk.Combobox(main_frame, textvariable=self.account_var, values=options, width=10)
+        self.select_menu_account.grid(row=cur_row, column=1, columnspan=1,  **args_entry)
+        
+        # Save Account Name
+        button_frame_2 = ttk.Frame(main_frame, relief="flat", borderwidth=2)
+        button_frame_2.grid(row=cur_row, column=2)
+        string_button =ttk.Button(button_frame_2, text=self.st.lan().ACCOUNT_SAVE, command=self.account_on_save)
+        string_button.pack()
+
+        
         # MJAPI url
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().MJAPI_URL)
@@ -254,6 +275,20 @@ class SettingsWindow(tk.Toplevel):
         save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
         save_button.pack(side=tk.RIGHT, padx=20, pady=20)
         
+    def account_on_save(self):        
+        account_var_new = self.account_var.get()
+        print(account_var_new)
+        if account_var_new == "":
+            return
+        self.bot_manager.stop_browser()
+        account_manager.saveUserAccount(account_var_new)
+        LOGGER.info("Saving Account %s to database",account_var_new)
+        self.account_var = tk.StringVar(value=account_var_new)
+        self.select_menu_account['values']=account_manager.listUser()
+        LOGGER.info("select_menu_values %s",self.select_menu_account['values'])
+        self.select_menu_account.set(account_var_new)
+        self.select_menu_account.update()
+        return
         
     def _on_save(self):
         # Get values from entry fields, validate, and save them        
@@ -286,6 +321,7 @@ class SettingsWindow(tk.Toplevel):
         else:
             self.gui_need_reload = False
         
+        account_var_new = self.account_var.get()
         # models
         model_type_new = self.model_type_var.get()
         model_file_new = self.model_file_var.get()
@@ -308,6 +344,11 @@ class SettingsWindow(tk.Toplevel):
             self.st.mjapi_model_select != mjapi_model_select_new
         ):
             self.model_updated = True
+        
+        if (
+            self.st.account != account_var_new
+        ):
+            self.account_updated = True
         
         # auto play settings
         randomized_choice_new:int = int(self.randomized_choice_var.get().split(' ')[0])
@@ -345,6 +386,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_idle_move = self.auto_idle_move_var.get()
         self.st.auto_dahai_drag = self.auto_drag_dahai_var.get()
         self.st.auto_random_move = self.random_move_var.get()
+        self.st.account = account_var_new
         self.st.ai_randomize_choice = randomized_choice_new
         self.st.auto_reply_emoji_rate = reply_emoji_new        
         self.st.delay_random_lower = delay_lower_new

@@ -7,6 +7,7 @@ GUI functions: controlling browser settings, displaying AI guidance info, game s
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
+import  account_manager
 
 from bot_manager import BotManager, mjai_reaction_2_guide
 from common.utils import Folder, GameMode, GAME_MODES, GameClientType
@@ -193,6 +194,9 @@ class MainGUI(tk.Tk):
 
     def _on_btn_start_browser_clicked(self):
         self.btn_start_browser.config(state=tk.DISABLED)
+        LOGGER.debug("stop brower and switch account %s",self.st.account)
+        self.bot_manager.stop_browser()
+        account_manager.switchAccountLogin(self.st.account)
         self.bot_manager.start_browser()
         
 
@@ -227,7 +231,7 @@ class MainGUI(tk.Tk):
 
     def _on_btn_settings_clicked(self):
         # open settings dialog (modal/blocking)
-        settings_window = SettingsWindow(self, self.st)
+        settings_window = SettingsWindow(self, self.st,self.bot_manager)
         settings_window.transient(self)
         settings_window.grab_set()
         self.wait_window(settings_window)
@@ -242,7 +246,10 @@ class MainGUI(tk.Tk):
                 # message box to tell user to restart
                 
             #     self.bot_manager.set_mitm_proxinject_update()
-            
+            if settings_window.account_updated:
+                LOGGER.debug("stop brower and switch account %s",self.st.account)
+                self.bot_manager.stop_browser()
+                account_manager.switchAccountLogin(self.st.account)            
 
     def _on_btn_help_clicked(self):
         # open help dialog        

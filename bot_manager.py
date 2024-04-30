@@ -160,6 +160,11 @@ class BotManager:
         else:
             return False
         
+
+    def stop_browser(self):
+        """ Stop the browser thread,close browser window """
+        LOGGER.info("Shutting down browser")
+        self.browser.stop(True)
         
     def get_pending_reaction(self) -> dict:
         """ returns the pending mjai output reaction (which hasn't been acted on)"""
@@ -273,8 +278,7 @@ class BotManager:
                 self._loop_post_msg()
                                     
             # loop ended, clean up before exit
-            LOGGER.info("Shutting down browser")
-            self.browser.stop(True)                
+            self.stop_browser()            
             LOGGER.info("Shutting down MITM")
             self.mitm_server.stop()
             if self.proxy_injector.is_running():
