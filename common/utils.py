@@ -169,14 +169,18 @@ def is_certificate_installed(cert_file:str) -> tuple[bool, str]:
             # Use certutil to look up the certificate by its serial number in the Root store
             cmd = ['certutil', '-store', 'Root', serial_number]
             store_found_phrase = serial_number
+            args = sub_run_args()
         elif sys.platform == "darwin":
             # TODO test on MacOS
             # Use security to find the certificate by its serial number in the System keychain
-            cmd = ['security', 'find-certificate', '-c', serial_number, '/Library/Keychains/System.keychain']
+            cmd = ['security', 'find-certificate', '-c', 'mitmproxy', '/Library/Keychains/System.keychain']
             store_found_phrase = 'attributes:'
+            args = {
+                'capture_output':True, 
+                'text': True,
+                'check': False}
         else:   # unsupported platform
             return False
-        args = sub_run_args()
         result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
         # Check if the command output indicates the certificate was found
         if result.returncode==0:
