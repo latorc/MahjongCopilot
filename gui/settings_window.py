@@ -57,13 +57,21 @@ class SettingsWindow(tk.Toplevel):
         auto_launch_entry.grid(row=cur_row, column=1, **args_entry)
 
         # Select client size
+        cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().CLIENT_SIZE)
-        _label.grid(row=cur_row, column=2, **args_label)
+        _label.grid(row=cur_row, column=0, **args_label)
         options = ["960 x 540", "1280 x 720", "1600 x 900", "1920 x 1080", "2560 x 1440", "3840 x 2160"]
         setting_size = f"{self.st.browser_width} x {self.st.browser_height}"
         self.client_size_var = tk.StringVar(value=setting_size)
         select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=std_wid)
-        select_menu.grid(row=cur_row, column=3, **args_entry)
+        select_menu.grid(row=cur_row, column=1, **args_entry)
+
+        # scale factor
+        _label = ttk.Label(main_frame, text=self.st.lan().SCALE_FACTOR)
+        _label.grid(row=cur_row, column=2, **args_label)
+        self.scale_factor = tk.DoubleVar(value=self.st.scale_factor)
+        scale_entry = ttk.Entry(main_frame, textvariable=self.scale_factor, width=std_wid)
+        scale_entry.grid(row=cur_row, column=3, **args_entry)
         
         # majsoul url
         cur_row += 1
@@ -261,6 +269,7 @@ class SettingsWindow(tk.Toplevel):
         size_list = self.client_size_var.get().split(' x ')
         width_new = int(size_list[0])
         height_new = int(size_list[1])
+        scale_factor_new = self.scale_factor.get()
         # url
         ms_url_new = self.ms_url_var.get()
         
@@ -325,6 +334,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_launch_browser = self.auto_launch_var.get()
         self.st.browser_width = width_new
         self.st.browser_height = height_new
+        self.st.scale_factor = scale_factor_new
         self.st.ms_url = ms_url_new
         self.st.enable_chrome_ext = self.enable_extension_var.get()
         self.st.mitm_port = mitm_port_new

@@ -16,10 +16,11 @@ class GameBrowser:
     """ Wrapper for Playwright browser controlling maj-soul operations
     Browser runs in a thread, and actions are queued to be processed by the thread"""
 
-    def __init__(self, width:int, height:int):
-        """ Set browser with viewport size (width, height)"""
+    def __init__(self, width:int, height:int, device_scale_factor:float):
+        """ Set browser with viewport size (width, height) and device scale factor"""
         self.width = width
         self.height = height
+        self.device_scale_factor = device_scale_factor
         self._action_queue = queue.Queue()       # thread safe queue for actions
         self._stop_event = threading.Event()    # set this event to stop processing actions
         self._browser_thread = None
@@ -45,12 +46,13 @@ class GameBrowser:
     def __del__(self):
         self.stop()
 
-    def start(self, url:str, proxy:str=None, width:int=None, height:int=None, enable_chrome_ext:bool=False):
+    def start(self, url:str, proxy:str=None, width:int=None, height:int=None, device_scale_factor:float=None, enable_chrome_ext:bool=False):
         """ Launch the browser in a thread, and start processing action queue
         params:
             url(str): url of the page to open upon browser launch
             proxy(str): proxy server to use. e.g. http://1.2.3.4:555"
             width, height: viewport width and height
+            device_scale_factor: device scale factor
             enable_ext: True to enable chrome extensions
         """
         # using thread here to avoid playwright sync api not usable in async context (textual) issue
@@ -61,6 +63,8 @@ class GameBrowser:
             self.width = width
         if height is not None:
             self.height = height
+        if device_scale_factor is not None:
+            self.device_scale_factor = device_scale_factor
         self._clear_action_queue()
         self._stop_event.clear()
         self._browser_thread = threading.Thread(
@@ -100,6 +104,7 @@ class GameBrowser:
                         user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
                         headless=False,
                         viewport={'width': self.width, 'height': self.height},
+                        device_scale_factor=self.device_scale_factor,
                         proxy=proxy_object,
                         ignore_default_args=["--enable-automation"],
                         args=[
@@ -120,6 +125,7 @@ class GameBrowser:
                         user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
                         headless=False,
                         viewport={'width': self.width, 'height': self.height},
+                        device_scale_factor=self.device_scale_factor,
                         proxy=proxy_object,
                         ignore_default_args=["--enable-automation"],
                         args=["--noerrdialogs", "--no-sandbox"]
