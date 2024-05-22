@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from functools import cmp_to_key
 
 import numpy as np
+from common.utils import GameMode
 
 TILES_MS_2_MJAI = {
     '0m': '5mr',
@@ -27,7 +28,7 @@ def cvt_ms2mjai(ms_tile:str) -> str:
         return TILES_MS_2_MJAI[ms_tile]
     else:
         return ms_tile
-    
+
 
 def cvt_mjai2ms(mjai_tile:str) -> str:
     """ convert mjai tile to majsoul tile"""
@@ -47,7 +48,7 @@ class MSType:
     kakan = 6
     reach = 7
     zimo = 8
-    hora = 9 
+    hora = 9
     ryukyoku = 10
     nukidora = 11
 
@@ -106,18 +107,18 @@ def eq(l, r):
 
 
 def softmax(arr, temperature=1.0):
-    arr = np.array(arr, dtype=float)  # Ensure the input is a numpy array of floats    
+    arr = np.array(arr, dtype=float)  # Ensure the input is a numpy array of floats
     if arr.size == 0:
         return arr  # Return the empty array if input is empty
     if not eq(temperature, 1.0):
         arr /= temperature  # Scale by temperature if temperature is not approximately 1
     # Shift values by max for numerical stability
     max_val = np.max(arr)
-    arr = arr - max_val    
+    arr = arr - max_val
     # Apply the softmax transformation
     exp_arr = np.exp(arr)
-    sum_exp = np.sum(exp_arr)    
-    softmax_arr = exp_arr / sum_exp    
+    sum_exp = np.sum(exp_arr)
+    softmax_arr = exp_arr / sum_exp
     return softmax_arr
 
 
@@ -126,7 +127,7 @@ MJAI_MASK_LIST = [
     "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p",
     "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s",
     "E",  "S",  "W",  "N",  "P",  "F",  "C",
-    '5mr', '5pr', '5sr', 
+    '5mr', '5pr', '5sr',
     'reach', 'chi_low', 'chi_mid', 'chi_high', 'pon', 'kan_select', 'hora', 'ryukyoku', 'none'
 ]
 
@@ -135,7 +136,7 @@ MJAI_MASK_LIST_3P = [
     "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p",
     "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s",
     "E",  "S",  "W",  "N",  "P",  "F",  "C",
-    '5mr', '5pr', '5sr', 
+    '5mr', '5pr', '5sr',
     'reach', 'pon', 'kan_select', 'nukidora', 'hora', 'ryukyoku', 'none'
 ]
 
@@ -184,7 +185,7 @@ class ActionUnicode:
     REACH = "🟧"
     AGARI = "🟥"
     RYUKYOKU = "⬛"
-    
+
 
 def cmp_mjai_tiles(tile1: str, tile2: str):
     """ compare function for sorting tiles"""
@@ -219,12 +220,12 @@ def meta_to_options(meta: dict, is_3p:bool=False) -> list:
         mask_list = MJAI_MASK_LIST_3P
     else:
         mask_list = MJAI_MASK_LIST
-    
+
     q_values = meta['q_values']
     mask_bits = meta['mask_bits']
     mask = mask_bits_to_bool_list(mask_bits)
     weight_values = softmax(q_values)
-    
+
     q_value_idx = 0
     option_list = []
     for i in range(46):
@@ -241,7 +242,7 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
     returns:
         ([list of tehai], trumohai) in mjai tiles format"""
     # tehai34 is with tsumohai, no aka marked
-    
+
     tile_list = []
     for tile_id, tile_count in enumerate(tehai34):
         for _ in range(tile_count):
@@ -263,6 +264,7 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
 @dataclass
 class GameInfo:
     """ data class containing game info"""
+    game_mode:GameMode              # game mode
     bakaze:str = None               # bakaze 场风
     jikaze:str = None               # self_wind 自风
     kyoku:int = None                # kyoku 局 (under bakaze)
@@ -273,7 +275,7 @@ class GameInfo:
     self_seat:int = None            # self seat index
     player_reached:list[bool] = field(default_factory=lambda: [False]*4)  # players in REACH state
     is_first_round:bool = False     # if self first round has not passed
-    
+
     def n_other_reach(self) -> int:
         """ number of other players in reach state"""
         other_reach = self.player_reached.copy()

@@ -299,13 +299,13 @@ class FPSCounter:
     @property
     def fps(self):
         """Returns the current frames per second, calculated as the number of frames in the past second."""
-        if time.time() - self.last_calc_time < 0.5:
+        this_time = time.time()
+        if this_time - self.last_calc_time < 0.5:
             return self.last_fps
         with self.lock:
-            # Filter out timestamps that are older than 1 second from the current time
-            cur_time = time.time()
-            self.timestamps = [t for t in self.timestamps if cur_time - t < 1]
+            # Filter out timestamps that are older than 1 second from the current time            
+            self.timestamps = [t for t in self.timestamps if this_time - t < 1]
             self.last_fps = len(self.timestamps)
-            self.last_calc_time = cur_time
+            self.last_calc_time = this_time
             return self.last_fps
             
