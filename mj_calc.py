@@ -1,6 +1,6 @@
 """ Calc risks
 ref: https:#github.com/EndlessCheng/mahjong-helper/blob/master/util/risk_base.go"""
-
+# Work in progress
 from enum import IntEnum, auto
 
 from common.mj_helper import MJAI_TILES_34
@@ -33,16 +33,16 @@ class RiskCatSuji(IntEnum):
     SUJI_19 = auto()            # 1.8
     DOUBLESUJI_5 = auto()       # 2.2
     DOUBLESUJI_46 = auto()      # 2.3
-    
+
     YAKU_3LEFT = auto()         # 4.6 Yaku hai - 3 left 字牌-役牌-剩余3
     YAKU_2LEFT = auto()         # 1.9 Yaku hai - 2 left 字牌-役牌-剩余2
     YAKU_1LEFT = auto()         # 0.3 Yaku hai - 1 left 字牌-役牌-剩余1
     OTAKAZE_3LEFT = auto()      # 4.0 Otakaze 3 left 字牌-客风-剩余3
     OTAKAZE_2LEFT = auto()      # 1.8 Otakaze 2 left 字牌-客风-剩余2
     OTAKAZE_1LEFT = auto()      # 0.2 Otakaze 1 left 字牌-客风-剩余1
-    
 
-RISK_TABLE_SUJI = [                                                                 
+
+RISK_TABLE_SUJI = [
 	[],                                                                             # 字牌                              # 巡目 Turn
 	[0, 5.7, 5.7, 5.8, 4.7, 3.4, 2.5, 2.5, 3.1, 5.6, 3.8, 1.8, 0.8, 2.6,            2.1, 1.2, 0.5, 2.4, 1.4, 1.2],      # 1
 	[0, 6.6, 6.9, 6.3, 5.2, 4.0, 3.5, 3.5, 4.1, 5.3, 3.5, 1.9, 0.8, 2.6,            2.3, 1.2, 0.5, 2.7, 1.3, 0.4],
@@ -64,16 +64,16 @@ RISK_TABLE_SUJI = [
 	[0, 24.7, 24.9, 17.9, 16.7, 15.4, 15.2, 15.0, 15.6, 8.5, 6.6, 4.0, 4.3, 4.2,    13.9, 8.5, 1.7, 11.8, 9.4, 1.6],    # 18
 	[0, 27.5, 27.8, 20.4, 19.1, 17.8, 17.5, 17.5, 17.5, 9.8, 7.4, 5.0, 5.1, 5.1,    18.1, 12.1, 2.8, 14.7, 12.6, 2.1],  # 19
 ]
-""" 
+"""
 筋牌相关分类危险度
-RISK_TABLE_SUJI[1-based turn #][risk category] = hoju rate, [巡目][种类] = 铳率  
+RISK_TABLE_SUJI[1-based turn #][risk category] = hoju rate, [巡目][种类] = 铳率
 统计学麻雀战术 表20-1, 20-2"""
 
 class RiskCatOC(IntEnum):
     """ No-chance / One-chance related categories"""
     ALL = 0                 #
     NC = auto()             # No chance: n-1, n+1 both 0 left (wall)
-    OC = auto()             # 
+    OC = auto()             #
     OC_SELF = auto()
     OC_OTHER = auto()
     DOC = auto()
@@ -138,17 +138,17 @@ def list_2_array_34(tile_list:list[int]) -> list[int]:
 
 def calc_tile_riskcat(
     safe_tiles_34:set[int],         # set of safe tiles in 34 format
-    tiles_left_34:list[int],        # numbers of tiles left    
+    tiles_left_34:list[int],        # numbers of tiles left
     round_wind:int,                 # round wind    27=E, 28=S, 29=W, 30=N
     player_wind:int                 # player wind   27=E, 28=S, 29=W, 30=N
     ) -> list[RiskCatSuji]:
     """ determine risk category for 34 tiles based on safe tile list and other info
     """
-    # mark safe tiles in 34-array    
+    # mark safe tiles in 34-array
     safe_tiles_34:list[bool] = [False] * 34  # False = risky, True = safe
     for tile in safe_tiles_34:
         safe_tiles_34[tile] = True
-        
+
     # compute risk category (suji category) for m/p/s tiles
     risk_cat_34 = [None] * 34
     for idx in range(27):
@@ -171,18 +171,18 @@ def calc_tile_riskcat(
             if num == 6 and tiles_left_34[idx-2] == 0:
                 # 5壁，37视为筋
                 risk_cat_34[idx] = RiskCatSuji.SUJI_37
-    
+
     honor_risk_type = {     # (is yaku, tiles left): RiskCat
         (True, 1):  RiskCatSuji.YAKU_1LEFT,
         (True, 2):  RiskCatSuji.YAKU_2LEFT,
         (True, 3):  RiskCatSuji.YAKU_3LEFT,
-        (True, 4):  RiskCatSuji.YAKU_3LEFT,        
+        (True, 4):  RiskCatSuji.YAKU_3LEFT,
         (False, 1):  RiskCatSuji.OTAKAZE_1LEFT,
         (False, 2):  RiskCatSuji.OTAKAZE_2LEFT,
         (False, 3):  RiskCatSuji.OTAKAZE_3LEFT,
-        (False, 4):  RiskCatSuji.OTAKAZE_3LEFT, 
+        (False, 4):  RiskCatSuji.OTAKAZE_3LEFT,
         # 剩余数为 0 可以视作安牌（忽略国士）
-        (True, 0):  RiskCatSuji.SAFE,       
+        (True, 0):  RiskCatSuji.SAFE,
         (False, 0): RiskCatSuji.SAFE,
     }
     for idx in range(27,34):  # for honor tiles
@@ -190,7 +190,7 @@ def calc_tile_riskcat(
         if num in (round_wind, player_wind, Tile34.P, Tile34.F, Tile34.C):
             is_yaku = True  # 该玩家的役牌 = 场风/自风/白/发/中
         risk_cat_34[idx] = honor_risk_type[(is_yaku, tiles_left_34[idx])]
-    
+
     return risk_cat_34
 
 
@@ -235,39 +235,39 @@ def calc_risk_tile34(
     safe_list:list[int],    # safe tiles (from others' discard after riichi)
     tiles_left_34:list[int],   # number of tiles left for index tile
     dora_list:list[int],    # dora list of tile34 indices
-    round_wind:int,         # round wind 27=E, 28=S, 29=W, 30=N 
+    round_wind:int,         # round wind 27=E, 28=S, 29=W, 30=N
     player_wind:int,        # player wind 27=E, 28=S, 29=W, 30=N
     ) -> list[float]:
     """ calculate risk rate for each of the 34 tiles, to hoju to one opponent
     Returns:
         list of risk rates for each tile34 index
     """
-    
+
     def dora_multi(tile_idx:int, risk_cat:RiskCatSuji) -> float:
         """ risk multiplier considering whether tile is dora and its risk category"""
         if tile_idx in dora_list:
             return RISK_DORA_MULTI[risk_cat]
         else:
             return 1.0
-        
-        
+
+
     # 各类牌和牌方式:
-	# 19 - 单骑, 对碰, 两面 
+	# 19 - 单骑, 对碰, 两面
 	# 28 - 单骑, 对碰, 两面, 坎张
 	# 37 - 单骑, 对碰, 两面, 坎张, 边张
 	# 456- 单骑, 对碰, 两面x2, 坎张
     # 字 - 单骑, 对碰
-    
+
     # 首先，根据现物和 No Chance 计算有没有两面的可能
 	# 生成用来计算筋牌的「安牌」
     tiles_safe_34 = list_2_array_34(discard_list + safe_list)
     tile_lowrisk_27 = calc_low_risk_tiles27(tiles_safe_34, tiles_left_34)
-    
+
     # 利用「安牌」计算无筋、筋、半筋、双筋的铳率
 	# TODO: 特殊处理宣言牌的筋牌、宣言牌的同色牌的铳率
     tile_riskcat_27 = calc_tile_riskcat(tile_lowrisk_27)
     for idx in range()
-    
-    
+
+
     tile_risk_34 = [RISK_TABLE_SUJI[turn][t] * dora_multi(idx//9, t) for idx, t in enumerate(tile_riskcat_27)]
-    
+
