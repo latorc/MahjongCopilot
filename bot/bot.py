@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from common.log_helper import LOGGER
 from common.mj_helper import meta_to_options, MjaiType
 from common.utils import GameMode, BotNotSupportingMode
+from common.settings import Settings
 
 
 def reaction_convert_meta(reaction:dict, is_3p:bool=False):
@@ -105,8 +106,13 @@ class BotMjai(Bot):
                 import riichi as libriichi
             self.mjai_bot = libriichi.mjai.Bot(engine, self.seat)
         elif mode == GameMode.MJ3P:
-            import libriichi3p
-            self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
+            settings = Settings()
+            if settings.enable_ot2_for_3p:
+                import riichi3p
+                self.mjai_bot = riichi3p.online.Bot(self.seat)
+            else:
+                import libriichi3p
+                self.mjai_bot = libriichi3p.mjai.Bot(engine, self.seat)
         else:
             raise BotNotSupportingMode(mode)          
             

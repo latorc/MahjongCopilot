@@ -60,8 +60,11 @@ python main.py
 ```
 ### 配置模型
 本程序支持几种模型来源。其中，本地模型（Local）是基于 Akagi 兼容的 Mortal 模型。要获取 Akagi 的模型，请参见 <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a> 的说明。
+如需使用 AkagiOT2 模型，请前往 Akagi 的官方 Discord 频道获取对应的 model.pth 和 riichi3p 包并安装。
 ### Model Configuration
 This program supports different types of AI models. The 'Local' Model type uses Mortal models compatible with Akagi. To acquire Akagi's models, please refer to <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a>.
+To use the AkagiOT2 model, please visit Akagi's official Discord channel to obtain the corresponding model.pth and riichi3p package, and then install them.
+
 
 
 ## 截图 / Screenshots
