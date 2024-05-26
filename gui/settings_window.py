@@ -16,7 +16,7 @@ class SettingsWindow(tk.Toplevel):
         super().__init__(parent)
         self.st = setting
 
-        self.geometry('800x675')
+        self.geometry('800x800')
         self.minsize(800,800)
         # self.resizable(False, False)
         # set position: within main window
