@@ -30,7 +30,7 @@ def try_create_ot2_bot():
 
     # 尝试从队列中获取结果，设置超时时间防止无限等待
     try:
-        success = queue.get(timeout=10)  # 设置适当的超时时间，例如10秒
+        success = queue.get(timeout=3)  # 设置适当的超时时间，例如10秒
     except Exception as e:
         LOGGER.error("Failed to retrieve the result from the subprocess: %s", e)
         success = False
