@@ -50,8 +50,6 @@ class LanStr:
     AI_MODEL_FILE_3P = "Local Model File (3P)"
     AKAGI_OT_URL = "AkagiOT Server URL"
     AKAGI_OT_APIKEY = "AkagiOT API Key"
-    AKAGI_OT2 = "AKAGI OT2"
-    ENABLE_AKAGI_OT2_FOR_3P = "Enable AkagiOT2 for 3P(Only Effective when model type is Local)"
     AKAGI_OT2_URL = "AkagiOT2 Server URL"
     AKAGI_OT2_APIKEY = "AkagiOT2 API Key"
     MJAPI_URL = "MJAPI Server URL"
@@ -93,6 +91,7 @@ class LanStr:
     GAME_NOT_RUNNING = "Not Launched"
     # errors
     LOCAL_MODEL_ERROR = "Local Model Loading Error!"
+    OT2_MODEL_ERROR = "OT2 Model Loading Error!"
     MITM_SERVER_ERROR = "MITM Service Error!"
     MITM_CERT_NOT_INSTALLED = "Run as admin or manually install MITM cert."
     MAIN_THREAD_ERROR = "Main Thread Error!"
@@ -187,8 +186,6 @@ class LanStrZHS(LanStr):
     AI_MODEL_FILE_3P = "本地模型文件(三麻)"
     AKAGI_OT_URL = "AkagiOT 服务器地址"
     AKAGI_OT_APIKEY = "AkagiOT API Key"
-    AKAGI_OT2 = "AKAGI OT2"
-    ENABLE_AKAGI_OT2_FOR_3P = "三麻中启用 AkagiOT2(仅在选择 Local 模型时生效)"
     AKAGI_OT2_URL = "AkagiOT2 服务器地址"
     AKAGI_OT2_APIKEY = "AkagiOT2 API Key"
     MJAPI_URL = "MJAPI 服务器地址"
@@ -232,6 +229,7 @@ class LanStrZHS(LanStr):
     GAME_NOT_RUNNING = "未启动"
     #error
     LOCAL_MODEL_ERROR = "本地模型加载错误!"
+    OT2_MODEL_ERROR = "OT2 模型加载错误!"
     MITM_CERT_NOT_INSTALLED = "以管理员运行或手动安装 MITM 证书"
     MITM_SERVER_ERROR = "MITM 服务错误!"
     MAIN_THREAD_ERROR = "主进程发生错误!"
