@@ -64,9 +64,12 @@ class UiState(Enum):
     GAME_ENDING = 20
 
 
-# === Exceptions ===    
+# === Exceptions ===
 class LocalModelException(Exception):
     """ Exception for model file error"""
+
+class Ot2BotCreationError(Exception):
+    """ Exception for OT2 bot creation error"""
 
 class MITMException(Exception):
     """ Exception for MITM error"""
@@ -84,6 +87,8 @@ def error_to_str(error:Exception, lan:LanStr) -> str:
     """ Convert error to language specific string"""
     if isinstance(error, LocalModelException):
         return lan.LOCAL_MODEL_ERROR
+    elif isinstance(error, Ot2BotCreationError):
+        return lan.OT2_MODEL_ERROR
     elif isinstance(error, MitmCertNotInstalled):
         return lan.MITM_CERT_NOT_INSTALLED + f"{error.args}"    
     elif isinstance(error, MITMException):
