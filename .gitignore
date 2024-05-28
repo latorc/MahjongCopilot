@@ -27,3 +27,4 @@ MahjongCopilot.spec
 libriichi3p/*.pyd
 libriichi3p/*.so
 chrome_ext/*/
+mjai/bot_3p/model.pth
