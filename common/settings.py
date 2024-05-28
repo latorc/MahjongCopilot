@@ -34,7 +34,7 @@ class Settings:
         
         # AI Model settings
         self.model_type:str = self._get_value("model_type", "Local")
-        """ model type: local, mjapi"""
+        """ model type: local, mjapi, AkagiOT, AkagiOT2"""
         # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
         self.model_file_3p:str = self._get_value("model_file_3p", "mortal_3p.pth")
@@ -42,7 +42,6 @@ class Settings:
         self.akagi_ot_url:str = self._get_value("akagi_ot_url", "")
         self.akagi_ot_apikey:str = self._get_value("akagi_ot_apikey", "")
         # akagi ot2 3p model
-        self.enable_ot2_for_3p:bool = self._get_value("enable_ot2_for_3p", False, self.valid_bool)
         self.akagi_ot2_url:str = self._get_value("akagi_ot2_url", "")
         self.akagi_ot2_apikey: str = self._get_value("akagi_ot2_apikey", "")
         # for mjapi

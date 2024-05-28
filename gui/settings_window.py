@@ -153,14 +153,6 @@ class SettingsWindow(tk.Toplevel):
         string_entry = ttk.Entry(main_frame, textvariable=self.akagiot_apikey_var, width=std_wid*4)
         string_entry.grid(row=cur_row, column=1,columnspan=3,  **args_entry)
 
-        # Enable Akagi OT2
-        cur_row += 1
-        _label = ttk.Label(main_frame, text=self.st.lan().AKAGI_OT2)
-        _label.grid(row=cur_row, column=0, **args_label)
-        self.enable_ot2_for_3p_var = tk.BooleanVar(value=self.st.enable_ot2_for_3p)
-        enable_akagi_ot2_entry = ttk.Checkbutton(
-            main_frame, variable=self.enable_ot2_for_3p_var, text=self.st.lan().ENABLE_AKAGI_OT2_FOR_3P, width=std_wid*3)
-        enable_akagi_ot2_entry.grid(row=cur_row, column=1, **args_entry)
         # Akagi OT2 url
         cur_row += 1
         _label = ttk.Label(main_frame, text=self.st.lan().AKAGI_OT2_URL)
@@ -315,7 +307,6 @@ class SettingsWindow(tk.Toplevel):
         mode_file_3p_new = self.model_file_3p_var.get()
         akagi_url_new = self.akagiot_url_var.get()
         akagi_apikey_new = self.akagiot_apikey_var.get()
-        enable_ot2_for_3p_new = self.enable_ot2_for_3p_var.get()
         akagi_url2_new = self.akagiot2_url_var.get()
         akagi_apikey2_new = self.akagiot2_apikey_var.get()
         mjapi_url_new = self.mjapi_url_var.get()
@@ -328,7 +319,6 @@ class SettingsWindow(tk.Toplevel):
             self.st.model_file_3p != mode_file_3p_new or
             self.st.akagi_ot_url != akagi_url_new or
             self.st.akagi_ot_apikey != akagi_apikey_new or
-            self.st.enable_ot2_for_3p != enable_ot2_for_3p_new or
             self.st.akagi_ot2_url != akagi_url2_new or
             self.st.akagi_ot2_apikey != akagi_apikey2_new or
             self.st.mjapi_url != mjapi_url_new or
@@ -366,7 +356,6 @@ class SettingsWindow(tk.Toplevel):
         self.st.model_file_3p = mode_file_3p_new
         self.st.akagi_ot_url = akagi_url_new
         self.st.akagi_ot_apikey = akagi_apikey_new
-        self.st.enable_ot2_for_3p = enable_ot2_for_3p_new
         self.st.akagi_ot2_url = akagi_url2_new
         self.st.akagi_ot2_apikey = akagi_apikey2_new
         self.st.mjapi_url = mjapi_url_new
