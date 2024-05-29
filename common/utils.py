@@ -185,7 +185,7 @@ def is_certificate_installed(cert_file:str) -> tuple[bool, str]:
                 'text': True,
                 'check': False}
         else:   # unsupported platform
-            return False
+            return True, "Unsupported platform"
         result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
         # Check if the command output indicates the certificate was found
         if result.returncode==0:
