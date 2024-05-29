@@ -1,9 +1,8 @@
 import multiprocessing
+from pathlib import Path
 
 from bot.bot import BotMjai, GameMode
 from common.log_helper import LOGGER
-from pathlib import Path
-
 from common.utils import BotNotSupportingMode, Ot2BotCreationError
 
 model_file_path = "mjai/bot_3p/model.pth"
@@ -15,7 +14,9 @@ class BotAkagiOt2(BotMjai):
     def __init__(self) -> None:
         super().__init__("Akagi OT2 Bot")
         self._supported_modes: list[GameMode] = []
+        self._is_online = "Waiting"
         self._check()
+        self.model_type = "AkagiOT2"
 
     def _check(self):
         # check model file
@@ -34,7 +35,7 @@ class BotAkagiOt2(BotMjai):
         """ return supported game modes"""
         return self._supported_modes
 
-    # 覆写父类方法
+    # 覆写父类 impl 方法
     def _init_bot_impl(self, mode: GameMode = GameMode.MJ3P):
         if mode == GameMode.MJ3P:
             try:
@@ -47,13 +48,26 @@ class BotAkagiOt2(BotMjai):
         else:
             raise BotNotSupportingMode(mode)
 
+    # 覆写父类 react 方法
+    def react(self, input_msg: dict) -> dict | None:
+        reaction = super().react(input_msg)
+        if reaction is not None:
+            if self.mjai_bot.is_online():
+                self._is_online = "Online"
+            else:
+                self._is_online = "Offline"
+        return reaction
+
+    @property
+    def is_online(self):
+        return self._is_online
+
 
 # 尝试获取mjai.bot实例，该方法可能会导致 panick，需要在分离进程中使用
 def create_bot_instance(queue):
     import riichi3p
     try:
         # 尝试创建一个mjai.bot实例
-        riichi3p.online.Bot(1)
         queue.put(True)  # 将成功的标志放入队列
     except Exception as e:
         LOGGER.warning("Cannot create bot: %s", e, exc_info=True)

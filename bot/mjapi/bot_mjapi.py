@@ -26,6 +26,7 @@ class BotMjapi(Bot):
         self._login_or_reg()
         self.id = -1
         self.ignore_next_turn_self_reach:bool = False
+        self.model_type = "mjapi"
         
     @property
     def info_str(self):
