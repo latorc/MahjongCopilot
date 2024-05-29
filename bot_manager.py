@@ -463,6 +463,15 @@ class BotManager:
         model_text = '🤖'
         if self.is_bot_created():
             model_text += self.st.lan().MODEL + ": " + self.st.model_type
+            if self.bot.get_model_type == "AkagiOT2":
+                if self.bot.is_online == "Online":
+                    model_text += "(🌐)"
+                elif self.bot.is_online == "Offline":
+                    model_text += "(🔌)"
+                elif self.bot.is_online == "Waiting":
+                    model_text += "(⏳)"
+                else:
+                    model_text += "(❓)"
         else:
             model_text += self.st.lan().MODEL_NOT_LOADED
 

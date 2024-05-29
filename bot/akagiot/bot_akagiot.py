@@ -15,7 +15,8 @@ class BotAkagiOt(BotMjai):
     def __init__(self, url:str, apikey:str) -> None:
         super().__init__("Akagi Online Bot")
         self.url = url
-        self.apikey = apikey        
+        self.apikey = apikey
+        self.model_type = "AkagiOT"
         
         self._check()
         
