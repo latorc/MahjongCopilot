@@ -4,6 +4,7 @@ from pathlib import Path
 from bot.bot import BotMjai, GameMode
 from common.log_helper import LOGGER
 from common.utils import BotNotSupportingMode, Ot2BotCreationError
+import time
 
 model_file_path = "mjai/bot_3p/model.pth"
 
@@ -68,6 +69,7 @@ def create_bot_instance(queue):
     import riichi3p
     try:
         # 尝试创建一个mjai.bot实例
+        riichi3p.online.Bot(1)
         queue.put(True)  # 将成功的标志放入队列
     except Exception as e:
         LOGGER.warning("Cannot create bot: %s", e, exc_info=True)
@@ -82,10 +84,17 @@ def try_create_ot2_bot():
     process.start()
 
     # 尝试从队列中获取结果，设置超时时间防止无限等待
+    start_time = time.time()
+    timeout = 10
     try:
-        success = queue.get(timeout=3)
+        timeout = 10
+        success = queue.get(timeout=timeout)
     except Exception as e:
+        end_time = time.time()
         LOGGER.error("Failed to retrieve the result from the subprocess: %s", e)
+        if end_time - start_time >= timeout:
+            LOGGER.error("Timeout when waiting for the result from the subprocess")
+            process.terminate()
         success = False
 
     process.join()
