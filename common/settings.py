@@ -7,6 +7,7 @@ from .lan_str import LanStr, LAN_OPTIONS
 from . import utils
 
 DEFAULT_SETTING_FILE = 'settings.json'
+DEFAULT_OT2_JSON = 'settings_ot2.json'
 
 class Settings:
     """ Settings class to load and save settings to json file"""
@@ -33,13 +34,16 @@ class Settings:
         
         # AI Model settings
         self.model_type:str = self._get_value("model_type", "Local")
-        """ model type: local, mjapi"""
+        """ model type: local, mjapi, AkagiOT, AkagiOT2"""
         # for local model
         self.model_file:str = self._get_value("model_file", "mortal.pth")
         self.model_file_3p:str = self._get_value("model_file_3p", "mortal_3p.pth")
         # akagi ot model
         self.akagi_ot_url:str = self._get_value("akagi_ot_url", "")
         self.akagi_ot_apikey:str = self._get_value("akagi_ot_apikey", "")
+        # akagi ot2 3p model
+        self.akagi_ot2_url:str = self._get_value("akagi_ot2_url", "")
+        self.akagi_ot2_apikey: str = self._get_value("akagi_ot2_apikey", "")
         # for mjapi
         self.mjapi_url:str = self._get_value("mjapi_url", "https://mjai.7xcnnw11phu.eu.org", self.valid_url)
         self.mjapi_user:str = self._get_value("mjapi_user", "")
@@ -86,6 +90,14 @@ class Settings:
                             if not key.startswith('_') and not callable(value)}
         with open(self._json_file, 'w', encoding='utf-8') as file:
             json.dump(settings_to_save, file, indent=4, separators=(', ', ': '))
+
+        # Save ot2 related settings to settings_ot2.json
+        ot2_settings = {
+            "ip": self.akagi_ot2_url,
+            "key": self.akagi_ot2_apikey
+        }
+        with open(DEFAULT_OT2_JSON, 'w', encoding='utf-8') as ot2_file:
+            json.dump(ot2_settings, ot2_file, indent=4, separators=(', ', ': '))
     
     def _get_value(self, key:str, default_value:any, validator:Callable[[any],bool]=None) -> any:
         """ Get value from settings dictionary, or return default_value if error"""

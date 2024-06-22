@@ -18,6 +18,7 @@ class BotMortalLocal(BotMjai):
         super().__init__("Local Mortal Bot")   
         self._supported_modes: list[GameMode] = []  
         self.model_files = model_files
+        self.model_type = "Local"
         self._engines:dict[GameMode, any] = {}
         for k,v in model_files.items():
             if not Path(v).exists() or not Path(v).is_file():

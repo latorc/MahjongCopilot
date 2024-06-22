@@ -27,6 +27,11 @@ class Bot(ABC):
         self.name = name
         self._initialized:bool = False
         self.seat:int = None
+        self.model_type:str = None
+
+    @property
+    def get_model_type(self) -> str:
+        return self.model_type
     
     @property
     def supported_modes(self) -> list[GameMode]:
