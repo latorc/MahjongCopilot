@@ -2,7 +2,7 @@ mitmproxy==10.2.4
 playwright==1.42.0
 torch==2.2.1
 requests
-numpy
+numpy<2
 pillow
 --find-links https://github.com/shinkuan/Akagi/releases/expanded_assets/v0.1.1-libriichi
 riichi>=0.1.1
