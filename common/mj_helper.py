@@ -261,6 +261,103 @@ def decode_mjai_tehai(tehai34, akas, tsumohai) -> tuple[list[str], str]:
     return (tile_list, tsumohai)
 
 
+def normalize_pai(pai):
+    """Turn red dora to normal pai"""
+    return pai.replace('r', '')
+
+
+def determine_kan_type(last_action, hand):
+    """
+    Determines the type of kan based on the last action taken and the player's hand.
+
+    Description:
+    This function assumes it is called only when a kan is possible and
+    distinguishes which type of kan it is: Ankan, Kakan, or Daiminkan.
+    It first normalizes all tiles in the hand, converting red dora tiles
+    to their regular counterparts for uniformity in processing.
+
+    Parameters:
+    last_action (dict): Information about the last action taken, including the type of action
+                        ('tsumo' for a self-draw or 'dahai' for a discard),
+                        the actor's identifier, and the tile involved.
+                        Example: {'type': 'tsumo', 'actor': 0, 'pai': '5mr'}
+    hand (list of str): List of tiles in the player's hand, excluding the tile drawn most recently,
+                        which is added during processing if necessary.
+                        Example: ['1m', '1m', '1m', '2p', '2p', '2p', '3s', '3s', '3s',
+                        '7m', '7m', '7m', '4p', '5m', '5m', '5m']
+
+    Returns:
+    MjaiType: ANKAN, KAKAN, or DAIMINKAN.
+    The function will return the appropriate enum value based on the conditions met.
+
+    """
+    normalized_hand = [normalize_pai(p) for p in hand]
+    pai = normalize_pai(last_action['pai'])
+
+    if last_action['type'] == 'tsumo':
+        normalized_hand.append(pai)  # Include the drawn tile in the hand
+
+    pai_counts = {p: normalized_hand.count(p) for p in set(normalized_hand)}
+
+    if pai_counts[pai] == 4:
+        if last_action['type'] == 'tsumo':
+            return MjaiType.ANKAN
+        else:
+            return MjaiType.KAKAN
+    elif last_action['type'] == 'dahai':
+        return MjaiType.DAIMINKAN
+
+
+def generate_chi_consume_sequence(tile, chi_type):
+    """Generate the other two tiles in a sequence based on the type of chi and a given tile."""
+    base_number = int(tile[0])
+    suit = tile[1]
+
+    # Calculate the other two tiles in the sequence based on the chi_type
+    if chi_type == 'chi_low':
+        return [str(base_number + 1) + suit, str(base_number + 2) + suit]
+    elif chi_type == 'chi_mid':
+        return [str(base_number - 1) + suit, str(base_number + 1) + suit]
+    elif chi_type == 'chi_high':
+        return [str(base_number - 2) + suit, str(base_number - 1) + suit]
+    else:
+        raise ValueError("Invalid chi type")
+
+
+def determine_chi_tiles(chi_type, called_tile, hand):
+    """
+    Determine the tiles used for a chi action based on the type of chi and the tile that was called.
+
+    Parameters:
+    chi_type (str): 'chi_low', 'chi_mid', or 'chi_high', representing the position of the called tile in the sequence.
+    called_tile (str): The tile that was called, formatted as '5m'.
+    hand (list of str): Current list of tiles in hand.
+
+    Returns:
+    list of str: Returns a list of two tiles needed to complete the chow, defaulting to not choosing red
+    dora tiles when multiple combinations are possible.
+    """
+    sequence_tiles = generate_chi_consume_sequence(called_tile, chi_type)
+
+    # Check if each tile in the sequence is in the hand, considering red dora tiles
+    needed_tiles = []
+    for tile in sequence_tiles:
+        if tile in hand:
+            needed_tiles.append(tile)
+        else:
+            # Check if the normalized tile (in case of red dora tiles) is in the hand
+            normalized_tile = normalize_pai(tile)
+            for hand_tile in hand:
+                if normalize_pai(hand_tile) == normalized_tile:
+                    needed_tiles.append(hand_tile)
+                    break
+
+    if len(needed_tiles) == len(sequence_tiles):
+        return needed_tiles
+    else:
+        return []
+
+
 @dataclass
 class GameInfo:
     """ data class containing game info"""
