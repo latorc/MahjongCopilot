@@ -135,12 +135,21 @@ class BotMjai(Bot):
         if reaction['type'] == MjaiType.REACH and reaction['actor'] == self.seat:  # Self reach
             # get the subsequent dahai message,
             # appeding it to the reach reaction msg as 'reach_dahai' key
-            LOGGER.debug("Send reach msg to get reach_dahai. Cannot go back to unreach!")
-            # TODO make a clone of mjai_bot so reach can be tested to get dahai without affecting the game
-
-            reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
-            reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
-            reach_dahai = json.loads(reach_dahai_str)
+            reach_dahai = self.get_reach_dahai()
             reaction['reach_dahai'] = reach_dahai
-            self.ignore_next_turn_self_reach = True     # ignore very next reach msg
         return reaction
+
+    def get_reach_dahai(self) -> dict:
+        """ get the reach_dahai message"""
+
+        LOGGER.debug("Getting reach_dahai msg by sending reach message to a clone of the bot")
+        # clone the bot
+        reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
+        reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
+        reach_dahai = json.loads(reach_dahai_str)
+
+        return reach_dahai
+
+    def set_ignore_next_turn_self_reach(self):
+        """ set flag to ignore the next turn self reach msg"""
+        self.ignore_next_turn_self_reach = True
