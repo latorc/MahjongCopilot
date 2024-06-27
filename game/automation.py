@@ -531,6 +531,11 @@ class Automation:
             new_action = {
                 'type': MjaiType.NONE
             }
+        elif chosen_option == 'nukidora':
+            new_action = {
+                'type': MjaiType.NUKIDORA,
+                'actor': gi.self_seat
+            }
         elif chosen_option == 'reach':
             new_action = {
                 'type': MjaiType.REACH,
