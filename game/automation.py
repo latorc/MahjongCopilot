@@ -389,11 +389,12 @@ class Automation:
         gi = game_state.get_game_info()
         assert gi is not None, "Game info is None"
         op_step = game_state.last_op_step
-        mjai_type = mjai_action['type']        
-        
+        mjai_type = mjai_action['type']
+
         if self.st.ai_randomize_choice:     # randomize choice
             mjai_action = self.randomize_action(mjai_action, gi, game_state)
-        # Dahai action
+            mjai_type = mjai_action['type']
+            # Dahai action
         if  mjai_type == MjaiType.DAHAI:       
             if gi.self_reached:
                 # already in reach state. no need to automate dahai
@@ -537,6 +538,7 @@ class Automation:
             }
         else:
             LOGGER.error(f"Unknown chosen option: {chosen_option}")
+        LOGGER.debug(f"Constructed new action: {new_action}")
         return new_action
 
 
