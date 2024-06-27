@@ -403,6 +403,8 @@ class GameState:
                         'type': MjaiType.REACH,
                         'actor': actor
                     }
+                if reach_action_dict['actor'] == self.seat:
+                    self.mjai_bot.set_ignore_next_turn_self_reach()
                 self.append_action(reach_action_dict)
                 # pending reach accept msg for mjai. this msg will be sent when next liqi action msg is received
                 self.kyoku_state.pending_reach_acc = {
