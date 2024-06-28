@@ -432,6 +432,8 @@ class Automation:
         n = self.st.ai_randomize_choice     # randomize strength. 0 = no random, 5 = according to probability
         if n == 0:
             return action
+        if len(action['meta_options']) == 0:
+            return action # no options to randomize
         mjai_type = action['type']
         options: dict = action['meta_options']
         # get options (tile only) from top 3 at most
