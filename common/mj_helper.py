@@ -357,6 +357,38 @@ def determine_chi_tiles(chi_type, called_tile, hand):
     else:
         return []
 
+def determine_pon_tiles(called_tile, hand):
+    if called_tile[0] != 5:
+        return [called_tile] * 2
+    else:
+        pon_tiles_count = 0
+        exists_dora = False
+        tiles_list = []
+        for tile in hand:
+            if tile[0:1] == called_tile[0:1]:
+                pon_tiles_count += 1
+                if tile[2] == 'r':
+                    exists_dora = True
+                tiles_list.append(tile)
+        if pon_tiles_count == 3 and exists_dora:
+            return [called_tile] * 2
+        else:
+            return tiles_list
+
+
+def determine_kan_tiles(called_tile):
+    if called_tile[0] != 5:
+        return [called_tile] * 4
+    else:
+        tiles_list = []
+        if called_tile[2] == 'r':
+            tiles_list = [called_tile[0:1]] * 3
+            tiles_list.append(called_tile)
+        else:
+            tiles_list = [called_tile[0:1]] * 3
+            tiles_list.append(f"{called_tile}r")
+        return tiles_list
+
 
 @dataclass
 class GameInfo:

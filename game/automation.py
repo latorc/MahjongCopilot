@@ -12,8 +12,8 @@ import random
 import threading
 from typing import Iterable, Iterator
 
-from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED
-from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai, determine_kan_type, determine_chi_tiles
+from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED, determine_kan_tiles
+from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai, determine_kan_type, determine_chi_tiles, determine_pon_tiles
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.utils import UiState, GAME_MODES
@@ -485,7 +485,7 @@ class Automation:
             }
         elif chosen_option == 'pon':
             target = game_state.last_action['actor']
-            consumed = [game_state.last_action['pai']] * 2
+            consumed = determine_pon_tiles(game_state.last_action['pai'], game_state.get_game_info().my_tehai)
             new_action = {
                 'type': MjaiType.PON,
                 'actor': gi.self_seat,
@@ -498,8 +498,8 @@ class Automation:
             hand = game_state.get_game_info().my_tehai
             kan_type = determine_kan_type(last_action, hand)
             target = last_action['actor']
+            consumed = determine_kan_tiles(last_action['pai'])
             if kan_type == MjaiType.DAIMINKAN:
-                consumed = [last_action['pai']] * 3
                 new_action = {
                     'type': MjaiType.DAIMINKAN,
                     'actor': gi.self_seat,
@@ -511,7 +511,8 @@ class Automation:
                 new_action = {
                     'type': kan_type,
                     'actor': gi.self_seat,
-                    'pai': last_action['pai']
+                    'pai': last_action['pai'],
+                    'consumed': consumed
                 }
         elif chosen_option == 'hora':
             target = game_state.last_action['actor']
