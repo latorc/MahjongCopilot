@@ -84,7 +84,8 @@ class Bot(ABC):
     def get_init_clone(self):
         """ get a clone of the bot from initialization"""
         bot = self.__class__(*self.init_args)
-        return bot.init_bot(*self.init_bot_args)
+        bot.init_bot(*self.init_bot_args)
+        return bot
 
 
 class BotMjai(Bot):
