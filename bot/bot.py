@@ -27,6 +27,8 @@ class Bot(ABC):
         self.name = name
         self._initialized:bool = False
         self.seat:int = None
+        self.init_args = [name]
+        self.init_bot_args = []
     
     @property
     def supported_modes(self) -> list[GameMode]:
@@ -48,6 +50,7 @@ class Bot(ABC):
         self.seat = seat
         self._init_bot_impl(mode)
         self._initialized = True
+        self.init_bot_args = [seat, mode]
 
     @property
     def initialized(self) -> bool:
@@ -78,6 +81,11 @@ class Bot(ABC):
         """ log game results"""
         return
 
+    def get_init_clone(self):
+        """ get a clone of the bot from initialization"""
+        bot = self.__class__(*self.init_args)
+        return bot.init_bot(*self.init_bot_args)
+
 
 class BotMjai(Bot):
     """ base class for libriichi.mjai Bots"""
@@ -86,6 +94,8 @@ class BotMjai(Bot):
         
         self.mjai_bot = None
         self.ignore_next_turn_self_reach:bool = False
+        self.init_args = [name]
+        self.history_msgs = []
         
     
     @property
@@ -116,6 +126,7 @@ class BotMjai(Bot):
             
         
     def react(self, input_msg:dict) -> dict:
+        self.history_msgs.append(input_msg)
         if self.mjai_bot is None:
             return None        
         if self.ignore_next_turn_self_reach:    # ignore repetitive self reach. only for the very next msg
@@ -144,8 +155,11 @@ class BotMjai(Bot):
 
         LOGGER.debug("Getting reach_dahai msg by sending reach message to a clone of the bot")
         # clone the bot
+        tmp_clone_bot = self.get_init_clone()
+        for msg in self.history_msgs:
+            tmp_clone_bot.react(msg)
         reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
-        reach_dahai_str = self.mjai_bot.react(json.dumps(reach_msg))
+        reach_dahai_str = tmp_clone_bot.react(json.dumps(reach_msg))
         reach_dahai = json.loads(reach_dahai_str)
 
         return reach_dahai

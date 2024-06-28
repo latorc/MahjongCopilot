@@ -15,7 +15,8 @@ class BotMortalLocal(BotMjai):
         """ params:
         model_files(dicty): model files for different modes {mode, file_path}
         """
-        super().__init__("Local Mortal Bot")   
+        super().__init__("Local Mortal Bot")
+        self.init_args = [model_files]
         self._supported_modes: list[GameMode] = []  
         self.model_files = model_files
         self._engines:dict[GameMode, any] = {}

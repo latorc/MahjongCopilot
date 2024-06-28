@@ -14,6 +14,7 @@ class BotAkagiOt(BotMjai):
     
     def __init__(self, url:str, apikey:str) -> None:
         super().__init__("Akagi Online Bot")
+        self.init_args = [url, apikey]
         self.url = url
         self.apikey = apikey        
         
