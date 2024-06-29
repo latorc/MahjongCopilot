@@ -708,7 +708,7 @@ class Automation:
             return steps
 
         # Reach: process subsequent reach dahai action
-        if mstype_from_mjai == MSType.reach:            
+        if mstype_from_mjai == MSType.reach:
             reach_dahai = game_state.mjai_bot.get_reach_dahai()
             delay = self.get_delay(reach_dahai, gi)
             steps.append(ActionStepDelay(delay))

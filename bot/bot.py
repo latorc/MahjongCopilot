@@ -21,8 +21,6 @@ class Bot(ABC):
     """ Bot Interface class
     bot follows mjai protocol
     ref: https://mjai.app/docs/highlevel-api
-    Note: Reach msg has additional 'reach_dahai' key attached,
-    which is a 'dahai' msg, representing the subsequent dahai action after reach
     """
 
     def __init__(self, name: str = "Bot") -> None:
@@ -30,6 +28,8 @@ class Bot(ABC):
         self._initialized: bool = False
         self.seat: int = None
         self.mode = None
+        self.ignore_next_turn_self_reach: bool = False
+        self.reach_dahai:dict = None
 
     @property
     def supported_modes(self) -> list[GameMode]:
@@ -82,6 +82,25 @@ class Bot(ABC):
         """ log game results"""
         return
 
+    def get_reach_dahai(self) -> dict:
+        """
+        get the reach_dahai message
+        Only call this method when it is reachable.
+        """
+        if self.reach_dahai is not None:
+            return self.reach_dahai
+        else:
+            self.generate_reach_dahai()
+            return self.reach_dahai
+
+
+    def generate_reach_dahai(self):
+        reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
+        reach_dahai_from_originalbot = self.react(reach_msg)
+        self.reach_dahai = reach_dahai_from_originalbot
+        LOGGER.debug(f"Generated and saved reach_dahai: {self.reach_dahai}")
+        self.ignore_next_turn_self_reach = True
+
 
 class BotMjai(Bot):
     """ base class for libriichi.mjai Bots"""
@@ -90,8 +109,6 @@ class BotMjai(Bot):
         super().__init__(name)
 
         self.mjai_bot = None
-        self.history_msgs = []
-        self.reach_dahai = None
 
     @property
     def info_str(self) -> str:
@@ -118,51 +135,20 @@ class BotMjai(Bot):
             raise BotNotSupportingMode(mode)
 
     def react(self, input_msg: dict) -> dict:
+        msg_type = input_msg['type']
         if self.mjai_bot is None:
             return None
+        if self.ignore_next_turn_self_reach == True:
+            if msg_type == MjaiType.REACH and input_msg['actor'] == self.seat:
+                LOGGER.debug("Ignoring Reach msg, already fed reach msg to the bot.")
+                self.ignore_next_turn_self_reach = False
+                return None
+
 
         str_input = json.dumps(input_msg)
 
         react_str = self.mjai_bot.react(str_input)
-        self.history_msgs.append(str_input)
         if react_str is None:
             return None
         reaction = json.loads(react_str)
-        # Special treatment for self reach output msg
-        # mjai only outputs dahai msg after the reach msg
-        if reaction['type'] == MjaiType.REACH and reaction['actor'] == self.seat:  # Self reach
-            self.reach_dahai = None
-            # get the subsequent dahai message,
-            # appeding it to the reach reaction msg as 'reach_dahai' key
-            reach_dahai = self.get_reach_dahai()
-            reaction['reach_dahai'] = reach_dahai
         return reaction
-
-    def get_reach_dahai(self) -> dict:
-        """
-        get the reach_dahai message
-        Only call this method when it is reachable.
-        """
-        if self.reach_dahai is not None:
-            return self.reach_dahai
-        else:
-            self.generate_reach_dahai()
-            return self.reach_dahai
-
-
-    def generate_reach_dahai(self):
-        reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
-        reach_dahai_from_originalbot = self.mjai_bot.react(json.dumps(reach_msg))
-        self.reach_dahai = json.loads(reach_dahai_from_originalbot)
-
-        # Row the bot back to unreached state by reinitialize and refeed the bot
-        LOGGER.debug(f"Rowing back bot to unreached state...")
-        self.mjai_bot = None
-        self.init_bot(self.seat, self.mode)
-        LOGGER.debug(f"Refeeding newly init bot instance...")
-        for msg in self.history_msgs:
-            LOGGER.debug(f"Refeeding: {msg}")
-            self.mjai_bot.react(msg)
-            if 'can_act' not in msg:
-                time.sleep(0)
-

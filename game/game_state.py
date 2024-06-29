@@ -633,7 +633,4 @@ class GameState:
                 is_3p = False
 
             reaction_convert_meta(output_reaction,is_3p)
-            if any(item[0] == 'reach' for item in output_reaction["meta_options"][0:4]):
-                self.mjai_bot.reach_dahai = None
-                self.mjai_bot.generate_reach_dahai()
             return output_reaction
