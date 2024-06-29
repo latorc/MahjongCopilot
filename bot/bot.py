@@ -138,8 +138,8 @@ class BotMjai(Bot):
         if self.ignore_next_turn_self_reach == True:
             if msg_type == MjaiType.REACH and input_msg['actor'] == self.seat:
                 LOGGER.debug("Ignoring Reach msg, already fed reach msg to the bot.")
-                self.ignore_next_turn_self_reach = False
                 return None
+            self.ignore_next_turn_self_reach = False
 
 
         str_input = json.dumps(input_msg)
