@@ -87,11 +87,8 @@ class Bot(ABC):
         get the reach_dahai message
         Only call this method when it is reachable.
         """
-        if self.reach_dahai is not None:
-            return self.reach_dahai
-        else:
-            self.generate_reach_dahai()
-            return self.reach_dahai
+        self.generate_reach_dahai()
+        return self.reach_dahai
 
 
     def generate_reach_dahai(self):
