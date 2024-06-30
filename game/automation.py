@@ -458,7 +458,14 @@ class Automation:
                 prob = top_ops_powered[i][1]  # the probability
                 orig_prob = top_ops[i][1]
                 break
-        LOGGER.debug(f"Randomized Option, Chosen: {chosen_option}, Prob: {prob:.2f}, Orig Prob: {orig_prob:.2f}")
+
+        # 3. Check if the chosen option is the highest probability option
+        if chosen_option == top_ops[0][0]:  # Compare with the original top option
+            LOGGER.debug("Chosen option is the highest probability option, returning original action.")
+            return action
+
+        LOGGER.debug(f"Randomized Option, Chosen: {chosen_option}, Prob: {prob:.2f}, "
+                     f"Orig Prob: {orig_prob:.2f}, Orig Option: {top_ops[0][0]}")
 
         new_action = self.construct_new_action(chosen_option, gi, game_state, action)
         return new_action
