@@ -69,6 +69,7 @@ class GameState:
         #1-2-3 then goes counter-clockwise
         self.player_scores:list = None          # player scores
         self.kyoku_state:KyokuState = KyokuState()  # kyoku info - cleared every newround
+        self.last_action:dict = None            # last action (dahai, reach, etc.)
 
         ### about last reaction
         self.last_reaction:dict = None          # last bot output reaction
@@ -83,6 +84,11 @@ class GameState:
         self.is_round_started:bool = False
         """ if any new round has started (so game info is available)"""
         self.is_game_ended:bool = False         # if game has ended
+
+    def append_action(self, action:dict):
+        """ Append action to pending input msgs"""
+        self.mjai_pending_input_msgs.append(action)
+        self.last_action = action
 
     def get_game_info(self) -> GameInfo:
         """ Return game info. Return None if N/A"""
@@ -261,7 +267,7 @@ class GameState:
         self.seat = seatList.index(self.account_id)
         self.mjai_bot.init_bot(self.seat, self.game_mode)
         # Start_game has no effect for mjai bot, omit here
-        self.mjai_pending_input_msgs.append(
+        self.append_action(
             {
                 'type': MjaiType.START_GAME,
                 'id': self.seat
@@ -329,9 +335,9 @@ class GameState:
             'scores': self.player_scores,
             'tehais': tehais_mjai
             }
-        self.mjai_pending_input_msgs.append(start_kyoku_msg)
+        self.append_action(start_kyoku_msg)
         if tsumo_msg:
-            self.mjai_pending_input_msgs.append(tsumo_msg)
+            self.append_action(tsumo_msg)
 
         self.is_round_started = True
         return self._react_all(liqi_data_data)
@@ -342,7 +348,7 @@ class GameState:
         # when there is new action, accept reach, unless it is agari
         if not liqi_data_name == LiqiAction.Hule:
             if self.kyoku_state.pending_reach_acc is not None:
-                self.mjai_pending_input_msgs.append(self.kyoku_state.pending_reach_acc)
+                self.append_action(self.kyoku_state.pending_reach_acc)
                 self.kyoku_state.pending_reach_acc = None
 
         liqi_data_data = liqi_data['data']
@@ -351,7 +357,7 @@ class GameState:
             # According to mjai.app, in the case of an ankan, the dora event comes first, followed by the tsumo event.
             if 'doras' in liqi_data_data:
                 if len(liqi_data_data['doras']) > len(self.kyoku_state.doras_ms):
-                    self.mjai_pending_input_msgs.append(
+                    self.append_action(
                         {
                             'type': MjaiType.DORA,
                             'dora_marker': mj_helper.cvt_ms2mjai(liqi_data_data['doras'][-1])
@@ -367,7 +373,7 @@ class GameState:
             else:           # my tsumo
                 tile_mjai = mj_helper.cvt_ms2mjai(liqi_data_data['tile'])
                 self.kyoku_state.my_tsumohai = tile_mjai
-            self.mjai_pending_input_msgs.append(
+            self.append_action(
                 {
                     'type': MjaiType.TSUMO,
                     'actor': actor,
@@ -393,19 +399,18 @@ class GameState:
                     self.kyoku_state.self_in_reach = True
 
                 self.kyoku_state.player_reach[actor] = True
-                self.mjai_pending_input_msgs.append(
-                    {
+                reach_action_dict = {
                         'type': MjaiType.REACH,
                         'actor': actor
                     }
-                )
+                self.append_action(reach_action_dict)
                 # pending reach accept msg for mjai. this msg will be sent when next liqi action msg is received
                 self.kyoku_state.pending_reach_acc = {
                     'type': MjaiType.REACH_ACCEPTED,
                     'actor': actor
                     }
 
-            self.mjai_pending_input_msgs.append(
+            self.append_action(
                 {
                     'type': MjaiType.DAHAI,
                     'actor': actor,
@@ -439,7 +444,7 @@ class GameState:
             match liqi_data_data['type']:
                 case ChiPengGang.Chi:
                     assert len(consumed_mjai) == 2
-                    self.mjai_pending_input_msgs.append(
+                    self.append_action(
                         {
                             'type': MjaiType.CHI,
                             'actor': actor,
@@ -450,7 +455,7 @@ class GameState:
                     )
                 case ChiPengGang.Peng:
                     assert len(consumed_mjai) == 2
-                    self.mjai_pending_input_msgs.append(
+                    self.append_action(
                         {
                             'type': MjaiType.PON,
                             'actor': actor,
@@ -461,7 +466,7 @@ class GameState:
                     )
                 case ChiPengGang.Gang:
                     assert len(consumed_mjai) == 3
-                    self.mjai_pending_input_msgs.append(
+                    self.append_action(
                         {
                             'type': MjaiType.DAIMINKAN,
                             'actor': actor,
@@ -491,7 +496,7 @@ class GameState:
                             self.kyoku_state.my_tehai.remove(c)
                         self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)
 
-                    self.mjai_pending_input_msgs.append(
+                    self.append_action(
                         {
                             'type': MjaiType.ANKAN,
                             'actor': actor,
@@ -510,7 +515,7 @@ class GameState:
                         self.kyoku_state.my_tehai.remove(tile_mjai)
                         self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)
 
-                    self.mjai_pending_input_msgs.append(
+                    self.append_action(
                         {
                             'type': MjaiType.KAKAN,
                             'actor': actor,
@@ -529,7 +534,7 @@ class GameState:
                 self.kyoku_state.my_tehai.remove('N')
                 self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)
 
-            self.mjai_pending_input_msgs.append(
+            self.append_action(
                 {
                     'type': MjaiType.NUKIDORA,
                     'actor': actor,
@@ -562,7 +567,7 @@ class GameState:
     def ms_end_kyoku(self) -> dict | None:
         """ End kyoku and get None as reaction"""
         self.mjai_pending_input_msgs = []
-        # self.mjai_pending_input_msgs.append(
+        # self.append_action(
         #     {
         #         'type': MJAI_TYPE.END_KYOKU
         #     }
@@ -583,7 +588,7 @@ class GameState:
         except Exception as e:
             LOGGER.warning("Error finding scores in game results: %s",e, exc_info=True)
 
-        # self.mjai_pending_input_msgs.append(
+        # self.append_action(
         #     {
         #         'type': MJAI_TYPE.END_GAME
         #     }

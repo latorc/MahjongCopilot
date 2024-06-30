@@ -547,10 +547,8 @@ def mjai_reaction_2_guide(reaction:dict, max_options:int=3, lan_str:LanStr=LanSt
     elif re_type == MjaiType.ANKAN:
         tile_str = get_tile_str(reaction['consumed'][1])
         action_str = f"{ActionUnicode.KAN}{lan_str.KAN}{tile_str}({lan_str.ANKAN})"
-    elif re_type == MjaiType.REACH: # attach reach dahai options
-        reach_dahai_reaction = reaction['reach_dahai']
-        dahai_action_str, _dahai_options = mjai_reaction_2_guide(reach_dahai_reaction, 0, lan_str)
-        action_str = f"{ActionUnicode.REACH}{lan_str.RIICHI}," + dahai_action_str
+    elif re_type == MjaiType.REACH:
+        action_str = f"{ActionUnicode.REACH}{lan_str.RIICHI}"
     elif re_type == MjaiType.HORA:
         if reaction['actor'] == reaction['target']:
             action_str = f"{ActionUnicode.AGARI}{lan_str.AGARI}({lan_str.TSUMO})"

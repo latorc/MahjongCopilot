@@ -82,14 +82,6 @@ class BotMjapi(Bot):
         else:
             return None
 
-        # process self reach
-        if recurse and reaction['type'] == MjaiType.REACH and reaction['actor'] == self.seat:
-            LOGGER.debug("Send reach msg to get reach_dahai.")
-            reach_msg = {'type': MjaiType.REACH, 'actor': self.seat}
-            reach_dahai = self.react(reach_msg, recurse=False)
-            reaction['reach_dahai'] = self._process_reaction(reach_dahai, False)
-            self.ignore_next_turn_self_reach = True
-
         return reaction
 
     def react(self, input_msg:dict, recurse=True) -> dict | None:
