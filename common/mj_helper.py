@@ -351,6 +351,8 @@ def determine_chi_tiles(chi_type, called_tile, hand):
                 if normalize_pai(hand_tile) == normalized_tile:
                     needed_tiles.append(hand_tile)
                     break
+        # Switch needed_tiles to red dora tile if possible
+        needed_tiles = [f"{tile}r" if f"{tile}r" in hand else tile for tile in needed_tiles]
 
     if len(needed_tiles) == len(sequence_tiles):
         return needed_tiles
