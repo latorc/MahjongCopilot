@@ -59,11 +59,11 @@ class GameState:
         if self.mjai_bot is None:
             raise ValueError("Bot is None")
         self.mjai_pending_input_msgs = []   # input msgs to be fed into bot
-        self.game_mode:GameMode = None      # Game mode
 
         ### Game info
         self.account_id = 0                     # Majsoul account id
         self.mode_id:int = -1                   # game mode
+        self.game_mode:GameMode = None          # Game mode
         self.seat = 0                           # seat index
         #seat 0 is chiicha (起家; first dealer; first East)
         #1-2-3 then goes counter-clockwise
@@ -130,12 +130,11 @@ class GameState:
         self.is_bot_calculating = True
         start_time = time.time()
         reaction = self._input_inner(liqi_msg)
-        time_used = time.time() - start_time
         if reaction is not None:
             # Update last_reaction (not none) and set it to pending
             self.last_reaction = reaction
             self.last_reaction_pending = True
-            self.last_reaction_time = time_used
+            self.last_reaction_time = time.time() - start_time
         self.is_bot_calculating = False
         return reaction
 

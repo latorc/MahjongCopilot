@@ -18,8 +18,8 @@ class Tile34(IntEnum):
 
 class RiskCatSuji(IntEnum):
     """ Risk Category, column headers (and column index) for risk table"""
-    #                           # For turn 9 in RISK_TABLE 例如，第9巡的数据为
-    SAFE = 0                    # 0.0 现物 genbutsu
+    #                           # For turn 9 in RISK_TABLE
+    SAFE = 0                    # 0.0 no risk e.g. genbutsu 现物
     NOSUJI_5 = auto()           # 12.8
     NOSUJI_46 = auto()          # 13.1
     NOSUJI_37 = auto()          # 9.5
@@ -43,7 +43,7 @@ class RiskCatSuji(IntEnum):
 
 
 RISK_TABLE_SUJI = [
-	[],                                                                             # 字牌                              # 巡目 Turn
+	[],                                                                             # Honor tiles                       # 巡目 Turn
 	[0, 5.7, 5.7, 5.8, 4.7, 3.4, 2.5, 2.5, 3.1, 5.6, 3.8, 1.8, 0.8, 2.6,            2.1, 1.2, 0.5, 2.4, 1.4, 1.2],      # 1
 	[0, 6.6, 6.9, 6.3, 5.2, 4.0, 3.5, 3.5, 4.1, 5.3, 3.5, 1.9, 0.8, 2.6,            2.3, 1.2, 0.5, 2.7, 1.3, 0.4],
 	[0, 7.7, 8.0, 6.7, 5.8, 4.6, 4.3, 4.1, 4.9, 5.2, 3.6, 1.8, 1.6, 2.0,            2.4, 1.2, 0.3, 2.6, 1.2, 0.3],
@@ -129,7 +129,7 @@ SUJI_TYPE_TABLE = [
 # genbutsu / safe tile
 
 def list_2_array_34(tile_list:list[int]) -> list[int]:
-    """ convert list of 34-tile indices to 34-element array"""
+    """ convert list of tiles in 34-format to 34-array foramt"""
     tile_array = [0] * 34
     for t in tile_list:
         tile_array[t] += 1
@@ -137,40 +137,41 @@ def list_2_array_34(tile_list:list[int]) -> list[int]:
 
 
 def calc_tile_riskcat(
-    safe_tiles_34:set[int],         # set of safe tiles in 34 format
-    tiles_left_34:list[int],        # numbers of tiles left
+    safe_tiles_34t:set[int],        # set of safe tiles (34-tile format)
+    tiles_left_34a:list[int],       # numbers of tiles left (34-array)
     round_wind:int,                 # round wind    27=E, 28=S, 29=W, 30=N
     player_wind:int                 # player wind   27=E, 28=S, 29=W, 30=N
     ) -> list[RiskCatSuji]:
-    """ determine risk category for 34 tiles based on safe tile list and other info
+    """ determine risk category for each of the 34 tiles
+    returns: list of RiskCatSuju (34-array)
     """
     # mark safe tiles in 34-array
-    safe_tiles_34:list[bool] = [False] * 34  # False = risky, True = safe
-    for tile in safe_tiles_34:
-        safe_tiles_34[tile] = True
+    safe_tiles_34a:list[bool] = [False] * 34  # False = risky, True = safe
+    for tile in safe_tiles_34t:
+        safe_tiles_34a[tile] = True
 
     # compute risk category (suji category) for m/p/s tiles
-    risk_cat_34 = [None] * 34
+    risk_cat_34a = [None] * 34
     for idx in range(27):
         num = idx // 9
         if num < 3:
-            risk_cat_34[idx] = SUJI_TYPE_TABLE[num][safe_tiles_34[idx+3]]
-            if num == 0 and safe_tiles_34[idx+3] and tiles_left_34[idx] == 0:
-                # 1: 两面 对碰单骑 都不可能 -> 安牌
-                risk_cat_34[idx] = RiskCatSuji.SAFE
-            if num == 2 and tiles_left_34[idx+2] == 0:
+            risk_cat_34a[idx] = SUJI_TYPE_TABLE[num][safe_tiles_34a[idx+3]]
+            if num == 0 and safe_tiles_34a[idx+3] and tiles_left_34a[idx] == 0:
+                # 数牌1: 两面 对碰单骑 都不可能 -> 安牌
+                risk_cat_34a[idx] = RiskCatSuji.SAFE
+            if num == 2 and tiles_left_34a[idx+2] == 0:
                 # 5壁，37视为筋
-                risk_cat_34[idx] = RiskCatSuji.SUJI_37
+                risk_cat_34a[idx] = RiskCatSuji.SUJI_37
         elif 3 <= num < 6:
-            risk_cat_34[idx] = SUJI_TYPE_TABLE[num][safe_tiles_34[idx-3]][safe_tiles_34[idx+3]]
+            risk_cat_34a[idx] = SUJI_TYPE_TABLE[num][safe_tiles_34a[idx-3]][safe_tiles_34a[idx+3]]
         else: # num 6 7 8
-            risk_cat_34[idx] = SUJI_TYPE_TABLE[num][safe_tiles_34[idx-3]]
-            if num == 8 and safe_tiles_34[idx-3] and tiles_left_34[idx] == 0:
+            risk_cat_34a[idx] = SUJI_TYPE_TABLE[num][safe_tiles_34a[idx-3]]
+            if num == 8 and safe_tiles_34a[idx-3] and tiles_left_34a[idx] == 0:
                 # 9: 两面 对碰单骑 都不可能 -> 安牌
-                risk_cat_34[idx] = RiskCatSuji.SAFE
-            if num == 6 and tiles_left_34[idx-2] == 0:
+                risk_cat_34a[idx] = RiskCatSuji.SAFE
+            if num == 6 and tiles_left_34a[idx-2] == 0:
                 # 5壁，37视为筋
-                risk_cat_34[idx] = RiskCatSuji.SUJI_37
+                risk_cat_34a[idx] = RiskCatSuji.SUJI_37
 
     honor_risk_type = {     # (is yaku, tiles left): RiskCat
         (True, 1):  RiskCatSuji.YAKU_1LEFT,
@@ -189,9 +190,9 @@ def calc_tile_riskcat(
         num = idx//9
         if num in (round_wind, player_wind, Tile34.P, Tile34.F, Tile34.C):
             is_yaku = True  # 该玩家的役牌 = 场风/自风/白/发/中
-        risk_cat_34[idx] = honor_risk_type[(is_yaku, tiles_left_34[idx])]
+        risk_cat_34a[idx] = honor_risk_type[(is_yaku, tiles_left_34a[idx])]
 
-    return risk_cat_34
+    return risk_cat_34a
 
 
 def calc_low_risk_tiles27(tiles_safe_34:list[bool], tile_left_34:list[int]) -> list[bool]:
@@ -230,17 +231,17 @@ def calc_low_risk_tiles27(tiles_safe_34:list[bool], tile_left_34:list[int]) -> l
 
 def calc_risk_tile34(
     turn:int,               # turn number starting from 1
-    discard_list:list[int], # list discarded tiles
+    discard_list:list[int], # list discarded tiles, in 34 format. same for following parameters
     riichi_idx:int,         # index in discard list where riichi was declared
     safe_list:list[int],    # safe tiles (from others' discard after riichi)
     tiles_left_34:list[int],   # number of tiles left for index tile
     dora_list:list[int],    # dora list of tile34 indices
-    round_wind:int,         # round wind 27=E, 28=S, 29=W, 30=N
+    round_wind:int,         # round wind  27=E, 28=S, 29=W, 30=N
     player_wind:int,        # player wind 27=E, 28=S, 29=W, 30=N
     ) -> list[float]:
-    """ calculate risk rate for each of the 34 tiles, to hoju to one opponent
+    """ calculate risk rate for each of the 34 tiles, given the reach opponent
     Returns:
-        list of risk rates for each tile34 index
+        list of risk rates (34-array) for each tile34 index. i.e. list[tile_index_34] = hoju rate
     """
 
     def dora_multi(tile_idx:int, risk_cat:RiskCatSuji) -> float:
@@ -266,7 +267,7 @@ def calc_risk_tile34(
     # 利用「安牌」计算无筋、筋、半筋、双筋的铳率
 	# TODO: 特殊处理宣言牌的筋牌、宣言牌的同色牌的铳率
     tile_riskcat_27 = calc_tile_riskcat(tile_lowrisk_27)
-    for idx in range()
+    for idx in range():
 
 
     tile_risk_34 = [RISK_TABLE_SUJI[turn][t] * dora_multi(idx//9, t) for idx, t in enumerate(tile_riskcat_27)]
