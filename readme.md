@@ -48,6 +48,9 @@ Features:
 5. Main entry: main.py
 
 ### 示例脚本 Sample script：
+
+#### Windows
+
 ```batch
 git clone https://github.com/latorc/MahjongCopilot.git
 cd MahjongCopilot
@@ -58,6 +61,19 @@ set PLAYWRIGHT_BROWSERS_PATH=0
 playwright install chromium
 python main.py
 ```
+#### Unix(Linux/Mac)
+
+```sh
+git clone https://github.com/latorc/MahjongCopilot.git
+cd MahjongCopilot
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+export PLAYWRIGHT_BROWSERS_PATH=0
+playwright install chromium
+python main.py
+```
+
 ### 配置模型
 本程序支持几种模型来源。其中，本地模型（Local）是基于 Akagi 兼容的 Mortal 模型。要获取 Akagi 的模型，请参见 <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a> 的说明。
 ### Model Configuration
