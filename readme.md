@@ -1,8 +1,13 @@
 # 麻将 Copilot / Mahjong Copilot
 
 麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂三人、四人麻将。
-QQ群：834105526 <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=Mec5daqIyUsuZjCLojH_t88hQV6luPxl&jump_from=webapi&authKey=nNSpmIQY3ieVau/oLTF9eNO6YTqAm1+Ne3iE3zpqmFrj61iAUDu/GSpA38g93Zlx"><img border="0" src="https://pub.idqqimg.com/wpa/images/group.png" alt="加入QQ群" title="麻将 Copilot"></a>  
-<a href="https://discord.gg/7hcZYTFw5r" target="_blank">Join Discord</a>
+
+加入QQ群：809862894
+<a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=PQINXihRvJymzTDzjbV2q_1bGnefQ1Cn&jump_from=webapi&authKey=PjnYMadfFGZR5IHHICW5Ag1UvNiYrZP8TXyMPejg1pKLII3Y6Y4W2//K3UP+kI+L"><img border="0" src="https://pub.idqqimg.com/wpa/images/group.png" alt="麻将Copilot讨论-南" title="麻将Copilot讨论-南"></a>
+<br>
+已满QQ群：834105526
+<br>
+Click to <a href="https://discord.gg/7hcZYTFw5r" target="_blank">Join Discord</a>
 
 Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 3-person and 4-person game modes.
 
