@@ -12,8 +12,8 @@ import random
 import threading
 from typing import Iterable, Iterator
 
-from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED
-from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
+from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED, determine_kan_tiles
+from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai, determine_kan_type, determine_chi_tiles, determine_pon_tiles
 from common.log_helper import LOGGER
 from common.settings import Settings
 from common.utils import UiState, GAME_MODES
@@ -377,6 +377,9 @@ class Automation:
             game_state(GameState): game state object
         Returns:
             bool: True means automation kicks off. False means not automating."""
+
+        LOGGER.debug(f'Automating action: {mjai_action}')
+
         if not self.can_automate():
             return False
         if game_state is None or mjai_action is None:
@@ -386,11 +389,12 @@ class Automation:
         gi = game_state.get_game_info()
         assert gi is not None, "Game info is None"
         op_step = game_state.last_op_step
-        mjai_type = mjai_action['type']        
-        
+        mjai_type = mjai_action['type']
+
         if self.st.ai_randomize_choice:     # randomize choice
-            mjai_action = self.randomize_action(mjai_action, gi) 
-        # Dahai action
+            mjai_action = self.randomize_action(mjai_action, gi, game_state)
+            mjai_type = mjai_action['type']
+            # Dahai action
         if  mjai_type == MjaiType.DAHAI:       
             if gi.self_reached:
                 # already in reach state. no need to automate dahai
@@ -403,7 +407,7 @@ class Automation:
         elif mjai_type in [MjaiType.NONE, MjaiType.CHI, MjaiType.PON, MjaiType.DAIMINKAN, MjaiType.ANKAN,
             MjaiType.KAKAN, MjaiType.HORA, MjaiType.REACH, MjaiType.RYUKYOKU, MjaiType.NUKIDORA]:
             liqi_operation = game_state.last_operation
-            more_steps:list[ActionStep] = self.steps_button_action(mjai_action, gi, liqi_operation)
+            more_steps:list[ActionStep] = self.steps_button_action(mjai_action, gi, liqi_operation, game_state)
         
         else:
             LOGGER.error("No automation for unrecognized mjai type: %s", mjai_type)
@@ -423,59 +427,136 @@ class Automation:
         self._task.start_action_steps(action_steps, game_state)
         return True
     
-    def randomize_action(self, action:dict, gi:GameInfo) -> dict:
-        """ Randomize ai choice: pick according to probaility from top 3 options"""
+    def randomize_action(self, action:dict, gi:GameInfo, game_state:GameState) -> dict:
+        """ Randomize ai choice: pick according to probaility from at most top 3 options"""
         n = self.st.ai_randomize_choice     # randomize strength. 0 = no random, 5 = according to probability
         if n == 0:
             return action
+        if len(action['meta_options']) == 0:
+            return action # no options to randomize
         mjai_type = action['type']
-        if mjai_type == MjaiType.DAHAI:
-            orig_pai = action['pai']
-            options:dict = action['meta_options']            # e.g. {'1m':0.95, 'P':0.045, 'N':0.005, ...}
-            # get dahai options (tile only) from top 3
-            top_ops:list = [(k,v) for k,v in options[:3] if k in MJAI_TILES_SORTED]        
-            #pick from top3 according to probability
-            power = 1 / (0.2 * n)
-            sum_probs = sum([v**power for k,v in top_ops])
-            top_ops_powered = [(k, v**power/sum_probs) for k,v in top_ops]
-            
-            # 1. Calculate cumulative probabilities
-            cumulative_probs = [top_ops_powered[0][1]]
-            for i in range(1, len(top_ops_powered)):
-                cumulative_probs.append(cumulative_probs[-1] + top_ops_powered[i][1])
+        options: dict = action['meta_options']
+        # get options (tile only) from top 3 at most
+        top_ops = sorted(options, key=lambda item: item[1], reverse=True)[:3]
 
-            # 2. Pick an option based on a random number
-            rand_prob = random.random()  # Random float: 0.0 <= x < 1.0
-            chosen_pai = orig_pai  # Default in case no option is selected, for safety
-            prob = top_ops_powered[0][1]
-            for i, cum_prob in enumerate(cumulative_probs):
-                if rand_prob < cum_prob:
-                    chosen_pai = top_ops_powered[i][0]  # This is the selected key based on probability
-                    prob = top_ops_powered[i][1]        # the probability
-                    orig_prob = top_ops[i][1]
-                    break
-                
-            if chosen_pai == orig_pai:  # return original action if no change
-                change_str = f"{action['pai']} Unchanged"
-            else:
-                change_str = f"{action['pai']} -> {chosen_pai}"
-            
-            # generate new action for changed tile
-            tsumogiri = chosen_pai == gi.my_tsumohai
-            new_action = {
-                'type': MjaiType.DAHAI,
-                'actor': action['actor'],
-                'pai': chosen_pai,
-                'tsumogiri': tsumogiri
-            }
-            msg = f"Randomized dahai: {change_str} ([{n}] {orig_prob*100:.1f}% -> {prob*100:.1f}%)"
-            LOGGER.debug(msg)
-            return new_action
-        # other MJAI types
-        else:
+        # pick from top3 according to probability
+        power = 1 / (0.2 * n)
+        sum_probs = sum([v ** power for k, v in top_ops])
+        top_ops_powered = [(k, v ** power / sum_probs) for k, v in top_ops]
+
+        # 1. Calculate cumulative probabilities
+        cumulative_probs = [top_ops_powered[0][1]]
+        for i in range(1, len(top_ops_powered)):
+            cumulative_probs.append(cumulative_probs[-1] + top_ops_powered[i][1])
+
+        # 2. Pick an option based on a random number
+        rand_prob = random.random()  # Random float: 0.0 <= x < 1.0
+        chosen_option, prob, orig_prob = None, None, None
+        for i, cum_prob in enumerate(cumulative_probs):
+            if rand_prob < cum_prob:
+                chosen_option = top_ops_powered[i][0]  # This is the selected key based on probability
+                prob = top_ops_powered[i][1]  # the probability
+                orig_prob = top_ops[i][1]
+                break
+
+        # 3. Check if the chosen option is the highest probability option
+        if chosen_option == top_ops[0][0]:  # Compare with the original top option
+            LOGGER.debug("Chosen option is the highest probability option, returning original action.")
             return action
 
-    
+        LOGGER.debug(f"Randomized Option, Chosen: {chosen_option}, Prob: {prob:.2f}, "
+                     f"Orig Prob: {orig_prob:.2f}, Orig Option: {top_ops[0][0]}")
+
+        new_action = self.construct_new_action(chosen_option, gi, game_state, action)
+        return new_action
+
+    def construct_new_action(self, chosen_option:str, gi:GameInfo, game_state:GameState, action:dict):
+        new_action = None
+        if chosen_option in MJAI_TILES_SORTED:
+            new_action = {
+                'type': MjaiType.DAHAI,
+                'actor': gi.self_seat,
+                'pai': chosen_option,
+                'tsumogiri': chosen_option == gi.my_tsumohai
+            }
+        elif chosen_option in ['chi_low', 'chi_mid', 'chi_high']:
+            called_tile = game_state.last_action['pai']
+            hand = game_state.get_game_info().my_tehai
+            chi_tiles = determine_chi_tiles(chosen_option, called_tile, hand)
+            target = game_state.last_action['actor']
+            consumed = chi_tiles
+            new_action = {
+                'type': MjaiType.CHI,
+                'actor': gi.self_seat,
+                'target': target,
+                'pai': called_tile,
+                'consumed': consumed
+            }
+        elif chosen_option == 'pon':
+            target = game_state.last_action['actor']
+            consumed = determine_pon_tiles(game_state.last_action['pai'], game_state.get_game_info().my_tehai)
+            new_action = {
+                'type': MjaiType.PON,
+                'actor': gi.self_seat,
+                'target': target,
+                'pai': game_state.last_action['pai'],
+                'consumed': consumed
+            }
+        elif chosen_option == 'kan_select':
+            last_action = game_state.last_action
+            hand = game_state.get_game_info().my_tehai
+            kan_type = determine_kan_type(last_action, hand)
+            target = last_action['actor']
+            consumed = determine_kan_tiles(last_action['pai'])
+            if kan_type == MjaiType.DAIMINKAN:
+                new_action = {
+                    'type': MjaiType.DAIMINKAN,
+                    'actor': gi.self_seat,
+                    'target': target,
+                    'pai': last_action['pai'],
+                    'consumed': consumed
+                }
+            elif kan_type == MjaiType.ANKAN or MjaiType.KAKAN:
+                new_action = {
+                    'type': kan_type,
+                    'actor': gi.self_seat,
+                    'pai': last_action['pai'],
+                    'consumed': consumed
+                }
+        elif chosen_option == 'hora':
+            target = game_state.last_action['actor']
+            new_action = {
+                'type': MjaiType.HORA,
+                'actor': gi.self_seat,
+                'target': target
+            }
+        elif chosen_option == 'ryukyoku':
+            target = game_state.last_action['actor']
+            new_action = {
+                'type': MjaiType.RYUKYOKU,
+                'actor': gi.self_seat,
+                'target': target
+            }
+        elif chosen_option == 'none':
+            new_action = {
+                'type': MjaiType.NONE
+            }
+        elif chosen_option == 'nukidora':
+            new_action = {
+                'type': MjaiType.NUKIDORA,
+                'actor': gi.self_seat
+            }
+        elif chosen_option == 'reach':
+            new_action = {
+                'type': MjaiType.REACH,
+                'actor': gi.self_seat
+            }
+        else:
+            LOGGER.error(f"Unknown chosen option: {chosen_option}")
+        LOGGER.debug(f"Constructed new action: {new_action}")
+        return new_action
+
+
     def last_exec_time(self) -> float:
         """ return the time of last action execution. return -1 if N/A"""
         if self._task:
@@ -603,7 +684,8 @@ class Automation:
         return op_list        
 
     
-    def steps_button_action(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict) -> list[ActionStep]:
+    def steps_button_action(self, mjai_action:dict, gi:GameInfo, liqi_operation:dict,
+                            game_state:GameState) -> list[ActionStep]:
         """Generate action steps for button actions (chi, pon, kan, etc.)"""       
         if 'operationList' not in liqi_operation:   # no liqi operations provided - no buttons to click
             return []
@@ -633,8 +715,8 @@ class Automation:
             return steps
 
         # Reach: process subsequent reach dahai action
-        if mstype_from_mjai == MSType.reach:            
-            reach_dahai = mjai_action['reach_dahai']
+        if mstype_from_mjai == MSType.reach:
+            reach_dahai = game_state.mjai_bot.get_reach_dahai()
             delay = self.get_delay(reach_dahai, gi)
             steps.append(ActionStepDelay(delay))
             dahai_steps = self.steps_action_dahai(reach_dahai, gi)
