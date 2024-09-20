@@ -40,7 +40,7 @@ class BotManager:
         self.liqi_parser = liqi.LiqiProto()
         self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
         self.proxy_injector = proxinject.ProxyInjector()
-        self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
+        self.browser = GameBrowser(self.st.browser_width, self.st.browser_height, self.st.scale_factor)
         self.automation = Automation(self.browser, self.st)
         self.bot:Bot = None
 
@@ -126,14 +126,14 @@ class BotManager:
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
-        self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
+        self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.scale_factor, self.st.enable_chrome_ext)
     
     def is_browser_zoom_off(self):
         """ check browser zoom level, return true if zoomlevel is not 1"""
         if self.browser and self.browser.is_page_normal():
             zoom = self.browser.zoomlevel_check
             if zoom is not None:
-                if abs(zoom - 1) > 0.001:
+                if abs(zoom - self.browser.device_scale_factor) > 0.001:
                     return True
         return False
         
