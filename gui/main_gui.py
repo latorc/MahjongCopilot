@@ -324,7 +324,8 @@ class MainGUI(tk.Tk):
                 ai_guide_str += f" {tile_str:8}  {weight*100:4.0f}%\n"
             self.ai_guide_var.set(ai_guide_str)
         else:
-            self.ai_guide_var.set("")
+            if not self.ai_guide_var.get():
+                self.ai_guide_var.set("")
 
         # update game info: display tehai + tsumohai
         gi:GameInfo = self.bot_manager.get_game_info()
