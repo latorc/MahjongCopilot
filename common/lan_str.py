@@ -3,6 +3,8 @@
 class LanStr:
     """ String constants for default language (English) """
     LANGUAGE_NAME = 'English'
+    PREFERRED_FONT_FAMILY = 'Arial'
+    IS_CJK = False
 
     # GUI
     APP_TITLE = 'Mahjong Copilot'
@@ -111,7 +113,9 @@ class LanStr:
     RON = "Ron"
     RYUKYOKU = "Ryukyoku"
     NUKIDORA = "Nukidora"
-    OPTIONS_TITLE = "Options:"    
+    OPTIONS_TITLE = "Options:"
+    OK_BUTTON = "OK"
+    CANCEL_BUTTON = "Cancel"    
     
     MJAI_2_STR = {
         '1m': '1 Man', '2m': '2 Man', '3m': '3 Man', '4m': '4 Man', '5m': '5 Man',
@@ -137,6 +141,8 @@ class LanStr:
 class LanStrZHS(LanStr):
     """ String constants for Chinese Simplified"""
     LANGUAGE_NAME = '简体中文'
+    PREFERRED_FONT_FAMILY = 'Microsoft YaHei UI'
+    IS_CJK = True
     
     # GUI
     APP_TITLE = '麻将 Copilot'
@@ -247,7 +253,9 @@ class LanStrZHS(LanStr):
     RON = "荣和"
     RYUKYOKU = "流局"
     NUKIDORA = "拔北"
-    OPTIONS_TITLE = "候选项:"    
+    OPTIONS_TITLE = "候选项:"
+    OK_BUTTON = "确定"
+    CANCEL_BUTTON = "取消"    
     
     MJAI_2_STR ={
         '1m': '一萬', '2m': '二萬', '3m': '三萬', '4m': '四萬', '5m': '伍萬',
