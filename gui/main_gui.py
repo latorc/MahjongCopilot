@@ -471,7 +471,10 @@ class MainGUI(ctk.CTk):
 
     def _on_btn_help_clicked(self):
         try:
-            help_win = HelpWindow(self, self.st, self.updater); help_win.grab_set()
+            help_win = HelpWindow(self, self.st, self.updater)
+            help_win.grab_set()
+            self.wait_window(help_win)
+
         except Exception as e: LOGGER.error(f"打开帮助窗口时出错: {e}", exc_info=True); messagebox.showerror("错误", f"无法打开帮助窗口:\n{e}")
 
     def _on_exit(self):

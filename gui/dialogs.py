@@ -64,8 +64,8 @@ class ConfirmExitDialog(ctk.CTkToplevel):
         # 2. 【延迟执行】使用 after 设置 PhotoImage (关键步骤，用于窗口左上角)
         if master_icon_photo and isinstance(master_icon_photo, ImageTk.PhotoImage): # 检查是否是有效的 PhotoImage 对象
             try:
-                # 延迟 250 毫秒后执行 lambda 函数来设置 iconphoto
-                self.after(250, lambda: self.iconphoto(False, master_icon_photo))
+                # 延迟 210 毫秒后执行 lambda 函数来设置 iconphoto
+                self.after(210, lambda: self.iconphoto(False, master_icon_photo))
                 LOGGER.debug("对话框: 已安排 iconphoto 设置。")
             except Exception as e_schedule:
                 LOGGER.error(f"对话框安排 iconphoto 设置失败: {e_schedule}", exc_info=True)

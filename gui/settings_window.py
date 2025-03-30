@@ -72,7 +72,7 @@ class SettingsWindow(ctk.CTkToplevel):
         if parent_icon_photo and isinstance(parent_icon_photo, ImageTk.PhotoImage):
             try:
                 # 使用与 ConfirmExitDialog 相同的延迟
-                self.after(250, lambda: self.iconphoto(False, parent_icon_photo))
+                self.after(210, lambda: self.iconphoto(False, parent_icon_photo))
                 LOGGER.debug("SettingsWindow: 已安排 iconphoto 设置。")
             except Exception as e_schedule:
                 LOGGER.error(f"SettingsWindow 安排 iconphoto 设置失败: {e_schedule}", exc_info=True)

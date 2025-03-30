@@ -1,19 +1,21 @@
-# coding: utf-8 # Add encoding declaration for potentially non-ASCII characters in comments/strings
+# coding: utf-8
 """ 使用 customtkinter 的帮助窗口 (整合优化与图标设置) """
 
-import os # Needed for os.path.exists
+import os
 import threading
 from typing import Callable
 import tkinter as tk
 from tkinter import messagebox
 import customtkinter as ctk
 from tkhtmlview import HTMLScrolledText
-from PIL import ImageTk # Needed for iconphoto if using PIL images
+from PIL import Image, ImageTk # 确保导入 Image
 
 # Assuming these are correctly imported from your project structure
 from common.log_helper import LOGGER
 from common.settings import Settings
 from updater import Updater, UpdateStatus # Ensure UpdateStatus has all required members
+from common.utils import Folder, sub_file
+
 
 class HelpWindow(ctk.CTkToplevel):
     """ 使用 customtkinter 实现的帮助信息和更新对话框 (优化版 + 图标) """
@@ -26,10 +28,12 @@ class HelpWindow(ctk.CTkToplevel):
         self.updater = updater
         self._refresh_timer_id = None # 用于取消 after 定时器
         self.html_text = None         # 缓存加载的 HTML
+        self._app_icon_photo = None   # 存储 PhotoImage 引用
 
         # --- 基本窗口设置 ---
         title_str = f"{st.lan().HELP} {st.lan().APP_TITLE} v{self.updater.local_version}"
         self.title(title_str)
+        self._parent = parent
 
         # --- 窗口几何与位置 (优化版) ---
         try:
@@ -42,20 +46,15 @@ class HelpWindow(ctk.CTkToplevel):
             if parent_w > 0 and parent_h > 0:
                 new_x = parent_x + (parent_w // 2) - (self.WIN_WIDTH // 2)
                 new_y = parent_y + (parent_h // 2) - (self.WIN_HEIGHT // 2)
-                # 基本边界检查，防止窗口完全移出屏幕 (可选)
-                # screen_w = self.winfo_screenwidth()
-                # screen_h = self.winfo_screenheight()
-                # new_x = max(0, min(new_x, screen_w - self.WIN_WIDTH))
-                # new_y = max(0, min(new_y, screen_h - self.WIN_HEIGHT))
                 self.geometry(f'{self.WIN_WIDTH}x{self.WIN_HEIGHT}+{new_x}+{new_y}')
                 LOGGER.debug(f"HelpWindow centered relative to parent at {new_x},{new_y}")
             else:
+                # 如果父窗口尺寸为0，可能父窗口还未完全绘制或被隐藏
+                LOGGER.warning("父窗口尺寸报告为零，尝试屏幕居中。")
                 raise ValueError("Parent window dimensions reported as zero.")
         except Exception as e:
             LOGGER.warning(f"无法基于父窗口居中 ({e}), 尝试屏幕居中。")
             try:
-                # 回退到屏幕居中
-                self.update_idletasks() # Ensure screen dimensions are available
                 screen_w = self.winfo_screenwidth()
                 screen_h = self.winfo_screenheight()
                 new_x = (screen_w // 2) - (self.WIN_WIDTH // 2)
@@ -63,96 +62,14 @@ class HelpWindow(ctk.CTkToplevel):
                 self.geometry(f'{self.WIN_WIDTH}x{self.WIN_HEIGHT}+{new_x}+{new_y}')
                 LOGGER.debug(f"HelpWindow centered on screen at {new_x},{new_y}")
             except Exception as e2:
-                LOGGER.warning(f"屏幕居中失败 ({e2}), 使用固定偏移量 +100+100。")
+                LOGGER.error(f"屏幕居中失败 ({e2}), 使用固定偏移量 +100+100。", exc_info=True)
                 self.geometry(f'{self.WIN_WIDTH}x{self.WIN_HEIGHT}+100+100') # 最终回退
 
         # --- 窗口行为 ---
-        # self.resizable(False, False) # 取消注释以禁用缩放
         self.lift()  # 将窗口置于顶层
         self.attributes("-topmost", True)  # 初始保持窗口在最前
-        # 稍后允许其他窗口置于其上 (200ms 应该足够)
-        self.after(200, lambda: self.attributes("-topmost", False))
+        self.after(200, lambda: self.attributes("-topmost", False)) # 稍后允许其他窗口置于其上
         self.protocol("WM_DELETE_WINDOW", self._on_close)  # 处理关闭按钮
-        
-        
-        try:
-            # 使用 winfo_toplevel() 获取包含此窗口的顶级窗口 (即主程序窗口)
-            top_level_window = self.winfo_toplevel()
-            LOGGER.debug(f"HelpWindow: Found top_level_window: {top_level_window}")
-
-            # 从顶级窗口获取图标属性
-            master_icon_path_ico = getattr(top_level_window, 'app_icon_path_ico', None)
-            master_icon_photo = getattr(top_level_window, 'app_icon_photo', None)
-            LOGGER.debug(f"HelpWindow: Icon path from top_level: {master_icon_path_ico}")
-            LOGGER.debug(f"HelpWindow: Icon photo obj from top_level: {'Exists' if master_icon_photo else 'None'}")
-
-        except Exception as e:
-            # 如果获取顶级窗口或属性时出错，则记录错误并继续
-            LOGGER.error(f"HelpWindow: Failed to get top_level_window or icon attributes: {e}", exc_info=True)
-            master_icon_path_ico = None
-            master_icon_photo = None
-
-        # 1. 尝试设置 .ico (影响任务栏等)
-        if master_icon_path_ico and isinstance(master_icon_path_ico, str) and os.path.exists(master_icon_path_ico):
-            try:
-                self.wm_iconbitmap(master_icon_path_ico)
-                LOGGER.debug(f"HelpWindow: wm_iconbitmap set to {master_icon_path_ico}")
-            except tk.TclError as e_wm_ico:
-                LOGGER.warning(f"HelpWindow: TclError setting wm_iconbitmap: {e_wm_ico}")
-            except Exception as e_wm_ico_gen:
-                LOGGER.warning(f"HelpWindow: Failed to set wm_iconbitmap: {e_wm_ico_gen}", exc_info=False)
-        else:
-            # 提供更详细的日志，说明为什么没有设置 .ico
-            if not master_icon_path_ico:
-                 LOGGER.debug("HelpWindow: No 'app_icon_path_ico' attribute found on top_level_window.")
-            elif not isinstance(master_icon_path_ico, str):
-                 LOGGER.debug(f"HelpWindow: 'app_icon_path_ico' is not a string: {type(master_icon_path_ico)}")
-            elif not os.path.exists(master_icon_path_ico):
-                 LOGGER.debug(f"HelpWindow: Icon file path does not exist: {master_icon_path_ico}")
-            else:
-                 LOGGER.debug("HelpWindow: No valid .ico path found on master for wm_iconbitmap (unknown reason).")
-
-
-        # 2. 尝试设置 PhotoImage (影响窗口左上角), 延迟执行以提高兼容性
-        if master_icon_photo and isinstance(master_icon_photo, ImageTk.PhotoImage):
-            try:
-                # 延迟设置 iconphoto，增加成功率
-                self.after(250, lambda: self._safe_set_iconphoto(master_icon_photo))
-                LOGGER.debug("HelpWindow: Scheduled iconphoto setting.")
-            except Exception as e_schedule:
-                LOGGER.error(f"HelpWindow: Failed to schedule iconphoto setting: {e_schedule}", exc_info=True)
-        else:
-            # 提供更详细的日志
-            if not master_icon_photo:
-                 LOGGER.debug("HelpWindow: No 'app_icon_photo' attribute found on top_level_window.")
-            elif not isinstance(master_icon_photo, ImageTk.PhotoImage):
-                 LOGGER.debug(f"HelpWindow: 'app_icon_photo' is not a PhotoImage: {type(master_icon_photo)}")
-            else:
-                 LOGGER.debug("HelpWindow: No valid PhotoImage found on master for iconphoto (unknown reason).")
-
-        # 1. 尝试设置 .ico (影响任务栏等)
-        if master_icon_path_ico and isinstance(master_icon_path_ico, str) and os.path.exists(master_icon_path_ico):
-            try:
-                self.wm_iconbitmap(master_icon_path_ico)
-                LOGGER.debug(f"HelpWindow: wm_iconbitmap set to {master_icon_path_ico}")
-            except tk.TclError as e_wm_ico:
-                LOGGER.warning(f"HelpWindow: TclError setting wm_iconbitmap: {e_wm_ico}")
-            except Exception as e_wm_ico_gen:
-                LOGGER.warning(f"HelpWindow: Failed to set wm_iconbitmap: {e_wm_ico_gen}", exc_info=False) # exc_info=False for less noise
-        else:
-            LOGGER.debug("HelpWindow: No valid .ico path found on master for wm_iconbitmap.")
-
-        # 2. 尝试设置 PhotoImage (影响窗口左上角), 延迟执行以提高兼容性
-        if master_icon_photo and isinstance(master_icon_photo, ImageTk.PhotoImage):
-            try:
-                # 延迟设置 iconphoto，增加成功率
-                self.after(250, lambda: self._safe_set_iconphoto(master_icon_photo))
-                LOGGER.debug("HelpWindow: Scheduled iconphoto setting.")
-            except Exception as e_schedule:
-                LOGGER.error(f"HelpWindow: Failed to schedule iconphoto setting: {e_schedule}", exc_info=True)
-        else:
-             LOGGER.debug("HelpWindow: No valid PhotoImage found on master for iconphoto.")
-        # --- 图标设置结束 ---
 
         # --- HTML 显示区域 ---
         self.html_box = HTMLScrolledText(
@@ -180,7 +97,6 @@ class HelpWindow(ctk.CTkToplevel):
             state="disabled", # 初始禁用, 等待 _refresh_ui 确定状态
             command=lambda: None # 占位符
         )
-        # Use sticky="ew" to make the button expand horizontally within its grid cell
         self.update_button.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=5)
 
         # --- 更新状态标签 ---
@@ -191,7 +107,6 @@ class HelpWindow(ctk.CTkToplevel):
             anchor="w",  # Align text to the left
             justify=tk.LEFT
         )
-        # Use sticky="ew" to make the label expand horizontally
         self.update_label.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
 
         # --- OK 按钮 ---
@@ -201,101 +116,172 @@ class HelpWindow(ctk.CTkToplevel):
             command=self._on_close,
             width=100 # Fixed width might be better than default for consistency
         )
-        # Use sticky="e" to align the button to the right of its grid cell
         self.ok_button.grid(row=0, column=2, sticky="e", padx=(5, 0), pady=5)
 
         # --- 启动 UI 刷新循环 ---
-        # Short delay before first refresh to allow window rendering
-        self.after(100, self._refresh_ui)
+        self.after(100, self._refresh_ui) # 稍作延迟启动刷新
 
-    def _safe_set_iconphoto(self, icon_photo: ImageTk.PhotoImage):
-        """ Safely sets the iconphoto, checking if the window still exists. """
-        try:
-            if self.winfo_exists():
-                self.iconphoto(False, icon_photo)
-                LOGGER.debug("HelpWindow: iconphoto set successfully.")
+        # --- !!! 延迟设置图标 !!! ---
+        # 安排在 210 毫秒后调用 _setup_icon 方法
+        # 这个时间点应该在 CustomTkinter 完成其初始绘制之后
+        delay_ms = 210
+        self.after(delay_ms, self._setup_icon)
+        LOGGER.debug(f"已安排在 {delay_ms}ms 后调用 _setup_icon。")
+        # ---------------------------
+
+    def _setup_icon(self):
+            """设置窗口图标 (优先 PNG for iconphoto, ICO for iconbitmap) - 修正版 v2"""
+            LOGGER.debug("开始设置 HelpWindow 图标...")
+            icon_path_png = None
+            icon_path_ico = None
+            photo_icon_set = False # 标记 iconphoto 是否成功设置
+            bitmap_icon_set = False # 标记 iconbitmap 是否成功设置
+
+            # --- 步骤 1: 尝试设置任务栏/WM 图标 (使用 .ico) ---
+            try:
+                icon_path_ico = sub_file(Folder.RES, 'icon.ico')
+                LOGGER.debug(f"尝试获取 .ico 路径: {icon_path_ico}")
+                if icon_path_ico and os.path.exists(icon_path_ico):
+                    LOGGER.debug(".ico 文件存在，尝试设置 iconbitmap...")
+                    try:
+                        self.iconbitmap(icon_path_ico)
+                        bitmap_icon_set = True # 标记 iconbitmap 调用成功（无异常）
+                        LOGGER.debug("已尝试使用 .ico 设置图标 (通过 iconbitmap)")
+                    except Exception as e_ico_bitmap:
+                        LOGGER.warning(f"使用 iconbitmap 设置 .ico 失败: {e_ico_bitmap}")
+                else:
+                    LOGGER.debug(f".ico 文件不存在或路径无效: {icon_path_ico}")
+            except Exception as e_ico:
+                LOGGER.warning(f"处理 .ico 文件路径时出错: {e_ico}", exc_info=True)
+
+            # --- 步骤 2: 尝试设置窗口左上角图标 (优先使用 .png) ---
+            try:
+                icon_path_png = sub_file(Folder.RES, 'icon.png')
+                LOGGER.debug(f"尝试获取 .png 路径: {icon_path_png}")
+                if icon_path_png and os.path.exists(icon_path_png):
+                    LOGGER.debug(".png 文件存在，尝试使用 Pillow 加载并设置 iconphoto...")
+                    try:
+                        pil_image = Image.open(icon_path_png)
+                        photo_icon = ImageTk.PhotoImage(pil_image)
+                        self._app_icon_photo = photo_icon
+                        LOGGER.debug(f"PNG PhotoImage 已创建并存储: {self._app_icon_photo}")
+                        # 检查窗口是否仍然存在，以防在延迟期间被关闭
+                        if self.winfo_exists():
+                            self.iconphoto(False, self._app_icon_photo)
+                            self.iconphoto(False, self._app_icon_photo)
+                            photo_icon_set = True # 标记 iconphoto 调用成功（无异常）
+                            LOGGER.debug("已使用 .png 设置图标 (通过 Pillow + iconphoto)")
+                        else:
+                            LOGGER.debug("窗口在延迟设置 iconphoto 之前已关闭。")
+                    except ImportError:
+                            LOGGER.error("Pillow (PIL) 库未安装或导入失败。无法加载 PNG 图标。请运行 'pip install Pillow'")
+                    except FileNotFoundError:
+                            LOGGER.error(f"图标文件 .png 未找到 (路径: {icon_path_png})")
+                    except Exception as e_png:
+                        LOGGER.error(f"加载或设置 .png 图标时出错: {e_png}", exc_info=True)
+                else:
+                    LOGGER.warning(f".png 文件不存在或路径无效: {icon_path_png}")
+
+            except Exception as e_png_path:
+                LOGGER.warning(f"处理 .png 文件路径时出错: {e_png_path}", exc_info=True)
+
+
+            # --- 步骤 3: 如果 PNG 失败，最后尝试用 tk.PhotoImage 加载 ICO 设置 iconphoto (成功率低) ---
+            if not photo_icon_set and icon_path_ico and os.path.exists(icon_path_ico):
+                LOGGER.debug("PNG 设置 iconphoto 失败或未执行，尝试用 tk.PhotoImage 加载 ICO 设置 iconphoto...")
+                try:
+                    ico_photo = tk.PhotoImage(file=icon_path_ico)
+                    self.iconphoto(False, ico_photo)
+                    self._app_icon_photo = ico_photo # 存储引用
+                    photo_icon_set = True
+                    LOGGER.debug("已尝试使用 tk.PhotoImage 加载 .ico 设置 iconphoto (可能失败)")
+                except tk.TclError as e_ico_photo:
+                    LOGGER.warning(f"tk.PhotoImage 加载 .ico 用于 iconphoto 再次失败: {e_ico_photo}")
+                except Exception as e_ico_generic:
+                        LOGGER.error(f"尝试用 tk.PhotoImage 加载 ICO 设置 iconphoto 时发生意外错误: {e_ico_generic}", exc_info=True)
+
+
+            # --- 最终日志 ---
+            if photo_icon_set:
+                LOGGER.info("窗口左上角图标 (iconphoto) 已成功设置。")
             else:
-                LOGGER.debug("HelpWindow: Window destroyed before iconphoto could be set.")
-        except tk.TclError as e:
-            LOGGER.warning(f"HelpWindow: TclError setting iconphoto: {e}")
-        except Exception as e:
-            LOGGER.error(f"HelpWindow: Unexpected error setting iconphoto: {e}", exc_info=True)
+                LOGGER.warning("未能成功设置窗口左上角图标 (iconphoto)。")
+            if bitmap_icon_set:
+                LOGGER.info("任务栏/WM 图标 (iconbitmap) 已成功设置。")
+            else:
+                    LOGGER.warning("未能成功设置任务栏/WM 图标 (iconbitmap)。")
 
+
+            LOGGER.debug("HelpWindow 图标设置结束。")
+
+    # _safe_set_iconphoto 不再需要，已集成到 _setup_icon
+
+    # ... (其他方法 _run_in_thread, _check_for_update 等保持不变) ...
 
     def _run_in_thread(self, target_func: Callable, *args):
         """辅助函数：在单独的线程中运行目标函数"""
-        # Ensure the target function handles its own exceptions or updates state safely
         thread = threading.Thread(target=target_func, args=args, daemon=True)
         thread.start()
-        LOGGER.debug(f"Started background thread for: {target_func.__name__}")
+        LOGGER.debug(f"启动后台线程: {target_func.__name__}")
 
     def _check_for_update(self):
         """检查更新 (在线程中运行)"""
-        LOGGER.info("Requesting update check...")
-        # Immediately disable button, text/status updates handled by _refresh_ui
-        if self.winfo_exists(): # Check window exists before configuring
+        LOGGER.info("请求检查更新...")
+        if self.winfo_exists():
              self.update_button.configure(state="disabled")
-             # Updater needs to set status to CHECKING for UI feedback
              self._run_in_thread(self.updater.check_update)
         else:
-             LOGGER.warning("Update check requested but window no longer exists.")
+             LOGGER.warning("请求检查更新时窗口已不存在。")
 
 
     def _download_update(self):
         """下载并解压更新 (在线程中运行)"""
-        LOGGER.info("Requesting update download and preparation...")
+        LOGGER.info("请求下载并准备更新...")
         if self.winfo_exists():
             self.update_button.configure(state="disabled")
-            # Updater needs to set status to DOWNLOADING etc.
             self._run_in_thread(self.updater.prepare_update)
         else:
-            LOGGER.warning("Update download requested but window no longer exists.")
+            LOGGER.warning("请求下载更新时窗口已不存在。")
 
 
     def _start_update(self):
         """开始更新过程 (确认后执行)"""
-        LOGGER.info("Asking user to confirm starting the update...")
-        # messagebox is modal and blocks, which is acceptable for user confirmation
-        # Ensure parent=self so the messagebox appears over the help window
-        confirm_message = getattr(self.st.lan(), 'UPDATE_PREPARED_CONFIRM', self.st.lan().UPDATE_PREPARED) # More specific msg if available
+        LOGGER.info("询问用户是否开始更新...")
+        confirm_message = getattr(self.st.lan(), 'UPDATE_PREPARED_CONFIRM', self.st.lan().UPDATE_PREPARED)
 
+        # 确保 messagebox 的父窗口是 HelpWindow
         if messagebox.askokcancel(self.st.lan().START_UPDATE, confirm_message, parent=self):
-            LOGGER.info("User confirmed update. Executing start command...")
+            LOGGER.info("用户确认更新。执行启动命令...")
             if not self.winfo_exists():
-                 LOGGER.warning("Window closed before update could be started after confirmation.")
+                 LOGGER.warning("确认更新后，窗口在启动前关闭。")
                  return
 
-            self.update_button.configure(state="disabled") # Disable button after confirmation
+            self.update_button.configure(state="disabled")
             try:
-                # Assuming start_update initiates the external updater and quits
-                # This call itself should be quick, but the *consequence* is app exit
                 self.updater.start_update()
-                # If start_update doesn't exit the app itself, you might need:
-                # LOGGER.info("Update process started, closing help window.")
+                # 如果 start_update 不退出应用，可能需要手动关闭 HelpWindow
                 # self._on_close()
             except Exception as e:
-                LOGGER.error(f"Failed to start the update process: {e}", exc_info=True)
+                LOGGER.error(f"启动更新进程失败: {e}", exc_info=True)
                 if self.winfo_exists():
                     messagebox.showerror(self.st.lan().ERROR, f"{self.st.lan().ERROR_STARTING_UPDATE}: {e}", parent=self)
-                    # Re-enable check button after failed start
+                    # 启动失败后，恢复按钮状态以便重试
                     self.update_button.configure(state="normal", text=self.st.lan().CHECK_FOR_UPDATE, command=self._check_for_update)
                     self.update_str_var.set(f"{self.st.lan().ERROR}: {self.st.lan().ERROR_STARTING_UPDATE}")
         else:
-            LOGGER.info("User cancelled the update process.")
-            # Keep the "Start Update" button active if user cancels
+            LOGGER.info("用户取消了更新过程。")
             if self.winfo_exists():
-                self.update_button.configure(state="normal")
+                # 用户取消，保持“开始更新”按钮可用
+                 self.update_button.configure(state="normal")
 
 
     def _refresh_ui(self):
         """ 定期根据 Updater 状态更新 UI (优化版) """
-        # Primary exit condition: Window destroyed
         if not self.winfo_exists():
-            LOGGER.debug("_refresh_ui called but window destroyed. Stopping.")
-            # Attempt to cancel timer one last time if needed
+            LOGGER.debug("_refresh_ui 检测到窗口已销毁，停止刷新。")
             if self._refresh_timer_id:
                 try: self.after_cancel(self._refresh_timer_id)
-                except tk.TclError: pass # Ignore errors during shutdown
+                except tk.TclError: pass
                 self._refresh_timer_id = None
             return
 
@@ -310,118 +296,109 @@ class HelpWindow(ctk.CTkToplevel):
                 self.html_box.configure(state=tk.NORMAL)
                 self.html_box.set_html(self.html_text, strip=True)
                 self.html_box.configure(state=tk.DISABLED)
-                LOGGER.debug("Help HTML content updated.")
+                LOGGER.debug("帮助 HTML 内容已更新。")
             except Exception as e:
-                 LOGGER.error(f"Error setting HTML content: {e}", exc_info=True)
-                 # Display error within the box itself
+                 LOGGER.error(f"设置 HTML 内容时出错: {e}", exc_info=True)
                  try:
                      self.html_box.configure(state=tk.NORMAL)
-                     self.html_box.set_html(f"<h3>{lan.ERROR}</h3><p>Could not load help content.</p><p><small>{e}</small></p>")
+                     self.html_box.set_html(f"<h3>{lan.ERROR}</h3><p>无法加载帮助内容。</p><p><small>{e}</small></p>")
                      self.html_box.configure(state=tk.DISABLED)
-                 except: pass # Avoid error loops
+                 except: pass # 避免错误循环
 
         # --- 根据状态确定新 UI 状态 ---
         new_label_text = ""
-        # Default to current button text to detect changes easily
         new_button_text = self.update_button.cget("text")
         new_button_state = "disabled"
-        new_button_command = lambda: None
+        new_button_command = lambda: None # 默认为无操作
 
-        match current_status:
-            case UpdateStatus.NONE:
-                new_label_text = getattr(lan, 'READY_TO_CHECK', "") # Optional "Ready" message
-                new_button_text = lan.CHECK_FOR_UPDATE
-                new_button_state = "normal"
-                new_button_command = self._check_for_update
-            case UpdateStatus.CHECKING:
-                new_label_text = lan.CHECKING_UPDATE + "..."
-                new_button_text = lan.CHECKING_UPDATE # Optionally change button text too
-                new_button_state = "disabled"
-                # Keep command as None or previous, button is disabled anyway
-            case UpdateStatus.NO_UPDATE:
-                new_label_text = lan.NO_UPDATE_FOUND + f" (v{updater.web_version})"
-                new_button_text = lan.CHECK_FOR_UPDATE
-                new_button_state = "normal"
-                new_button_command = self._check_for_update
-            case UpdateStatus.NEW_VERSION:
-                new_label_text = lan.UPDATE_AVAILABLE + f" v{updater.web_version}"
-                new_button_text = lan.DOWNLOAD_UPDATE
-                new_button_state = "normal"
-                new_button_command = self._download_update
-            case UpdateStatus.DOWNLOADING:
-                progress = updater.dl_progress
-                progress_str = f"{progress:.1f}%" if isinstance(progress, (int, float)) else str(progress)
-                new_label_text = lan.DOWNLOADING + f" {progress_str}"
-                new_button_text = lan.DOWNLOADING # Optionally change button text
-                new_button_state = "disabled"
-            case UpdateStatus.UNZIPPING:
-                new_label_text = lan.UNZIPPING + "..."
-                new_button_text = lan.UNZIPPING # Optionally change button text
-                new_button_state = "disabled"
-            case UpdateStatus.PREPARED:
-                new_label_text = lan.UPDATE_PREPARED
-                new_button_text = lan.START_UPDATE
-                new_button_state = "normal"
-                new_button_command = self._start_update
-            case UpdateStatus.ERROR:
-                # Generic error in label, specific in log
-                err_msg = str(updater.update_exception) if updater.update_exception else "Unknown error"
-                new_label_text = f"{lan.ERROR}: {getattr(lan, 'UPDATE_FAILED_SEE_LOG', 'Update failed')}"
-                LOGGER.error(f"Update error state reached: {err_msg}", exc_info=(updater.update_exception is not None))
-                new_button_text = lan.CHECK_FOR_UPDATE # Allow retry
-                new_button_state = "normal"
-                new_button_command = self._check_for_update
-            case _:
-                new_label_text = f"{lan.ERROR}: Unknown status ({current_status})"
-                LOGGER.warning(f"Unhandled update status in UI refresh: {current_status}")
-                new_button_text = lan.ERROR # Indicate error on button too
-                new_button_state = "disabled"
+        # 使用 match-case (Python 3.10+) 或 if/elif/else
+        # (假设 UpdateStatus 是 Enum 或类似常量)
+        if current_status == UpdateStatus.NONE:
+            new_label_text = getattr(lan, 'READY_TO_CHECK', "") # 可选的“就绪”消息
+            new_button_text = lan.CHECK_FOR_UPDATE
+            new_button_state = "normal"
+            new_button_command = self._check_for_update
+        elif current_status == UpdateStatus.CHECKING:
+            new_label_text = lan.CHECKING_UPDATE + "..."
+            new_button_text = lan.CHECKING_UPDATE # 可选地更改按钮文本
+            new_button_state = "disabled"
+        elif current_status == UpdateStatus.NO_UPDATE:
+            new_label_text = lan.NO_UPDATE_FOUND + f" (v{updater.web_version})"
+            new_button_text = lan.CHECK_FOR_UPDATE
+            new_button_state = "normal"
+            new_button_command = self._check_for_update
+        elif current_status == UpdateStatus.NEW_VERSION:
+            new_label_text = lan.UPDATE_AVAILABLE + f" v{updater.web_version}"
+            new_button_text = lan.DOWNLOAD_UPDATE
+            new_button_state = "normal"
+            new_button_command = self._download_update
+        elif current_status == UpdateStatus.DOWNLOADING:
+            progress = updater.dl_progress
+            # 格式化进度，处理非数字情况
+            progress_str = f"{progress:.1f}%" if isinstance(progress, (int, float)) else str(progress)
+            new_label_text = lan.DOWNLOADING + f" {progress_str}"
+            new_button_text = lan.DOWNLOADING
+            new_button_state = "disabled"
+        elif current_status == UpdateStatus.UNZIPPING:
+            new_label_text = lan.UNZIPPING + "..."
+            new_button_text = lan.UNZIPPING
+            new_button_state = "disabled"
+        elif current_status == UpdateStatus.PREPARED:
+            new_label_text = lan.UPDATE_PREPARED
+            new_button_text = lan.START_UPDATE
+            new_button_state = "normal"
+            new_button_command = self._start_update
+        elif current_status == UpdateStatus.ERROR:
+            err_msg = str(updater.update_exception) if updater.update_exception else "未知错误"
+            new_label_text = f"{lan.ERROR}: {getattr(lan, 'UPDATE_FAILED_SEE_LOG', '更新失败')}"
+            LOGGER.error(f"更新错误状态: {err_msg}", exc_info=(updater.update_exception is not None))
+            new_button_text = lan.CHECK_FOR_UPDATE # 允许重试
+            new_button_state = "normal"
+            new_button_command = self._check_for_update
+        else: # 未知状态处理
+            new_label_text = f"{lan.ERROR}: 未知状态 ({current_status})"
+            LOGGER.warning(f"UI 刷新遇到未处理的更新状态: {current_status}")
+            new_button_text = lan.ERROR
+            new_button_state = "disabled"
+
 
         # --- 仅在必要时更新 UI 元素 ---
-        # Update label text if changed
         if self.update_str_var.get() != new_label_text:
             self.update_str_var.set(new_label_text)
 
-        # Update button if state, text, or command needs changing
+        # 优化按钮更新：仅当状态、文本或命令需要更改时才调用 configure
         current_button_state = self.update_button.cget("state")
         current_button_text = self.update_button.cget("text")
-        # Comparing command objects is tricky, safer to update if state/text changes,
-        # or if the state is 'normal' and command might need setting.
-        needs_configure = False
-        config_options = {}
-
-        if current_button_state != new_button_state:
-            config_options["state"] = new_button_state
-            needs_configure = True
-        if current_button_text != new_button_text:
-            config_options["text"] = new_button_text
-            needs_configure = True
-        # Always update command when configuring state/text to ensure consistency
-        if needs_configure:
-             config_options["command"] = new_button_command
-             self.update_button.configure(**config_options)
-        # Consider if command needs update even if state/text didn't change
-        # (e.g. from lambda:None to a real command when state becomes 'normal')
-        # This can be complex, the above usually covers most cases.
-        # If issues arise, explicitly check and set command if needed.
+        # 获取当前命令可能比较复杂，这里简化为：如果状态或文本变了，就更新所有三个
+        if current_button_state != new_button_state or current_button_text != new_button_text:
+             self.update_button.configure(
+                 text=new_button_text,
+                 state=new_button_state,
+                 command=new_button_command
+             )
+        # 特殊情况：如果状态从 disabled 变为 normal，即使文本没变，也需要确保命令是正确的
+        elif new_button_state == "normal" and current_button_state != "normal":
+            self.update_button.configure(
+                state=new_button_state,
+                command=new_button_command
+            )
 
 
         # --- 安排下一次刷新 ---
-        # Schedule the next call to this method
-        self._refresh_timer_id = self.after(200, self._refresh_ui) # 200ms interval
+        self._refresh_timer_id = self.after(200, self._refresh_ui) # 200ms 刷新间隔
 
 
     def _on_close(self):
-        """ 当窗口关闭时调用 (WM_DELETE_WINDOW or OK button) """
-        LOGGER.debug("HelpWindow closing...")
-        # Cancel the pending refresh timer
+        """ 当窗口关闭时调用 """
+        LOGGER.debug("HelpWindow 关闭...")
         if self._refresh_timer_id:
             try:
                 self.after_cancel(self._refresh_timer_id)
-                LOGGER.debug("Refresh timer cancelled.")
+                LOGGER.debug("刷新定时器已取消。")
             except tk.TclError:
-                 LOGGER.warning("TclError cancelling refresh timer, likely during interpreter shutdown.")
+                 LOGGER.warning("取消刷新定时器时 TclError (可能在解释器关闭期间)。")
             self._refresh_timer_id = None
-        # Destroy the window
+        # 清理 PhotoImage 引用 (虽然 Python 垃圾回收通常会处理，但显式清理无害)
+        self._app_icon_photo = None
         self.destroy()
-        LOGGER.debug("HelpWindow destroyed.")
+        LOGGER.debug("HelpWindow 已销毁。")
