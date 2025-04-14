@@ -70,6 +70,13 @@ class ToggleSwitch(tk.Frame):
         """ Switch to middle state"""
         self.img_label.config(image=self.img_mid)
         
+    def toggle(self):
+        """ Toggle the state of the switch """
+        if self.is_on:
+            self.switch_off()
+        else:
+            self.switch_on()
+        
         
     def _on_click(self, _event=None):
         self.command()

@@ -55,6 +55,9 @@ class MainGUI(tk.Tk):
         self.bot_manager.start()        # start the main program
         self.gui_update_delay = 50      # in ms
         self._update_gui_info()         # start updating gui info
+
+        # Bind the keyboard shortcut (Ctrl+H) to the handle_keyboard_shortcut method in BotManager
+        self.bind('<Control-h>', self._on_keyboard_shortcut)
         
 
     def _create_widgets(self):
@@ -203,6 +206,9 @@ class MainGUI(tk.Tk):
         else:
             self.bot_manager.disable_overlay()
             
+    def _on_keyboard_shortcut(self, event):
+        self.bot_manager.handle_keyboard_shortcut(event)
+        self.switch_overlay.toggle()  # Update the ToggleSwitch state when the keyboard shortcut is used
             
     def _on_switch_autoplay_clicked(self):
         self.switch_autoplay.switch_mid()
