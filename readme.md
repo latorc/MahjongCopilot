@@ -65,6 +65,23 @@ python main.py
 ### Model Configuration
 This program supports different types of AI models. The 'Local' Model type uses Mortal models compatible with Akagi. To acquire Akagi's models, please refer to <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a>.
 
+### 与 MajsoulMax 搭配使用
+
+如果你想要和 [MajsoulMax](https://github.com/Avenshy/MajsoulMax) 搭配使用，请在 `settings.json` 中设置 `"majsoulmax_proxy": "http://127.0.0.1:23410"` 。
+
+随后，请以如下方式启动 MajsoulMax：
+
+```bash
+mitmdump -p 23410 --mode upstream:http://127.0.0.1:10999 -s addons.py --ssl-insecure
+```
+
+请注意，如果你修改了 MajsoulMax 或者 MahjangCopilot 的代理端口，请相应修改对应端口，并且确保 MajsoulMax 和 MahjangCopilot 的自签名证书均正确安装（这两者是不同的，前者默认使用 `~/.mitmproxy/` 下的证书，而后者使用 `./mitm_config/` 下的证书）。
+
+最终代理链为：
+
+```
+Program -> MajsoulMax(23410) -> MahjongCopilot(10999) -> Server
+```
 
 ## 截图 / Screenshots
 
