@@ -30,6 +30,7 @@ class Settings:
         self.inject_process_name:str = self._get_value("inject_process_name", "jantama_mahjongsoul")
         self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)  # language code
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool) # not shown
+        self.majsoulmax_proxy:str = self._get_value("majsoulmax_proxy", "")
         
         # AI Model settings
         self.model_type:str = self._get_value("model_type", "Local")

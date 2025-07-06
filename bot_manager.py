@@ -125,7 +125,10 @@ class BotManager:
     def start_browser(self):
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
-        proxy = self.mitm_server.proxy_str
+        if self.st.majsoulmax_proxy:
+            proxy = self.st.majsoulmax_proxy
+        else:
+            proxy = self.mitm_server.proxy_str
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
     
     def is_browser_zoom_off(self):

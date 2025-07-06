@@ -12,6 +12,7 @@ import threading
 import random
 import string
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import requests
 
@@ -134,18 +135,20 @@ def wait_for_file(file:str, timeout:int=5) -> bool:
 
 
 def sub_run_args() -> dict:
-    """ return **args for subprocess.run"""
-    startup_info = subprocess.STARTUPINFO()
-    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startup_info.wShowWindow = subprocess.SW_HIDE
+    """return **args for subprocess.run"""
     args = {
-        'capture_output':True, 
-        'text': True,
-        'check': False,
-        'shell': True,
-        'startupinfo': startup_info}
+        "capture_output": True,
+        "text": True,
+        "check": False,
+    }
+    if sys.platform == "win32":
+        startup_info = subprocess.STARTUPINFO()
+        startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup_info.wShowWindow = subprocess.SW_HIDE
+        args.update({"shell": True, "startupinfo": startup_info})
+    else:
+        args["shell"] = False  # macOS / Linux
     return args
-
 
 def get_cert_serial_number(cert_file:str) ->str:
     """Extract the serial number as a hexadecimal string from a certificate."""
@@ -170,11 +173,35 @@ def is_certificate_installed(cert_file:str) -> tuple[bool, str]:
             cmd = ['certutil', '-store', 'Root', serial_number]
             store_found_phrase = serial_number
         elif sys.platform == "darwin":
-            # TODO test on MacOS
-            # Use security to find the certificate by its serial number in the System keychain
-            cmd = ['security', 'find-certificate', '-c', serial_number, '/Library/Keychains/System.keychain']
-            store_found_phrase = 'attributes:'
-        else:   # unsupported platform
+            # macOS: 通过比较 SHA-1 指纹确保本地证书已被系统信任。
+            try:
+                with open(cert_file, "rb") as f:
+                    cert_data = f.read()
+                cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+                sha1_fingerprint = cert.fingerprint(hashes.SHA1()).hex().upper()
+            except Exception as e:
+                return False, str(e)
+
+            # 列出系统钥匙串中所有 mitmproxy 证书并输出指纹。
+            cmd = [
+                "security",
+                "find-certificate",
+                "-a",
+                "-Z",
+                "-c",
+                "mitmproxy",
+                "/Library/Keychains/System.keychain",
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+            installed = sha1_fingerprint in result.stdout.upper()
+
+            # 仅保留前两行 SHA 信息，避免打印过多属性
+            lines = result.stdout.splitlines()
+            sha_lines = [l for l in lines if l.startswith("SHA-")][:2]
+            short_output = "\n".join(sha_lines)
+            return installed, short_output
+        else:  # unsupported platform
             return False
         args = sub_run_args()
         result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
