@@ -60,6 +60,47 @@ set PLAYWRIGHT_BROWSERS_PATH=0
 playwright install chromium
 python main.py
 ```
+
+### macOS arm64 极简发布（`mortal_mac_v0.2`）
+
+仅适用于 Apple Silicon (M1/M2/M3...)，并使用极简配置：
+
+- 固定简体中文
+- 仅本地模型（不提供 AkagiOT/MJAPI 配置入口）
+- 仅 Playwright 自动化（禁用真实鼠标）
+- 隐藏代理相关设置
+- 浏览器支持全屏模式（可配置）
+- 浏览器支持高画质模式（默认开启）
+
+构建命令：
+
+```bash
+bash scripts/generate_mac_app.sh
+bash scripts/make_dmg_mac.sh
+```
+
+产物：
+
+- App: `dist/mortal_mac_v0.2.app`
+- DMG: `dist/mortal_mac_v0.2.dmg`
+
+更新策略（mac）：
+
+- Help 窗口仅检查版本，不执行一键更新
+- 发布新版本后，下载新 DMG 覆盖安装
+
+浏览器体验设置（mac）：
+
+- 全屏模式：设置页可开关，启动浏览器时生效
+- 高画质模式：设置页可开关，默认开启
+- 高画质模式会使用持久化浏览器 profile 缓存，减少资源重复加载
+
+若仍出现画面模糊或资源未完整加载，可按以下顺序排查：
+
+1. 确认网络连接与 MITM 证书安装状态正常
+2. 关闭程序后删除 `~/Library/Application Support/mortal_mac_v0.2/browser_data`
+3. 重新启动应用并等待页面资源首次完整缓存
+
 ### 配置模型
 本程序支持几种模型来源。其中，本地模型（Local）是基于 Akagi 兼容的 Mortal 模型。要获取 Akagi 的模型，请参见 <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a> 的说明。
 ### Model Configuration

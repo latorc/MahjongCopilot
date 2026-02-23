@@ -41,6 +41,8 @@ class LanStr:
     MITM_PORT = "MITM Server Port"
     UPSTREAM_PROXY = "Upstream Proxy"
     CLIENT_SIZE = "Client Size"
+    BROWSER_FULLSCREEN = "Browser Fullscreen"
+    BROWSER_HIGH_QUALITY = "High Quality Mode"
     MAJSOUL_URL = "Majsoul URL"
     ENABLE_CHROME_EXT = "Enable Chrome Extensioins"
     LANGUAGE = "Display Language"
@@ -63,10 +65,14 @@ class LanStr:
     DRAG_DAHAI = "Mouse drag dahai"
     RANDOM_CHOICE = "Randomize AI Choice"
     REPLY_EMOJI_CHANCE = "Reply Emoji Rate"
-    RANDOM_DELAY_RANGE = "Base Delay Range (sec)"    
+    RANDOM_DELAY_RANGE = "Short Delay Range (sec)"    
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
     GAME_MODES = ["4-P East","4-P South","3-P East","3-P South"]
     MOUSE_RANDOM_MOVE = "Randomize Move"
+    REAL_MOUSE = "Real Mouse"
+    REAL_MOUSE_SPEED = "Real Mouse Speed (px/s)"
+    REAL_MOUSE_JITTER = "Move Jitter (px)"
+    REAL_MOUSE_CLICK_OFFSET = "Click Offset Radius (px)"
     
     # Status
     MAIN_THREAD  = "Main Thread"
@@ -174,6 +180,8 @@ class LanStrZHS(LanStr):
     MITM_PORT = "MITM 服务端口"
     UPSTREAM_PROXY = "上游代理"
     CLIENT_SIZE = "客户端大小"
+    BROWSER_FULLSCREEN = "浏览器全屏模式"
+    BROWSER_HIGH_QUALITY = "高画质模式"
     MAJSOUL_URL = "雀魂网址"
     ENABLE_CHROME_EXT = "启用浏览器插件"
     LANGUAGE = "显示语言"
@@ -198,10 +206,11 @@ class LanStrZHS(LanStr):
     RANDOM_CHOICE = "AI 选项随机化(去重)"
     REPLY_EMOJI_CHANCE = "回复表情概率"
     
-    RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
+    RANDOM_DELAY_RANGE = "短延迟范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
     MOUSE_RANDOM_MOVE = "鼠标移动随机化"
+    REAL_MOUSE = "真实鼠标"
     
     # Status
     MAIN_THREAD  = "主程序"

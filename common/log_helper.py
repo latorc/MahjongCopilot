@@ -1,6 +1,7 @@
 """ Logging helper functions """
 import datetime
 import logging
+import os
 import queue
 from .utils import Folder, sub_file
 
@@ -23,12 +24,14 @@ class LogHelper:
             return
 
         logger = LOGGER
-        logger.setLevel(logging.DEBUG)
+        level_name = os.environ.get("MJ_LOG_LEVEL", "INFO").upper()
+        log_level = getattr(logging, level_name, logging.INFO)
+        logger.setLevel(log_level)
         formatter = log_formatter()
         
         if console:
             console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.DEBUG)
+            console_handler.setLevel(log_level)
             console_handler.setFormatter(formatter)
             logger.addHandler(console_handler)
         
@@ -36,7 +39,7 @@ class LogHelper:
             file_name = file_prefix + '_' + dt_string() + '.log'
             LogHelper.log_file_name = sub_file(Folder.LOG, file_name)
             file_handler = logging.FileHandler(LogHelper.log_file_name, encoding='utf-8')
-            file_handler.setLevel(logging.DEBUG)
+            file_handler.setLevel(log_level)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
         
@@ -56,7 +59,9 @@ class QueueHandler(logging.Handler):
         super().__init__()
         self.log_queue = log_queue 
         formatter = log_formatter()
-        self.setLevel(logging.DEBUG)
+        level_name = os.environ.get("MJ_LOG_LEVEL", "INFO").upper()
+        log_level = getattr(logging, level_name, logging.INFO)
+        self.setLevel(log_level)
         self.setFormatter(formatter)
         
     def emit(self, record):

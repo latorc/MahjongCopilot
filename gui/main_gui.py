@@ -5,8 +5,11 @@ GUI functions: controlling browser settings, displaying AI guidance info, game s
 """
 
 import os
+import subprocess
+import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
+import ttkbootstrap as ttkb
 
 from bot_manager import BotManager, mjai_reaction_2_guide
 from common.utils import Folder, GameMode, GAME_MODES, GameClientType
@@ -20,21 +23,26 @@ from .settings_window import SettingsWindow
 from .help_window import HelpWindow
 from .widgets import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
+MAC_APP_NAME = "mortal_mac_v0.2"
 
-class MainGUI(tk.Tk):
+
+class MainGUI(ttkb.Window):
     """ Main GUI Window"""
     def __init__(self, setting:Settings, bot_manager:BotManager):
-        super().__init__()
+        super().__init__(themename="darkly")
         self.bot_manager = bot_manager
         self.st = setting
-        self.updater = Updater(self.st.update_url)
-        self.after_idle(self.updater.load_help)
-        self.after_idle(self.updater.check_update)        # check update when idle
-        
+        self.is_mac = sys.platform == "darwin"
+        self.updater = None
+        if not self.is_mac:
+            self.updater = Updater(self.st.update_url)
+            self.after_idle(self.updater.load_help)
+            self.after_idle(self.updater.check_update)        # check update when idle
+
         icon = tk.PhotoImage(file=sub_file(Folder.RES,'icon.png'))
         self.iconphoto(True, icon)
-        self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window  
-        size = (620,540)      
+        self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window
+        size = (680,560)
         self.geometry(f"{size[0]}x{size[1]}")
         self.minsize(*size)
         # Styling
@@ -60,10 +68,12 @@ class MainGUI(tk.Tk):
     def _create_widgets(self):
         """ Create all widgets in the main window"""
         # Main window properties
-        self.title(self.st.lan().APP_TITLE)        
+        app_title = MAC_APP_NAME if sys.platform == "darwin" else self.st.lan().APP_TITLE
+        self.title(app_title)
+        self.btn_help = None
         
         # container for grid control
-        self.grid_frame = tk.Frame(self)
+        self.grid_frame = ttk.Frame(self)
         self.grid_frame.pack(fill=tk.BOTH, expand=True)
         self.grid_frame.grid_columnconfigure(0, weight=1)
         grid_args = {'column':0, 'sticky': tk.EW, 'padx': 5, 'pady': 2}
@@ -83,8 +93,9 @@ class MainGUI(tk.Tk):
         # buttons on toolbar
         self.toolbar.add_sep()
         self.toolbar.add_button(self.st.lan().SETTINGS, 'settings.png', self._on_btn_settings_clicked)
-        self.toolbar.add_button(self.st.lan().OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
-        self.btn_help = self.toolbar.add_button(self.st.lan().HELP, 'help.png', self._on_btn_help_clicked)
+        if not self.is_mac:
+            self.toolbar.add_button(self.st.lan().OPEN_LOG_FILE, 'log.png', self._on_btn_log_clicked)
+            self.btn_help = self.toolbar.add_button(self.st.lan().HELP, 'help.png', self._on_btn_help_clicked)
         self.toolbar.add_sep()
         self.toolbar.add_button(self.st.lan().EXIT, 'exit.png', self._on_exit)
         
@@ -108,7 +119,7 @@ class MainGUI(tk.Tk):
             self.tb2, self.st.lan().AUTO_JOIN_GAME, tb_ht, font_size=sw_ft_sz, command=self._on_switch_autojoin_clicked)
         self.switch_autojoin.pack(**pack_args)
         # combo boxrd for auto join level and mode
-        _frame = tk.Frame(self.tb2)
+        _frame = tk.Frame(self.tb2, bg=GUI_STYLE.bg_color)
         _frame.pack(**pack_args)
         self.auto_join_level_var = tk.StringVar(value=self.st.lan().GAME_LEVELS[self.st.auto_join_level])
         options = self.st.lan().GAME_LEVELS
@@ -125,7 +136,14 @@ class MainGUI(tk.Tk):
         self.timer = Timer(self.tb2, tb_ht, sw_ft_sz, self.st.lan().AUTO_JOIN_TIMER)
         self.timer.set_callback(self.bot_manager.disable_autojoin)        # stop autojoin when time is up
         self.timer.pack(**pack_args)
-        self.tb2.add_sep()        
+        self.switch_real_mouse = None
+        if sys.platform == "win32":
+            self.tb2.add_sep()
+            # real mouse switch
+            self.switch_real_mouse = ToggleSwitch(
+                self.tb2, self.st.lan().REAL_MOUSE, tb_ht, font_size=sw_ft_sz, command=self._on_switch_real_mouse_clicked)
+            self.switch_real_mouse.pack(**pack_args)
+            self.tb2.add_sep()
                
         # === AI guidance ===
         cur_row += 1
@@ -140,7 +158,9 @@ class MainGUI(tk.Tk):
             textvariable=self.ai_guide_var,
             font=GUI_STYLE.font_normal("Segoe UI Emoji",22),
             height=5, anchor=tk.NW, justify=tk.LEFT,
-            relief=tk.SUNKEN, padx=5,pady=5,
+            relief=tk.FLAT, padx=8, pady=8,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color,
+            highlightbackground=GUI_STYLE.card_border, highlightthickness=1,
             )
         self.text_ai_guide.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)        
@@ -157,7 +177,9 @@ class MainGUI(tk.Tk):
             textvariable=self.gameinfo_var,
             height=2, anchor=tk.W, justify=tk.LEFT,
             font=GUI_STYLE.font_normal("Segoe UI Emoji",22),
-            relief=tk.SUNKEN, padx=5,pady=5,
+            relief=tk.FLAT, padx=8, pady=8,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color,
+            highlightbackground=GUI_STYLE.card_border, highlightthickness=1,
             )
         self.text_gameinfo.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)
@@ -218,11 +240,26 @@ class MainGUI(tk.Tk):
             self.bot_manager.disable_autojoin()
         else:
             self.bot_manager.enable_autojoin()
+
+    def _on_switch_real_mouse_clicked(self):
+        if self.switch_real_mouse is None:
+            return
+        self.st.use_real_mouse = not self.st.use_real_mouse
+        self.st.save_json()
             
 
     def _on_btn_log_clicked(self):
-        # LOGGER.debug('Open log')
-        os.startfile(LogHelper.log_file_name)
+        if self.is_mac:
+            return
+        try:
+            if sys.platform == "win32":
+                os.startfile(LogHelper.log_file_name)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", LogHelper.log_file_name])
+            else:
+                subprocess.Popen(["xdg-open", LogHelper.log_file_name])
+        except Exception as e:  # pylint:disable=broad-except
+            LOGGER.error("Failed to open log file: %s", e, exc_info=True)
         
 
     def _on_btn_settings_clicked(self):
@@ -245,6 +282,8 @@ class MainGUI(tk.Tk):
             
 
     def _on_btn_help_clicked(self):
+        if self.is_mac or self.updater is None:
+            return
         # open help dialog        
         help_win = HelpWindow(self, self.st, self.updater)
         help_win.transient(self)
@@ -292,23 +331,26 @@ class MainGUI(tk.Tk):
         else:
             self.btn_start_browser.config(state=tk.DISABLED)
 
-        # help button
-        if self.updater.update_status in (
-            UpdateStatus.NEW_VERSION,
-            UpdateStatus.DOWNLOADING,
-            UpdateStatus.UNZIPPING,
-            UpdateStatus.PREPARED
-        ):
-            self.toolbar.set_img(self.btn_help, 'help_update.png')
-        else:
-            self.toolbar.set_img(self.btn_help, 'help.png')
+        # help button (not shown on mac build)
+        if self.btn_help is not None and self.updater is not None:
+            if self.updater.update_status in (
+                UpdateStatus.NEW_VERSION,
+                UpdateStatus.DOWNLOADING,
+                UpdateStatus.UNZIPPING,
+                UpdateStatus.PREPARED
+            ):
+                self.toolbar.set_img(self.btn_help, 'help_update.png')
+            else:
+                self.toolbar.set_img(self.btn_help, 'help.png')
         
         # update switch states
         sw_list = [
             (self.switch_overlay, lambda: self.st.enable_overlay),
             (self.switch_autoplay, lambda: self.st.enable_automation),
-            (self.switch_autojoin, lambda: self.st.auto_join_game)
+            (self.switch_autojoin, lambda: self.st.auto_join_game),
         ]
+        if self.switch_real_mouse is not None:
+            sw_list.append((self.switch_real_mouse, lambda: self.st.use_real_mouse))
         for sw, func in sw_list:
             if func():
                 sw.switch_on()

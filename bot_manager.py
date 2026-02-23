@@ -7,6 +7,8 @@ The BotManager class is run in a separate thread, and provide interface methods 
 import time
 import queue
 import threading
+import socket
+import sys
 
 from game.browser import GameBrowser
 from game.game_state import GameState
@@ -27,6 +29,8 @@ METHODS_TO_IGNORE = [
     liqi.LiqiMethod.checkNetworkDelay,
     liqi.LiqiMethod.heartbeat,
     liqi.LiqiMethod.loginBeat,
+    liqi.LiqiMethod.routeRequestConnection,
+    liqi.LiqiMethod.routeHeartbeat,
     liqi.LiqiMethod.fetchAccountActivityData,
     liqi.LiqiMethod.fetchServerTime,
 ]
@@ -47,6 +51,7 @@ class BotManager:
         self._thread:threading.Thread = None
         self._stop_event = threading.Event()
         self.fps_counter = FPSCounter()
+        self.active_mitm_port:int = self.st.mitm_port      # runtime MITM port (may differ if default port is occupied)
 
         self.lobby_flow_id:str = None                   # websocket flow Id for lobby
         self.game_flow_id = None                        # websocket flow that corresponds to the game/match
@@ -126,6 +131,17 @@ class BotManager:
         """ Start the browser thread, open browser window """
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
+        if sys.platform == "darwin":
+            self.browser.start(
+                ms_url,
+                proxy,
+                self.st.browser_width,
+                self.st.browser_height,
+                self.st.enable_chrome_ext,
+                fullscreen=self.st.browser_fullscreen,
+                high_quality=self.st.browser_high_quality
+            )
+            return
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
     
     def is_browser_zoom_off(self):
@@ -232,6 +248,48 @@ class BotManager:
             self.bot = None
             self.game_exception = e
         self.is_loading_bot = False
+
+    def _is_local_port_available(self, port:int) -> bool:
+        """ return True if local tcp port can be bound """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.2)
+            if probe.connect_ex(("127.0.0.1", port)) == 0:
+                return False
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind(("127.0.0.1", port))
+                return True
+            except OSError:
+                return False
+
+    def _find_random_open_port(self, min_port:int=1000) -> int:
+        """ ask OS for a random available local tcp port """
+        while True:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(("127.0.0.1", 0))
+                port = int(sock.getsockname()[1])
+            if port >= min_port:
+                return port
+
+    def _wait_mitm_ready(self, timeout:float=3.0) -> bool:
+        """ wait for MITM thread to become available """
+        start = time.time()
+        while time.time() - start < timeout:
+            if self.mitm_server.proxy_str and self.mitm_server.is_running():
+                return True
+            if self.mitm_server.is_running() is False:
+                return False
+            time.sleep(0.05)
+        return bool(self.mitm_server.proxy_str) and self.mitm_server.is_running()
+
+    def _try_start_mitm(self, port:int, mode:str) -> bool:
+        """ start mitm with given port and verify startup """
+        self.mitm_server.start(port, mode, self.st.upstream_proxy)
+        if self._wait_mitm_ready():
+            self.active_mitm_port = port
+            return True
+        self.mitm_server.stop()
+        return False
         
     def _create_mitm_and_proxinject(self):
         # create mitm and proxinject threads
@@ -242,13 +300,32 @@ class BotManager:
         else:
             mode = mitm.HTTP
 
-        self.mitm_server.start(self.st.mitm_port, mode, self.st.upstream_proxy)
+        preferred_port = self.st.mitm_port
+        start_port = preferred_port
+        if not self._is_local_port_available(preferred_port):
+            start_port = self._find_random_open_port()
+            LOGGER.warning(
+                "MITM port %d is occupied. Using port %d for this instance.",
+                preferred_port,
+                start_port
+            )
+        started = self._try_start_mitm(start_port, mode)
+        if not started:
+            retry_port = self._find_random_open_port()
+            while retry_port == start_port:
+                retry_port = self._find_random_open_port()
+            LOGGER.warning("Failed to start MITM on port %d, retrying port %d", start_port, retry_port)
+            started = self._try_start_mitm(retry_port, mode)
+        if not started:
+            raise utils.MITMException("MITM server failed to start")
+        LOGGER.info("MITM server running on port %d", self.active_mitm_port)
+
         res = self.mitm_server.install_mitm_cert()
         if not res:
             self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)
         
         if self.st.enable_proxinject:
-            self.proxy_injector.start(self.st.inject_process_name, "127.0.0.1", self.st.mitm_port)
+            self.proxy_injector.start(self.st.inject_process_name, "127.0.0.1", self.active_mitm_port)
         
 
     def _run(self):
@@ -452,7 +529,8 @@ class BotManager:
     def _update_overlay_botleft(self):
         # update overlay bottom left text        
         # maj copilot
-        text = '😸' + self.st.lan().APP_TITLE
+        app_name = "mortal_mac_v0.2" if sys.platform == "darwin" else self.st.lan().APP_TITLE
+        text = '😸' + app_name
 
         # Model
         model_text = '🤖'

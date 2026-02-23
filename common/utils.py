@@ -13,6 +13,7 @@ import random
 import string
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
 import requests
 
 from .lan_str import LanStr
@@ -101,14 +102,36 @@ def error_to_str(error:Exception, lan:LanStr) -> str:
 def sub_folder(folder_name:str) -> pathlib.Path:
     """ return the subfolder Path, create it if not exists"""
     try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = pathlib.Path(sys._MEIPASS).parent   # pylint: disable=W0212,E1101
+        # In frozen app, keep read-only assets relative to executable (Contents/MacOS).
+        # In source runs, keep legacy behavior (project current directory).
+        if getattr(sys, "frozen", False):
+            app_base = pathlib.Path(sys.executable).resolve().parent
+        else:
+            app_base = pathlib.Path(".").resolve()
+        if sys.platform == "darwin":
+            mac_data_base = pathlib.Path.home() / "Library" / "Application Support" / "mortal_mac_v0.2"
+            writable_folders = {
+                Folder.MODEL,
+                Folder.BROWSER_DATA,
+                Folder.LOG,
+                Folder.MITM_CONF,
+                Folder.PROXINJECT,
+                Folder.UPDATE,
+                Folder.TEMP,
+                Folder.CHROME_EXT,
+            }
+            base_path = mac_data_base if folder_name in writable_folders else app_base
+        else:
+            base_path = app_base
     except Exception:  #pylint: disable=broad-except
-        base_path = pathlib.Path('.')
-        
-    subfolder = base_path / folder_name
+        base_path = pathlib.Path('.').resolve()
+
+    if folder_name in (".", ""):
+        subfolder = base_path
+    else:
+        subfolder = base_path / folder_name
     if not subfolder.exists():
-        subfolder.mkdir(exist_ok=True)
+        subfolder.mkdir(parents=True, exist_ok=True)
     return subfolder.resolve()
 
 
@@ -135,15 +158,16 @@ def wait_for_file(file:str, timeout:int=5) -> bool:
 
 def sub_run_args() -> dict:
     """ return **args for subprocess.run"""
-    startup_info = subprocess.STARTUPINFO()
-    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startup_info.wShowWindow = subprocess.SW_HIDE
     args = {
-        'capture_output':True, 
+        'capture_output':True,
         'text': True,
         'check': False,
-        'shell': True,
-        'startupinfo': startup_info}
+    }
+    if sys.platform == "win32":
+        startup_info = subprocess.STARTUPINFO()
+        startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup_info.wShowWindow = subprocess.SW_HIDE
+        args['startupinfo'] = startup_info
     return args
 
 
@@ -157,34 +181,52 @@ def get_cert_serial_number(cert_file:str) ->str:
     return hex_serial
 
 
+def get_cert_sha1_fingerprint(cert_file:str) -> str:
+    """Extract certificate SHA1 fingerprint as uppercase hex string."""
+    with open(cert_file, 'rb') as file:
+        cert_data = file.read()
+    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+    return cert.fingerprint(hashes.SHA1()).hex().upper()
+
+
 def is_certificate_installed(cert_file:str) -> tuple[bool, str]:
     """Check if the given certificate is installed in the system certificate store.
     Returns:
         (bool, str): True if the certificate is found in the system store, str is the stdout"""
-    # Get the hex serial number from the certificate file
     try:
-        serial_number = get_cert_serial_number(cert_file)
-        
         if sys.platform == "win32":
+            serial_number = get_cert_serial_number(cert_file)
             # Use certutil to look up the certificate by its serial number in the Root store
             cmd = ['certutil', '-store', 'Root', serial_number]
-            store_found_phrase = serial_number
+            result = subprocess.run(cmd, **sub_run_args())    #pylint:disable=subprocess-run-check
+            output = result.stdout + result.stderr
+            if result.returncode == 0 and serial_number.upper() in output.upper():
+                return True, output
+            return False, output
         elif sys.platform == "darwin":
-            # TODO test on MacOS
-            # Use security to find the certificate by its serial number in the System keychain
-            cmd = ['security', 'find-certificate', '-c', serial_number, '/Library/Keychains/System.keychain']
-            store_found_phrase = 'attributes:'
+            cert_sha1 = get_cert_sha1_fingerprint(cert_file)
+            keychains = [
+                pathlib.Path('/Library/Keychains/System.keychain'),
+                pathlib.Path.home() / 'Library' / 'Keychains' / 'login.keychain-db',
+                pathlib.Path.home() / 'Library' / 'Keychains' / 'login.keychain',
+            ]
+            outputs = []
+            for keychain in keychains:
+                if not keychain.exists():
+                    continue
+                cmd = ['security', 'find-certificate', '-a', '-Z', str(keychain)]
+                result = subprocess.run(cmd, **sub_run_args())    #pylint:disable=subprocess-run-check
+                output = f"keychain={keychain}\n{result.stdout}{result.stderr}"
+                outputs.append(output)
+                if result.returncode == 0 and cert_sha1 in result.stdout.upper():
+                    return True, output
+            if outputs:
+                return False, "\n".join(outputs)
+            return False, "No keychain found for certificate lookup"
         else:   # unsupported platform
-            return False
-        args = sub_run_args()
-        result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
-        # Check if the command output indicates the certificate was found
-        if result.returncode==0:
-            if store_found_phrase in result.stdout or store_found_phrase.lower() in result.stdout:
-                return True, result.stdout + result.stderr
-        return False, result.stdout + result.stderr
+            return False, f"Unsupported platform: {sys.platform}"
     except subprocess.SubprocessError as e:
-        # error occured while running the command    
+        # error occured while running the command
         return False, str(e)
     except Exception as e:
         return False, str(e)
@@ -207,11 +249,13 @@ def install_root_cert(cert_file:str):
         #     f"exit $LASTEXITCODE"
         # ]
         p=subprocess.run(full_command, **sub_run_args())
-        stdout, stderr = p.stdout, p.stderr        
+        stdout, stderr = p.stdout, p.stderr
     elif sys.platform == "darwin":
-        # TODO Test on MAC system
-        cmd = ['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file]
-        p = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        login_keychain = pathlib.Path.home() / 'Library' / 'Keychains' / 'login.keychain-db'
+        if not login_keychain.exists():
+            login_keychain = pathlib.Path.home() / 'Library' / 'Keychains' / 'login.keychain'
+        cmd = ['security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', str(login_keychain), cert_file]
+        p = subprocess.run(cmd, **sub_run_args())
         stdout, stderr = p.stdout, p.stderr
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)
@@ -235,7 +279,11 @@ def list_children(folder:str, full_path:bool=False, incl_file:bool=True, incl_di
     try:
         def to_include(f:pathlib.Path) -> bool:
             return (incl_file and f.is_file()) or (incl_dir and f.is_dir())
-        files = [f for f in pathlib.Path(folder).iterdir() if to_include(f)]
+        target = pathlib.Path(folder)
+        if not target.exists() and not target.is_absolute():
+            target = sub_folder(folder)
+        files = [f for f in target.iterdir() if to_include(f)]
+        files.sort(key=lambda x: x.name.lower())
         if full_path:
             return [str(f.resolve()) for f in files]
         else:

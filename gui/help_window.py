@@ -1,5 +1,6 @@
 """ Help Window for tkinter GUI"""
 
+import sys
 from typing import Callable
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -10,6 +11,9 @@ from common.settings import Settings
 from updater import Updater, UpdateStatus
 from .utils import GUI_STYLE
 
+MAC_APP_NAME = "mortal_mac_v0.2"
+MAC_MANUAL_UPDATE_HINT = "发现新版本，请下载最新 DMG 手动更新。"
+
 
 class HelpWindow(tk.Toplevel):
     """ dialog window for help information and update """
@@ -17,24 +21,26 @@ class HelpWindow(tk.Toplevel):
         super().__init__(parent)
         self.st = st            # Settings object
         self.updater = updater
-        
-        title_str = f"{st.lan().HELP} {st.lan().APP_TITLE} v{self.updater.local_version}"
+
+        app_name = MAC_APP_NAME if sys.platform == "darwin" else st.lan().APP_TITLE
+        title_str = f"{st.lan().HELP} {app_name} v{self.updater.local_version}"
         self.title(title_str)
+        self.configure(bg=GUI_STYLE.bg_color)
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
         self.geometry(f'+{parent_x+10}+{parent_y+10}')
         self.win_size = (750, 700)
-        self.geometry(f"{self.win_size[0]}x{self.win_size[1]}")  # Set the window size
-        # self.resizable(False, False)
+        self.geometry(f"{self.win_size[0]}x{self.win_size[1]}")
 
         self.html_text:str = None
         self.html_box = HTMLScrolledText(
             self, html=st.lan().HELP+st.lan().LOADING,
             wrap=tk.CHAR, font=GUI_STYLE.font_normal(), height=25,
-            state=tk.DISABLED)
-        self.html_box.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)        
+            state=tk.DISABLED,
+            background=GUI_STYLE.card_bg)
+        self.html_box.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        self.frame_bot = tk.Frame(self, height=30)
+        self.frame_bot = tk.Frame(self, height=30, bg=GUI_STYLE.bg_color)
         self.frame_bot.pack(expand=True, fill=tk.X, padx=10, pady=10)
         col_widths = [int(w*self.win_size[0]) for w in (0.1, 0.4, 0.1)]
         for idx, width in enumerate(col_widths):
@@ -62,12 +68,16 @@ class HelpWindow(tk.Toplevel):
         
     
     def _download_update(self):
+        if sys.platform == "darwin":
+            return
         LOGGER.info("Download and unzip update.")
         self.update_button.configure(state=tk.DISABLED)
         self.updater.prepare_update()
         
         
     def _start_update(self):
+        if sys.platform == "darwin":
+            return
         LOGGER.info("Starting update process. will kill program and restart.")
         self.update_button.configure(state=tk.DISABLED)
         if messagebox.askokcancel(self.st.lan().START_UPDATE, self.st.lan().UPDATE_PREPARED):
@@ -81,6 +91,41 @@ class HelpWindow(tk.Toplevel):
             if self.updater.help_html:
                 self.html_text = self.updater.help_html
                 self.html_box.set_html(self.html_text)
+
+        if sys.platform == "darwin":
+            match self.updater.update_status:
+                case UpdateStatus.NONE:
+                    self.update_str_var.set("")
+                    self._check_for_update()
+                case UpdateStatus.CHECKING:
+                    self.update_str_var.set(lan.CHECKING_UPDATE)
+                case UpdateStatus.NO_UPDATE:
+                    self.update_str_var.set(lan.NO_UPDATE_FOUND)
+                    self.update_button.configure(
+                        text=lan.CHECK_FOR_UPDATE,
+                        state=tk.NORMAL,
+                        command=self._check_for_update)
+                case UpdateStatus.NEW_VERSION:
+                    self.update_str_var.set(f"{MAC_MANUAL_UPDATE_HINT} v{self.updater.web_version}")
+                    self.update_button.configure(
+                        text=lan.CHECK_FOR_UPDATE,
+                        state=tk.NORMAL,
+                        command=self._check_for_update)
+                case UpdateStatus.ERROR:
+                    self.update_str_var.set(str(self.updater.update_exception))
+                    self.update_button.configure(
+                        text=lan.CHECK_FOR_UPDATE,
+                        state=tk.NORMAL,
+                        command=self._check_for_update)
+                case _:
+                    # Keep macOS release in manual-update mode only.
+                    self.update_str_var.set(MAC_MANUAL_UPDATE_HINT)
+                    self.update_button.configure(
+                        text=lan.CHECK_FOR_UPDATE,
+                        state=tk.NORMAL,
+                        command=self._check_for_update)
+            self.after(100, self._refresh_ui)
+            return
         
         # update button and status
         match self.updater.update_status:
