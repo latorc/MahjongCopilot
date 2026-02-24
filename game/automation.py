@@ -7,6 +7,7 @@
 # for example, Majsoul before you finish "Chi", another player may "Pon"/"Ron"/..., which cancels your "Chi" action
 
 from dataclasses import dataclass, field
+import sys
 import time
 import random
 import threading
@@ -192,18 +193,24 @@ class ActionStepDelay(ActionStep):
 class AutomationTask:
     """ Managing automation task and its thread
     an automation task corresponds to performing a bot reaction on game client (e.g. click dahai on web client)"""
-    def __init__(self, br:GameBrowser, name:str, desc:str=""):
+    def __init__(self, br:GameBrowser, name:str, desc:str="", use_real_mouse:bool=False,
+        real_mouse_speed_pps:float=2200.0, real_mouse_jitter_px:float=2.0, real_mouse_click_offset_px:float=2.0):
         """
         params:
             br(GameBrowser): browser object
             name(str): name for the thread and task
-            desc(str): description of the task, for logging and readability"""
+            desc(str): description of the task, for logging and readability
+            use_real_mouse(bool): if True, use real mouse via ctypes instead of Playwright"""
         self.name = name
         self.desc = desc
         self.executor = br
+        self.use_real_mouse = use_real_mouse
+        self.real_mouse_speed_pps = max(300.0, real_mouse_speed_pps)
+        self.real_mouse_jitter_px = max(0.0, real_mouse_jitter_px)
+        self.real_mouse_click_offset_px = max(0.0, real_mouse_click_offset_px)
         self._stop_event = threading.Event()        # set event to stop running
         self.last_exe_time:float = -1               # timestamp for the last actionstep execution
-        
+
         self._thread:threading.Thread = None        
         
     def stop(self, jointhread:bool=False):
@@ -222,12 +229,19 @@ class AutomationTask:
         
     def run_step(self, step:ActionStep):
         """ run single action step"""
+        if self.use_real_mouse:
+            self._run_step_real_mouse(step)
+        else:
+            self._run_step_playwright(step)
+        self.last_exe_time = time.time()
+
+    def _run_step_playwright(self, step:ActionStep):
+        """ run step using Playwright (simulated mouse)"""
         if isinstance(step, ActionStepMove):
             self.executor.mouse_move(step.x, step.y, step.steps, True)
         elif isinstance(step, ActionStepClick):
-            # self.executor.mouse_click(step.delay, True)
             self.executor.mouse_down(True)
-            time.sleep(step.delay/1000) # sleep here instead of in browser thread
+            time.sleep(step.delay/1000)
             self.executor.mouse_up(True)
         elif isinstance(step, ActionStepMouseDown):
             self.executor.mouse_down(True)
@@ -239,7 +253,36 @@ class AutomationTask:
             time.sleep(step.delay)
         else:
             raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
-        self.last_exe_time = time.time()
+
+    def _run_step_real_mouse(self, step:ActionStep):
+        """ run step using real mouse (ctypes)"""
+        if isinstance(step, ActionStepMove):
+            # Recalculate mapping each move in case window moved between actions.
+            screen_x, screen_y = self.executor.viewport_to_screen(step.x, step.y)
+            self.executor.real_mouse_move(
+                screen_x, screen_y,
+                speed_pps=self.real_mouse_speed_pps,
+                jitter_px=self.real_mouse_jitter_px
+            )
+            # Also sync Playwright mouse so page hover states update
+            self.executor.mouse_move(step.x, step.y, step.steps, True)
+        elif isinstance(step, ActionStepClick):
+            self.executor.real_mouse_click(
+                delay=step.delay/1000,
+                click_offset_px=self.real_mouse_click_offset_px,
+                speed_pps=self.real_mouse_speed_pps,
+                jitter_px=self.real_mouse_jitter_px
+            )
+        elif isinstance(step, ActionStepMouseDown):
+            self.executor.real_mouse_down()
+        elif isinstance(step, ActionStepMouseUp):
+            self.executor.real_mouse_up()
+        elif isinstance(step, ActionStepWheel):
+            self.executor.real_mouse_wheel(step.dx, step.dy)
+        elif isinstance(step, ActionStepDelay):
+            time.sleep(step.delay)
+        else:
+            raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
         
     def start_action_steps(self, action_steps:Iterable[ActionStep], game_state:GameState = None):
         """ start running action list/iterator in a thread"""
@@ -299,6 +342,19 @@ class Automation:
             return True
         else:
             return False
+
+    def _create_task(self, name:str, desc:str) -> AutomationTask:
+        """Create task with current real-mouse tuning settings."""
+        use_real_mouse = self.st.use_real_mouse and sys.platform == "win32"
+        return AutomationTask(
+            self.executor,
+            name,
+            desc,
+            use_real_mouse,
+            self.st.real_mouse_speed_pps,
+            self.st.real_mouse_jitter_px,
+            self.st.real_mouse_click_offset_px
+        )
     
     def running_task_info(self) -> tuple[str, str]:
         """ return the running task's (name, desc). None if N/A"""
@@ -330,7 +386,7 @@ class Automation:
     def get_delay(self, mjai_action:dict, gi:GameInfo, subtract:float=0.0):
         """ return the action initial delay based on action type and game info"""
         mjai_type = mjai_action['type']
-        delay = random.uniform(self.st.delay_random_lower, self.st.delay_random_upper)    # base delay        
+        delay = self._sample_base_delay()
         if mjai_type == MjaiType.DAHAI:
             # extra time for first round and East
             if gi.is_first_round and  gi.jikaze  == 'E':
@@ -368,6 +424,37 @@ class Automation:
         delay = max(0, delay-subtract)    # minimal delay =0
         # LOGGER.debug("Subtract=%.2f, Delay=%.2f", subtract, delay)
         return delay
+
+    def _sample_base_delay(self) -> float:
+        """Sample base delay with heavy short-delay bias.
+        Distribution:
+            - 86%: short delay range from settings (biased toward lower bound)
+            - 12%: up to 5 seconds
+            -  2%: 5 to 10 seconds
+        """
+        short_low = max(0.0, float(self.st.delay_random_lower))
+        short_high = max(short_low, float(self.st.delay_random_upper))
+        roll = random.random()
+
+        if roll < 0.86:
+            # Strongly bias to lower bound so most actions are very quick.
+            u = random.random() ** 3.2
+            return short_low + (short_high - short_low) * u
+
+        if roll < 0.98:
+            mid_low = max(short_high, 0.6)
+            mid_high = 5.0
+            if mid_low >= mid_high:
+                return short_high
+            # Mild lower-bound bias inside medium bucket.
+            u = random.random() ** 1.8
+            return mid_low + (mid_high - mid_low) * u
+
+        # Rare long think-time bucket.
+        long_low = 5.0
+        long_high = 10.0
+        u = random.random() ** 1.4
+        return long_low + (long_high - long_low) * u
      
         
     def automate_action(self, mjai_action:dict, game_state:GameState) -> bool:
@@ -419,7 +506,7 @@ class Automation:
             f" (step={op_step},"
             f" calc_time={calc_time:.2f}s, delay={delay:.2f}s, total_delay={calc_time+delay:.2f}s)"
         )
-        self._task = AutomationTask(self.executor, f"Auto_{mjai_type}_{pai}", desc)
+        self._task = self._create_task(f"Auto_{mjai_type}_{pai}", desc)
         self._task.start_action_steps(action_steps, game_state)
         return True
     
@@ -520,7 +607,7 @@ class Automation:
         steps.append(ActionStepMove(x*self.scaler,y*self.scaler))
         steps.append(ActionStepDelay(random.uniform(0.1, 0.2)))
         steps.append(ActionStepClick())
-        self._task = AutomationTask(self.executor, f"SendEmoji{idx}", f"Send emoji {idx}")
+        self._task = self._create_task(f"SendEmoji{idx}", f"Send emoji {idx}")
         self._task.start_action_steps(steps, None)
         self.last_emoji_time = time.time()
     
@@ -536,7 +623,7 @@ class Automation:
             action_steps = self.steps_move_to_center(False)
             action_steps += self.steps_move_to_center(False)
             action_steps += self.steps_move_to_center(False)
-            self._task = AutomationTask(self.executor, "IdleMove", "Move mouse around in other's turn")
+            self._task = self._create_task("IdleMove", "Move mouse around in other's turn")
             self._task.start_action_steps(action_steps, None)
         
     
@@ -789,7 +876,7 @@ class Automation:
             return False
         self.stop_previous()
 
-        self._task = AutomationTask(self.executor, END_GAME, "Going back to main menu from game ending")
+        self._task = self._create_task(END_GAME, "Going back to main menu from game ending")
         self._task.start_action_steps(self._end_game_iter(), None)
         return True
         
@@ -816,7 +903,7 @@ class Automation:
             return False
         self.stop_previous()
         desc = f"Joining game (level={self.st.auto_join_level}, mode={self.st.auto_join_mode})"
-        self._task = AutomationTask(self.executor, JOIN_GAME, desc)
+        self._task = self._create_task(JOIN_GAME, desc)
         self._task.start_action_steps(self._join_game_iter(), None)
         return True
     

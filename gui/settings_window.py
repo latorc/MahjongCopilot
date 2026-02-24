@@ -1,4 +1,5 @@
 """ GUI Settings Window """
+import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -15,10 +16,11 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, parent:tk.Frame, setting:Settings):
         super().__init__(parent)
         self.st = setting
+        self.is_mac = sys.platform == "darwin"
 
-        self.geometry('700x675')
-        self.minsize(700,675)        
-        # self.resizable(False, False)
+        self.geometry('700x730')
+        self.minsize(700,730)
+        self.configure(bg=GUI_STYLE.bg_color)
         # set position: within main window
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
@@ -26,10 +28,10 @@ class SettingsWindow(tk.Toplevel):
 
         # flags
         self.exit_save:bool = False             # save btn clicked
-        self.gui_need_reload:bool = False       #  
+        self.gui_need_reload:bool = False       #
         self.model_updated:bool = False         # model settings updated
         self.mitm_proxinject_updated:bool = False          # mitm settings updated
-        
+
         style = ttk.Style(self)
         GUI_STYLE.set_style_normal(style)
         self.create_widgets()
@@ -38,6 +40,9 @@ class SettingsWindow(tk.Toplevel):
     def create_widgets(self):
         """ Create widgets for settings dialog"""
         self.title(self.st.lan().SETTINGS)
+        if self.is_mac:
+            self._create_widgets_mac()
+            return
         # Main frame
         main_frame = ttk.Frame(self, padding="20")
         main_frame.pack(expand=True, fill="both")        
@@ -88,7 +93,7 @@ class SettingsWindow(tk.Toplevel):
         number_entry = ttk.Entry(main_frame, textvariable=self.mitm_port_var, width=std_wid)
         number_entry.grid(row=cur_row, column=1, **args_entry)
         # upstream proxy
-        _frame = tk.Frame(main_frame)
+        _frame = tk.Frame(main_frame, bg=GUI_STYLE.bg_color)
         _frame.grid(row=cur_row, column=2, columnspan=2)
         _label = ttk.Label(_frame, text=self.st.lan().UPSTREAM_PROXY)
         _label.pack(side=tk.LEFT, **pad_args)
@@ -235,11 +240,36 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.st.lan().RANDOM_DELAY_RANGE)
         _label.grid(row=cur_row, column=0, **args_label)
         self.delay_random_lower_var = tk.DoubleVar(value=self.st.delay_random_lower)
-        delay_lower_entry = tk.Entry(main_frame, textvariable= self.delay_random_lower_var,width=std_wid)
+        delay_lower_entry = tk.Entry(main_frame, textvariable= self.delay_random_lower_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color)
         delay_lower_entry.grid(row=cur_row, column=1, **args_entry)
         self.delay_random_upper_var = tk.DoubleVar(value=self.st.delay_random_upper)
-        delay_upper_entry = tk.Entry(main_frame, textvariable= self.delay_random_upper_var,width=std_wid)
+        delay_upper_entry = tk.Entry(main_frame, textvariable= self.delay_random_upper_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color)
         delay_upper_entry.grid(row=cur_row, column=2, **args_entry)
+
+        # real mouse parameters
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().REAL_MOUSE_SPEED)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.real_mouse_speed_var = tk.DoubleVar(value=self.st.real_mouse_speed_pps)
+        _entry = tk.Entry(main_frame, textvariable=self.real_mouse_speed_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color)
+        _entry.grid(row=cur_row, column=1, **args_entry)
+        _label = ttk.Label(main_frame, text=self.st.lan().REAL_MOUSE_JITTER)
+        _label.grid(row=cur_row, column=2, **args_label)
+        self.real_mouse_jitter_var = tk.DoubleVar(value=self.st.real_mouse_jitter_px)
+        _entry = tk.Entry(main_frame, textvariable=self.real_mouse_jitter_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color)
+        _entry.grid(row=cur_row, column=3, **args_entry)
+
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().REAL_MOUSE_CLICK_OFFSET)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.real_mouse_click_offset_var = tk.DoubleVar(value=self.st.real_mouse_click_offset_px)
+        _entry = tk.Entry(main_frame, textvariable=self.real_mouse_click_offset_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color)
+        _entry.grid(row=cur_row, column=1, **args_entry)
         
         # tips :Settings
         cur_row += 1
@@ -254,8 +284,219 @@ class SettingsWindow(tk.Toplevel):
         save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
         save_button.pack(side=tk.RIGHT, padx=20, pady=20)
         
+    def _create_widgets_mac(self):
+        """Create minimal settings UI for macOS release."""
+        main_frame = ttk.Frame(self, padding="20")
+        main_frame.pack(expand=True, fill="both")
+
+        pad_args = {"padx": (3, 3), "pady": (3, 2)}
+        args_label = {"sticky": "e", **pad_args}
+        args_entry = {"sticky": "w", **pad_args}
+        std_wid = 15
+        cur_row = 0
+
+        # Client size
+        _label = ttk.Label(main_frame, text=self.st.lan().CLIENT_SIZE)
+        _label.grid(row=cur_row, column=0, **args_label)
+        size_options = [
+            "960 x 540", "1280 x 720", "1600 x 900",
+            "1920 x 1080", "2560 x 1440", "3840 x 2160"
+        ]
+        setting_size = f"{self.st.browser_width} x {self.st.browser_height}"
+        self.client_size_var = tk.StringVar(value=setting_size)
+        _combo = ttk.Combobox(
+            main_frame, textvariable=self.client_size_var, values=size_options,
+            state="readonly", width=std_wid
+        )
+        _combo.grid(row=cur_row, column=1, **args_entry)
+        self.browser_fullscreen_var = tk.BooleanVar(value=self.st.browser_fullscreen)
+        _entry = ttk.Checkbutton(
+            main_frame, variable=self.browser_fullscreen_var, text=self.st.lan().BROWSER_FULLSCREEN, width=std_wid
+        )
+        _entry.grid(row=cur_row, column=2, **args_entry)
+        self.browser_high_quality_var = tk.BooleanVar(value=self.st.browser_high_quality)
+        _entry = ttk.Checkbutton(
+            main_frame, variable=self.browser_high_quality_var, text=self.st.lan().BROWSER_HIGH_QUALITY, width=std_wid
+        )
+        _entry.grid(row=cur_row, column=3, **args_entry)
+
+        # Majsoul URL
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().MAJSOUL_URL)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.ms_url_var = tk.StringVar(value=self.st.ms_url)
+        _entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=std_wid * 4)
+        _entry.grid(row=cur_row, column=1, columnspan=3, **args_entry)
+
+        # Model files (Local only)
+        cur_row += 1
+        sep = ttk.Separator(main_frame, orient=tk.HORIZONTAL)
+        sep.grid(row=cur_row, column=0, columnspan=4, sticky="ew", pady=5)
+
+        model_files = [""] + list_children(Folder.MODEL)
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AI_MODEL_FILE)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.model_file_var = tk.StringVar(value=self.st.model_file)
+        _combo = ttk.Combobox(
+            main_frame, textvariable=self.model_file_var, values=model_files,
+            state="readonly", width=std_wid * 3
+        )
+        _combo.grid(row=cur_row, column=1, columnspan=3, **args_entry)
+
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AI_MODEL_FILE_3P)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.model_file_3p_var = tk.StringVar(value=self.st.model_file_3p)
+        _combo = ttk.Combobox(
+            main_frame, textvariable=self.model_file_3p_var, values=model_files,
+            state="readonly", width=std_wid * 3
+        )
+        _combo.grid(row=cur_row, column=1, columnspan=3, **args_entry)
+
+        # Autoplay settings
+        cur_row += 1
+        sep = ttk.Separator(main_frame, orient=tk.HORIZONTAL)
+        sep.grid(row=cur_row, column=0, columnspan=4, sticky="ew", pady=5)
+
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().AUTO_PLAY_SETTINGS)
+        _label.grid(row=cur_row, column=0, **args_label)
+
+        self.random_move_var = tk.BooleanVar(value=self.st.auto_random_move)
+        _entry = ttk.Checkbutton(
+            main_frame, variable=self.random_move_var, text=self.st.lan().MOUSE_RANDOM_MOVE, width=std_wid
+        )
+        _entry.grid(row=cur_row, column=1, **args_entry)
+
+        self.auto_idle_move_var = tk.BooleanVar(value=self.st.auto_idle_move)
+        _entry = ttk.Checkbutton(
+            main_frame, variable=self.auto_idle_move_var, text=self.st.lan().AUTO_IDLE_MOVE, width=std_wid
+        )
+        _entry.grid(row=cur_row, column=2, **args_entry)
+
+        self.auto_drag_dahai_var = tk.BooleanVar(value=self.st.auto_dahai_drag)
+        _entry = ttk.Checkbutton(
+            main_frame, variable=self.auto_drag_dahai_var, text=self.st.lan().DRAG_DAHAI, width=std_wid
+        )
+        _entry.grid(row=cur_row, column=3, **args_entry)
+
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().RANDOM_CHOICE)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.randomized_choice_var = tk.StringVar(value=self.st.ai_randomize_choice)
+        _combo = ttk.Combobox(
+            main_frame,
+            textvariable=self.randomized_choice_var,
+            values=['0 (Off)', 1, 2, 3, 4, 5],
+            state="readonly",
+            width=std_wid
+        )
+        _combo.grid(row=cur_row, column=1, **args_entry)
+
+        _label = ttk.Label(main_frame, text=self.st.lan().REPLY_EMOJI_CHANCE)
+        _label.grid(row=cur_row, column=2, **args_label)
+        emoji_options = [f"{i*10}%" for i in range(11)]
+        emoji_options[0] = '0% (off)'
+        self.reply_emoji_var = tk.StringVar(value=f"{int(self.st.auto_reply_emoji_rate*100)}%")
+        _combo = ttk.Combobox(
+            main_frame, textvariable=self.reply_emoji_var, values=emoji_options, state="readonly", width=std_wid
+        )
+        _combo.grid(row=cur_row, column=3, **args_entry)
+
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().RANDOM_DELAY_RANGE)
+        _label.grid(row=cur_row, column=0, **args_label)
+        self.delay_random_lower_var = tk.DoubleVar(value=self.st.delay_random_lower)
+        _entry = tk.Entry(
+            main_frame, textvariable=self.delay_random_lower_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color
+        )
+        _entry.grid(row=cur_row, column=1, **args_entry)
+        self.delay_random_upper_var = tk.DoubleVar(value=self.st.delay_random_upper)
+        _entry = tk.Entry(
+            main_frame, textvariable=self.delay_random_upper_var, width=std_wid,
+            bg=GUI_STYLE.card_bg, fg=GUI_STYLE.fg_color, insertbackground=GUI_STYLE.fg_color
+        )
+        _entry.grid(row=cur_row, column=2, **args_entry)
+
+        cur_row += 1
+        _tips = ttk.Label(
+            main_frame,
+            text="mac 版仅保留本地模型、窗口大小、网址与出牌设置。",
+            width=std_wid * 4
+        )
+        _tips.grid(row=cur_row, column=0, columnspan=4, **args_entry)
+
+        # Buttons
+        button_frame = ttk.Frame(self)
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        cancel_button = ttk.Button(button_frame, text=self.st.lan().CANCEL, command=self._on_cancel)
+        cancel_button.pack(side=tk.LEFT, padx=20, pady=20)
+        save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
+        save_button.pack(side=tk.RIGHT, padx=20, pady=20)
+
+    def _on_save_mac(self):
+        """Save handler for macOS minimal settings UI."""
+        size_list = self.client_size_var.get().split(' x ')
+        width_new = int(size_list[0])
+        height_new = int(size_list[1])
+        ms_url_new = self.ms_url_var.get()
+
+        model_file_new = self.model_file_var.get()
+        mode_file_3p_new = self.model_file_3p_var.get()
+        if self.st.model_file != model_file_new or self.st.model_file_3p != mode_file_3p_new:
+            self.model_updated = True
+
+        randomized_choice_new = int(self.randomized_choice_var.get().split(' ')[0])
+        reply_emoji_new = int(self.reply_emoji_var.get().split('%')[0]) / 100
+        try:
+            delay_lower_new = self.delay_random_lower_var.get()
+            delay_upper_new = self.delay_random_upper_var.get()
+        except Exception:
+            messagebox.showerror("⚠", self.st.lan().RANDOM_DELAY_RANGE)
+            return
+
+        delay_lower_new = max(0, delay_lower_new)
+        delay_upper_new = max(delay_lower_new, delay_upper_new)
+
+        self.st.browser_width = width_new
+        self.st.browser_height = height_new
+        self.st.browser_fullscreen = self.browser_fullscreen_var.get()
+        self.st.browser_high_quality = self.browser_high_quality_var.get()
+        self.st.ms_url = ms_url_new
+
+        # macOS minimal app behavior
+        self.st.language = "ZHS"
+        self.st.model_type = "Local"
+        self.st.enable_chrome_ext = False
+        self.st.auto_launch_browser = False
+        self.st.upstream_proxy = ""
+        self.st.enable_proxinject = False
+        self.st.use_real_mouse = False
+
+        self.st.model_file = model_file_new
+        self.st.model_file_3p = mode_file_3p_new
+
+        self.st.auto_idle_move = self.auto_idle_move_var.get()
+        self.st.auto_dahai_drag = self.auto_drag_dahai_var.get()
+        self.st.auto_random_move = self.random_move_var.get()
+        self.st.ai_randomize_choice = randomized_choice_new
+        self.st.auto_reply_emoji_rate = reply_emoji_new
+        self.st.delay_random_lower = delay_lower_new
+        self.st.delay_random_upper = delay_upper_new
+
+        self.gui_need_reload = False
+        self.mitm_proxinject_updated = False
+        self.st.save_json()
+        self.exit_save = True
+        self.destroy()
+        
         
     def _on_save(self):
+        if self.is_mac:
+            self._on_save_mac()
+            return
         # Get values from entry fields, validate, and save them        
         # === Process and validate new values ===
         size_list = self.client_size_var.get().split(' x ')
@@ -315,11 +556,17 @@ class SettingsWindow(tk.Toplevel):
         try:
             delay_lower_new = self.delay_random_lower_var.get()
             delay_upper_new = self.delay_random_upper_var.get()
+            real_mouse_speed_new = self.real_mouse_speed_var.get()
+            real_mouse_jitter_new = self.real_mouse_jitter_var.get()
+            real_mouse_click_offset_new = self.real_mouse_click_offset_var.get()
         except Exception as _e:
             messagebox.showerror("⚠", self.st.lan().RANDOM_DELAY_RANGE)
             return
         delay_lower_new = max(0,delay_lower_new)
         delay_upper_new = max(delay_lower_new, delay_upper_new)
+        real_mouse_speed_new = max(300.0, min(20000.0, real_mouse_speed_new))
+        real_mouse_jitter_new = max(0.0, min(20.0, real_mouse_jitter_new))
+        real_mouse_click_offset_new = max(0.0, min(30.0, real_mouse_click_offset_new))
         
         # === save new values to setting ===        
         self.st.auto_launch_browser = self.auto_launch_var.get()
@@ -349,6 +596,9 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_reply_emoji_rate = reply_emoji_new        
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
+        self.st.real_mouse_speed_pps = real_mouse_speed_new
+        self.st.real_mouse_jitter_px = real_mouse_jitter_new
+        self.st.real_mouse_click_offset_px = real_mouse_click_offset_new
         
         self.st.save_json()
         self.exit_save = True

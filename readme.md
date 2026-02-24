@@ -1,3 +1,4 @@
+<!--
 # 麻将 Copilot / Mahjong Copilot
 
 麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂三人、四人麻将。
@@ -60,6 +61,47 @@ set PLAYWRIGHT_BROWSERS_PATH=0
 playwright install chromium
 python main.py
 ```
+
+### macOS arm64 极简发布（`mortal_mac_v0.2`）
+
+仅适用于 Apple Silicon (M1/M2/M3...)，并使用极简配置：
+
+- 固定简体中文
+- 仅本地模型（不提供 AkagiOT/MJAPI 配置入口）
+- 仅 Playwright 自动化（禁用真实鼠标）
+- 隐藏代理相关设置
+- 浏览器支持全屏模式（可配置）
+- 浏览器支持高画质模式（默认开启）
+
+构建命令：
+
+```bash
+bash scripts/generate_mac_app.sh
+bash scripts/make_dmg_mac.sh
+```
+
+产物：
+
+- App: `dist/mortal_mac_v0.2.app`
+- DMG: `dist/mortal_mac_v0.2.dmg`
+
+更新策略（mac）：
+
+- Help 窗口仅检查版本，不执行一键更新
+- 发布新版本后，下载新 DMG 覆盖安装
+
+浏览器体验设置（mac）：
+
+- 全屏模式：设置页可开关，启动浏览器时生效
+- 高画质模式：设置页可开关，默认开启
+- 高画质模式会使用持久化浏览器 profile 缓存，减少资源重复加载
+
+若仍出现画面模糊或资源未完整加载，可按以下顺序排查：
+
+1. 确认网络连接与 MITM 证书安装状态正常
+2. 关闭程序后删除 `~/Library/Application Support/mortal_mac_v0.2/browser_data`
+3. 重新启动应用并等待页面资源首次完整缓存
+
 ### 配置模型
 本程序支持几种模型来源。其中，本地模型（Local）是基于 Akagi 兼容的 Mortal 模型。要获取 Akagi 的模型，请参见 <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a> 的说明。
 ### Model Configuration
@@ -110,3 +152,36 @@ This program supports different types of AI models. The 'Local' Model type uses 
 ## 许可 / License
 本项目使用 GNU GPL v3 许可协议。  
 协议全文请见 [LICENSE](LICENSE)
+-->
+
+# MahjongCopilot 开发改动总结（本次）
+
+## 1. mac 版本主线（`mortal_mac_v0.2`）
+
+- 完成 mac 极简版方向：设置页只保留本地模型、窗口尺寸、Majsoul URL、自动打牌参数。
+- mac 固定策略：简体中文、仅 Local 模型、禁用真实鼠标、隐藏代理/远程模型等复杂入口。
+- 应用命名统一为 `mortal_mac_v0.2`（窗口标题、`.app`、`.dmg`）。
+- 打包链路补齐：`scripts/generate_mac_app.sh` + `scripts/make_dmg_mac.sh`，产出 `dist/mortal_mac_v0.2.app` 与 `dist/mortal_mac_v0.2.dmg`。
+- 处理了 mac 启动与分发问题：资源拷贝后重新签名（ad-hoc）避免 Finder 拦截。
+- 模型分发改造：把常用模型放进 `.app`，并加首次启动自动拷贝到可写目录的逻辑。
+- 浏览器体验增强（mac）：
+  - 新增全屏模式开关（启动生效）。
+  - 新增高画质模式开关（默认开启）。
+  - 高画质使用持久 profile 缓存，减少重复加载。
+- 修复全屏相关稳定性问题：
+  - 避免 `new_page()` 打断全屏窗口状态。
+  - 全屏模式使用运行时窗口尺寸，不再和固定 viewport 冲突。
+  - 导航阶段临时异常（如 `Execution context was destroyed`）按非致命处理，避免误退出。
+  - 全屏下增加坐标映射层，自动打牌点击按 16:9 游戏区自适配，减少分辨率偏移。
+- mac 版本中移除 Help/打开日志入口，界面进一步简化。
+
+## 2. Windows 功能补充（模拟鼠标）
+
+- Windows 分支保留并增强“模拟/真实鼠标”相关能力。
+- 增加真实鼠标执行参数与控制项（如移动速度、抖动、点击偏移等）用于降低行为机械感。
+- 自动化执行链路按平台分流：Windows 可走鼠标模拟路径，mac 固定 Playwright 路径。
+
+## 3. 当前交付形态
+
+- 主要交付目标是 mac 版可分发开发（`mortal_mac_v0.2`）与运行稳定性。
+- 同时保留 Windows 的模拟鼠标能力作为差异化功能，不影响 mac 极简策略。
