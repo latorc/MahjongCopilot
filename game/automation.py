@@ -16,7 +16,7 @@ from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJA
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
 from common.log_helper import LOGGER
 from common.settings import Settings
-from common.utils import UiState, GAME_MODES
+from common.utils import UiState, GAME_MODES, AUTO_JOIN_ROOMS
 
 from .img_proc import ImgTemp, GameVisual
 from .browser import GameBrowser
@@ -92,9 +92,10 @@ class Positions:
         (14.35, 8.12),    # OK button 确定按钮
         (6.825, 6.8),     # 点击好感度礼物?
     ]
-    MENUS = [
-        (11.5, 2.75),   # Ranked 段位场
-    ]
+    MENUS = {
+        AUTO_JOIN_ROOMS[0]: (11.5, 2.75),   # Ranked 段位场
+        AUTO_JOIN_ROOMS[1]: (11.35, 4.65),  # Match 比赛场
+    }
     
     LEVELS = [
         (11.5, 3.375),  # Bronze 铜之间
@@ -110,6 +111,11 @@ class Positions:
         (11.6, 6.1),   # 3E 三人东
         (11.6, 7.35),  # 3S 三人南
     ]
+
+    MATCH_TIANMING = (11.45, 5.55)
+    MATCH_MODE_BUTTONS = {
+        '4E': (11.45, 4.55),
+    }
 
 
 
@@ -815,14 +821,28 @@ class Automation:
         if self.st.auto_join_game is False:
             return False
         self.stop_previous()
-        desc = f"Joining game (level={self.st.auto_join_level}, mode={self.st.auto_join_mode})"
+        desc = (
+            f"Joining game (room={self.st.auto_join_room}, "
+            f"level={self.st.auto_join_level}, mode={self.st.auto_join_mode})"
+        )
         self._task = AutomationTask(self.executor, JOIN_GAME, desc)
         self._task.start_action_steps(self._join_game_iter(), None)
         return True
     
     def _join_game_iter(self) -> Iterator[ActionStep]:
         # generate action steps for joining next game
-        
+        for step in self._wait_for_main_menu_iter():
+            yield step
+
+        if self.st.auto_join_room == AUTO_JOIN_ROOMS[1]:
+            for step in self._join_match_game_iter():
+                yield step
+        else:
+            for step in self._join_ranked_game_iter():
+                yield step
+
+    def _wait_for_main_menu_iter(self) -> Iterator[ActionStep]:
+        """Wait until the main menu is visible."""
         while True:     # Wait for main menu
             res, diff = self.g_v.comp_temp(ImgTemp.MAIN_MENU)
             if res:
@@ -830,9 +850,10 @@ class Automation:
                 self.ui_state = UiState.MAIN_MENU
                 break
             yield ActionStepDelay(random.uniform(0.5, 1))
-        
-        # click on Ranked Mode
-        x,y = Positions.MENUS[0]
+
+    def _join_ranked_game_iter(self) -> Iterator[ActionStep]:
+        """Join the configured ranked lobby and queue mode."""
+        x,y = Positions.MENUS[AUTO_JOIN_ROOMS[0]]
         for step in self.steps_randomized_move_click(x,y):
             yield step
         yield ActionStepDelay(random.uniform(0.5, 1.5))
@@ -855,7 +876,31 @@ class Automation:
         mode_idx = GAME_MODES.index(self.st.auto_join_mode)
         x,y = Positions.MODES[mode_idx]
         for step in self.steps_randomized_move_click(x,y):
-            yield step    
+            yield step
+
+    def _join_match_game_iter(self) -> Iterator[ActionStep]:
+        """Enter the match hall, select Tianming mode, then queue the visible room button."""
+        x,y = Positions.MENUS[AUTO_JOIN_ROOMS[1]]
+        for step in self.steps_randomized_move_click(x,y):
+            yield step
+        yield ActionStepDelay(random.uniform(1.0, 1.8))
+
+        x,y = Positions.MATCH_TIANMING
+        for step in self.steps_randomized_move_click(x,y):
+            yield step
+        yield ActionStepDelay(random.uniform(0.8, 1.5))
+
+        mode_key = self.st.auto_join_mode
+        if mode_key not in Positions.MATCH_MODE_BUTTONS:
+            LOGGER.warning(
+                "Match auto join does not support mode %s yet. Falling back to 4E.",
+                mode_key
+            )
+            mode_key = '4E'
+
+        x,y = Positions.MATCH_MODE_BUTTONS[mode_key]
+        for step in self.steps_randomized_move_click(x,y):
+            yield step
     
     def decide_lobby_action(self):
         """ decide what "lobby action" to execute based on current state."""

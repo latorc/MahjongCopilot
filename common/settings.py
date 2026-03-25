@@ -61,6 +61,7 @@ class Settings:
         self.auto_retry_interval:float = self._get_value("auto_retry_interval", 1.5, lambda x: 0.5 < x < 30.0)  # not shown
         
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
+        self.auto_join_room:str = self._get_value("auto_join_room", utils.AUTO_JOIN_ROOMS[0], self.valid_auto_join_room)
         self.auto_join_level:int = self._get_value("auto_join_level", 1, self.valid_game_level)
         self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)
         
@@ -149,6 +150,10 @@ class Settings:
             return True
         else:
             return False
+
+    def valid_auto_join_room(self, room:str) -> bool:
+        """ return true if auto join room type is valid"""
+        return room in utils.AUTO_JOIN_ROOMS
         
     def valid_url(self, url:str) -> bool:
         """ validate url"""

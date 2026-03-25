@@ -10,6 +10,7 @@ class LanStr:
     WEB_OVERLAY = "Overlay"
     AUTOPLAY = "Autoplay"
     AUTO_JOIN_GAME = "Auto Join"
+    AUTO_JOIN_ROOM = "Auto Join Room"
     AUTO_JOIN_TIMER = "Auto Join Timer"
     OPEN_LOG_FILE = "Open Log File"
     SETTINGS = "Settings"
@@ -66,6 +67,7 @@ class LanStr:
     RANDOM_DELAY_RANGE = "Base Delay Range (sec)"    
     GAME_LEVELS = ["Bronze", "Silver", "Gold", "Jade", "Throne"]
     GAME_MODES = ["4-P East","4-P South","3-P East","3-P South"]
+    AUTO_JOIN_ROOMS = ["Ranked", "Match"]
     MOUSE_RANDOM_MOVE = "Randomize Move"
     
     # Status
@@ -93,6 +95,7 @@ class LanStr:
     MITM_CERT_NOT_INSTALLED = "Run as admin or manually install MITM cert."
     MAIN_THREAD_ERROR = "Main Thread Error!"
     MODEL_NOT_SUPPORT_MODE_ERROR = "Model not supporting game mode"
+    UNSUPPORTED_GAME_RULE_ERROR = "Unsupported game rules"
     CONNECTION_ERROR = "Network Connection Error"
     BROWSER_ZOOM_OFF = r"Set Browser Zoom level to 100% !"
     CHECK_ZOOM = "Browser Zoom!"
@@ -197,10 +200,12 @@ class LanStrZHS(LanStr):
     DRAG_DAHAI = "鼠标拖拽出牌"
     RANDOM_CHOICE = "AI 选项随机化(去重)"
     REPLY_EMOJI_CHANCE = "回复表情概率"
+    AUTO_JOIN_ROOM = "自动加入房间"
     
     RANDOM_DELAY_RANGE = "基础延迟随机范围(秒)"
     GAME_LEVELS = ["铜之间", "银之间", "金之间", "玉之间", "王座之间"]
     GAME_MODES = ["四人东","四人南","三人东","三人南"]
+    AUTO_JOIN_ROOMS = ["段位场", "比赛场"]
     MOUSE_RANDOM_MOVE = "鼠标移动随机化"
     
     # Status
@@ -228,6 +233,7 @@ class LanStrZHS(LanStr):
     MITM_SERVER_ERROR = "MITM 服务错误!"
     MAIN_THREAD_ERROR = "主进程发生错误!"
     MODEL_NOT_SUPPORT_MODE_ERROR = "模型不支持游戏模式"
+    UNSUPPORTED_GAME_RULE_ERROR = "当前活动规则暂不支持"
     CONNECTION_ERROR = "网络连接错误"
     BROWSER_ZOOM_OFF = r"请将浏览器缩放设置成 100% 以正常运行!"
     CHECK_ZOOM = "浏览器缩放错误!"

@@ -382,21 +382,31 @@ class BotManager:
                     LOGGER.info("Game Started. Game Flow ID=%s", msg.flow_id)
                     self.game_flow_id = msg.flow_id
                     self.game_state = GameState(self.bot)    # create game state with bot
-                    self.game_state.input(liqimsg)      # authGame -> mjai:start_game, no reaction
                     self.game_exception = None
                     self.automation.on_enter_game()
+                    self._handle_game_flow_msg(liqimsg, process_idle=False)
+                elif msg.flow_id == self.game_flow_id:
+                    self._handle_game_flow_msg(liqimsg, process_idle=False)
                 else:
                     LOGGER.warning("Game flow %s already started. ignoring new game flow %s", self.game_flow_id, msg.flow_id)
+
+            elif (liqi_type, liqi_method) in (
+                (liqi.MsgType.RES, liqi.LiqiMethod.enterGame),
+                (liqi.MsgType.RES, liqi.LiqiMethod.syncGame),
+            ):
+                if self.game_flow_id is None:
+                    LOGGER.info("Game flow initialized from %s. Flow ID=%s", liqi_method, msg.flow_id)
+                    self.game_flow_id = msg.flow_id
+                    self.game_state = GameState(self.bot)
+                    self.game_exception = None
+                    self.automation.on_enter_game()
+                    self._handle_game_flow_msg(liqimsg, process_idle=False)
+                elif msg.flow_id == self.game_flow_id:
+                    self._handle_game_flow_msg(liqimsg)
                 
             elif msg.flow_id == self.game_flow_id:
                 # Game Flow Message (in-Game message)
-                # Feed msg to game_state for processing with AI bot
-                LOGGER.debug('Game msg: %s', str(liqimsg))
-                reaction = self.game_state.input(liqimsg)
-                if reaction:
-                    self._do_automation(reaction)
-                else:
-                    self._process_idle_automation(liqimsg)
+                self._handle_game_flow_msg(liqimsg)
                 # if self.game_state.is_game_ended:
                 #     self._process_end_game()
             
@@ -487,6 +497,15 @@ class BotManager:
         
         text = '\n'.join((text, model_text, autoplay_text, line))       
         self.browser.overlay_update_botleft(text)
+
+    def _handle_game_flow_msg(self, liqimsg:dict, process_idle:bool=True):
+        """Feed an in-game message into GameState and trigger automation as needed."""
+        LOGGER.debug('Game msg: %s', str(liqimsg))
+        reaction = self.game_state.input(liqimsg)
+        if reaction:
+            self._do_automation(reaction)
+        elif process_idle:
+            self._process_idle_automation(liqimsg)
 
     
     def _do_automation(self, reaction:dict):

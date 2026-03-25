@@ -54,6 +54,7 @@ class GameMode(Enum):
 
 # for automation
 GAME_MODES = ['4E', '4S', '3E', '3S']
+AUTO_JOIN_ROOMS = ['ranked', 'match']
 
 
 class UiState(Enum):
@@ -79,6 +80,15 @@ class BotNotSupportingMode(Exception):
     def __init__(self, mode:GameMode):
         super().__init__(mode)
 
+class UnsupportedMajsoulRule(Exception):
+    """ Majsoul rule variant unsupported by the current parser/bot stack"""
+    def __init__(self, rules:list[str] | tuple[str, ...] | str):
+        if isinstance(rules, str):
+            self.rules = (rules,)
+        else:
+            self.rules = tuple(rules)
+        super().__init__(', '.join(self.rules))
+
 
 def error_to_str(error:Exception, lan:LanStr) -> str:
     """ Convert error to language specific string"""
@@ -90,6 +100,8 @@ def error_to_str(error:Exception, lan:LanStr) -> str:
         return lan.MITM_SERVER_ERROR    
     elif isinstance(error, BotNotSupportingMode):
         return lan.MODEL_NOT_SUPPORT_MODE_ERROR + f' {error.args[0].value}'
+    elif isinstance(error, UnsupportedMajsoulRule):
+        return lan.UNSUPPORTED_GAME_RULE_ERROR + f": {', '.join(error.rules)}"
     elif isinstance(error, requests.exceptions.ConnectionError):
         return lan.CONNECTION_ERROR + f': {error}'
     elif isinstance(error, requests.exceptions.ReadTimeout):

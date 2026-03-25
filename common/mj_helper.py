@@ -23,6 +23,12 @@ TILES_MJAI_2_MS = {value: key for key, value in TILES_MS_2_MJAI.items()}    # sw
 
 def cvt_ms2mjai(ms_tile:str) -> str:
     """ convert majsoul tile to mjai tile"""
+    if not ms_tile:
+        return ms_tile
+    # Activity rooms may append a transient state suffix such as `t` to tile strings.
+    # The bot/state code only needs the underlying tile identity.
+    if len(ms_tile) > 2 and ms_tile[0].isdigit() and ms_tile[1] in ('m', 'p', 's', 'z'):
+        ms_tile = ms_tile[:2]
     if ms_tile in TILES_MS_2_MJAI:
         return TILES_MS_2_MJAI[ms_tile]
     else:

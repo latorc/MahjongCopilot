@@ -4,6 +4,31 @@ import torch
 from torch.distributions import Normal, Categorical
 from bot.local.model3p import Brain, DQN
 
+def _to_python_scalars(value):
+    if isinstance(value, torch.Tensor):
+        return value.detach().cpu().tolist()
+    if isinstance(value, np.ndarray):
+        value = value.tolist()
+    elif isinstance(value, np.generic):
+        return value.item()
+
+    if isinstance(value, (list, tuple)):
+        return [_to_python_scalars(v) for v in value]
+    return value
+
+def _batch_to_tensor(batch, *, dtype, device):
+    if isinstance(batch, torch.Tensor):
+        return batch.to(device=device, dtype=dtype)
+
+    # Avoid the torch<->numpy bridge here. The shipped torch build is linked
+    # against NumPy 1.x, while the runtime may have NumPy 2.x installed.
+    if isinstance(batch, np.ndarray):
+        batch = batch.tolist()
+    elif not isinstance(batch, (list, tuple)):
+        batch = list(batch)
+
+    return torch.tensor(_to_python_scalars(batch), dtype=dtype, device=device)
+
 class MortalEngine:
     """ Mortal Engine for local bot 3p"""
     def __init__(
@@ -48,11 +73,11 @@ class MortalEngine:
             return self._react_batch(obs, masks, invisible_obs)
 
     def _react_batch(self, obs, masks, invisible_obs):
-        obs = torch.as_tensor(np.stack(obs, axis=0), device=self.device)
-        masks = torch.as_tensor(np.stack(masks, axis=0), device=self.device)
+        obs = _batch_to_tensor(obs, dtype=torch.float32, device=self.device)
+        masks = _batch_to_tensor(masks, dtype=torch.bool, device=self.device)
         invisible_obs = None
         if self.is_oracle:
-            invisible_obs = torch.as_tensor(np.stack(invisible_obs, axis=0), device=self.device)
+            invisible_obs = _batch_to_tensor(invisible_obs, dtype=torch.float32, device=self.device)
         batch_size = obs.shape[0]
 
         match self.version:
