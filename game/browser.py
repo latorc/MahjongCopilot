@@ -15,6 +15,7 @@ from common.log_helper import LOGGER
 class GameBrowser:
     """ Wrapper for Playwright browser controlling maj-soul operations
     Browser runs in a thread, and actions are queued to be processed by the thread"""
+    CLIENT_SIZE_TOLERANCE_PX = 4
 
     def __init__(self, width:int, height:int):
         """ Set browser with viewport size (width, height)"""
@@ -36,6 +37,7 @@ class GameBrowser:
         self._page_title:str = None
         self._last_update_time:float = 0
         self.zoomlevel_check:float = None
+        self.client_size_check:tuple[int, int] | None = None
 
         # overlay info
         self._canvas_id = None              # for overlay
@@ -44,6 +46,119 @@ class GameBrowser:
 
     def __del__(self):
         self.stop()
+
+    def _build_launch_args(self, url:str, enable_chrome_ext:bool, extensions_list:list[str] | None = None) -> list[str]:
+        """ Build Chromium launch args.
+        Use app mode to hide browser tabs/address bar while keeping a native title bar."""
+        args = [
+            "--noerrdialogs",
+            f"--app={url}",
+            f"--window-size={self.width},{self.height}",
+            # Chromium upstream test harnesses use this flag to suppress the
+            # "Google API keys are missing" infobar.
+            "--test-type=gpu",
+        ]
+        if os.name != "nt":
+            args.append("--no-sandbox")
+        if enable_chrome_ext and extensions_list:
+            args.extend([
+                "--disable-extensions-except=" + ",".join(extensions_list),
+                "--load-extension=" + ",".join(extensions_list),
+            ])
+        return args
+
+    def _build_launch_options(self, url:str, proxy_object:dict | None, enable_chrome_ext:bool, extensions_list:list[str]) -> dict:
+        """ Build launch kwargs for Playwright Chromium persistent context."""
+        launch_options = {
+            "user_data_dir": utils.sub_folder(Folder.BROWSER_DATA),
+            "headless": False,
+            "no_viewport": True,
+            "proxy": proxy_object,
+            "ignore_default_args": ["--enable-automation"],
+            "args": self._build_launch_args(url, enable_chrome_ext, extensions_list),
+        }
+
+        if os.name == "nt":
+            launch_options["chromium_sandbox"] = True
+
+        return launch_options
+
+    def _get_primary_page(self, timeout_ms:int=10000) -> Page:
+        """ Return the main non-extension page created by Chromium app mode."""
+        timeout_at = time.time() + timeout_ms / 1000
+        while time.time() < timeout_at:
+            for page in self.context.pages:
+                if not page.url.startswith("chrome-extension://"):
+                    return page
+            time.sleep(0.05)
+        raise RuntimeError("Timed out waiting for Chromium app page")
+
+    def _get_window_metrics(self) -> dict:
+        """ Return current browser/page size metrics."""
+        return self.page.evaluate("""() => ({
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            outerWidth: window.outerWidth,
+            outerHeight: window.outerHeight,
+            devicePixelRatio: window.devicePixelRatio,
+        })""")
+
+    def _calibrate_window_bounds(self, max_attempts:int=6):
+        """ Resize the outer Chromium app window until the page client area matches target size.
+
+        App mode with Playwright Chromium can leave extra client-area space after browser UI
+        infobars are suppressed, which shows up as a bottom black bar. We keep the content area
+        exactly at the configured automation resolution so coordinates remain valid.
+        """
+        cdp = self.context.new_cdp_session(self.page)
+        try:
+            for _ in range(max_attempts):
+                metrics = self._get_window_metrics()
+                delta_w = int(round(self.width - metrics['innerWidth']))
+                delta_h = int(round(self.height - metrics['innerHeight']))
+                if (
+                    abs(delta_w) <= self.CLIENT_SIZE_TOLERANCE_PX and
+                    abs(delta_h) <= self.CLIENT_SIZE_TOLERANCE_PX
+                ):
+                    LOGGER.info(
+                        "Browser client area calibrated: inner=%sx%s outer=%sx%s dpr=%s tolerance=%spx",
+                        metrics['innerWidth'],
+                        metrics['innerHeight'],
+                        metrics['outerWidth'],
+                        metrics['outerHeight'],
+                        metrics['devicePixelRatio'],
+                        self.CLIENT_SIZE_TOLERANCE_PX,
+                    )
+                    return
+
+                window_info = cdp.send("Browser.getWindowForTarget")
+                bounds = window_info.get('bounds', {})
+                current_outer_w = bounds.get('width', metrics['outerWidth'])
+                current_outer_h = bounds.get('height', metrics['outerHeight'])
+                new_bounds = {
+                    'width': max(100, int(round(current_outer_w + delta_w))),
+                    'height': max(100, int(round(current_outer_h + delta_h))),
+                }
+                cdp.send(
+                    "Browser.setWindowBounds",
+                    {
+                        'windowId': window_info['windowId'],
+                        'bounds': new_bounds,
+                    }
+                )
+                time.sleep(0.12)
+
+            metrics = self._get_window_metrics()
+            LOGGER.warning(
+                "Browser client area not fully calibrated: inner=%sx%s target=%sx%s tolerance=%spx",
+                metrics['innerWidth'],
+                metrics['innerHeight'],
+                self.width,
+                self.height,
+                self.CLIENT_SIZE_TOLERANCE_PX,
+            )
+        finally:
+            cdp.detach()
 
     def start(self, url:str, proxy:str=None, width:int=None, height:int=None, enable_chrome_ext:bool=False):
         """ Launch the browser in a thread, and start processing action queue
@@ -80,57 +195,26 @@ class GameBrowser:
             proxy_object = None
 
         # read all subfolder names from Folder.CRX and form extension list
+        extensions_list = []
         if enable_chrome_ext:
             extensions_list = list_children(Folder.CHROME_EXT, True, False, True)
-            # extensions_list = []
-            # for root, dirs, files in os.walk(utils.sub_folder(Folder.CHROME_EXT)):
-            #     for extension_dir in dirs:
-            #         extensions_list.append(os.path.join(root, extension_dir))
             LOGGER.info('Extensions loaded: %s', extensions_list)
-            disable_extensions_except_args = "--disable-extensions-except=" + ",".join(extensions_list)
-            load_extension_args = "--load-extension=" + ",".join(extensions_list)
+        launch_options = self._build_launch_options(url, proxy_object, enable_chrome_ext, extensions_list)
 
         LOGGER.info('Starting Chromium, viewport=%dx%d, proxy=%s', self.width, self.height, proxy)
         with sync_playwright() as playwright:
-            if enable_chrome_ext:
-                try:
-                    # Initilize browser
-                    chromium = playwright.chromium
-                    self.context = chromium.launch_persistent_context(
-                        user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
-                        headless=False,
-                        viewport={'width': self.width, 'height': self.height},
-                        proxy=proxy_object,
-                        ignore_default_args=["--enable-automation"],
-                        args=[
-                            "--noerrdialogs",
-                            "--no-sandbox",
-                            disable_extensions_except_args,
-                            load_extension_args
-                        ]
-                    )
-                except Exception as e:
-                    LOGGER.error('Error launching the browser: %s', e, exc_info=True)
-                    return
-            else:
-                try:
-                    # Initilize browser
-                    chromium = playwright.chromium
-                    self.context = chromium.launch_persistent_context(
-                        user_data_dir=utils.sub_folder(Folder.BROWSER_DATA),
-                        headless=False,
-                        viewport={'width': self.width, 'height': self.height},
-                        proxy=proxy_object,
-                        ignore_default_args=["--enable-automation"],
-                        args=["--noerrdialogs", "--no-sandbox"]
-                    )
-                except Exception as e:
-                    LOGGER.error('Error launching the browser: %s', e, exc_info=True)
-                    return
+            try:
+                chromium = playwright.chromium
+                self.context = chromium.launch_persistent_context(**launch_options)
+            except Exception as e:
+                LOGGER.error('Error launching the browser: %s', e, exc_info=True)
+                return
 
             try:
-                self.page = self.context.new_page()
-                self.page.goto(url)
+                self.page = self._get_primary_page()
+                if self.page.url != url:
+                    self.page.goto(url)
+                self._calibrate_window_bounds()
             except Exception as e:
                 LOGGER.error('Error opening page. Check if certificate is installed. \n%s',e)
 
@@ -149,8 +233,9 @@ class GameBrowser:
                 try:        # test if page is stil alive
                     if time.time() - self._last_update_time > 1:
                         self._page_title = self.page.title()
-                        # check zoom level
-                        self.zoomlevel_check = self.page.evaluate("() => window.devicePixelRatio")
+                        metrics = self._get_window_metrics()
+                        self.zoomlevel_check = metrics['devicePixelRatio']
+                        self.client_size_check = (metrics['innerWidth'], metrics['innerHeight'])
                         self._last_update_time = time.time()
                 except Exception as e:
                     LOGGER.warning("Page error %s. exiting.", e)

@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from bot_manager import BotManager, mjai_reaction_2_guide
-from common.utils import Folder, GameMode, GAME_MODES, AUTO_JOIN_ROOMS, GameClientType
+from common.utils import Folder, GameMode, GAME_MODES, MATCH_GAME_MODES, AUTO_JOIN_ROOMS, GameClientType
 from common.utils import UiState, sub_file, error_to_str
 from common.log_helper import LOGGER, LogHelper
 from common.settings import Settings
@@ -121,26 +121,23 @@ class MainGUI(tk.Tk):
         )
         self.combo_autojoin_room.grid(row=0, column=0, padx=3, pady=3)
         self.combo_autojoin_room.bind("<<ComboboxSelected>>", self._on_autojoin_room_selected)
-        self.auto_join_level_var = tk.StringVar(value=self.st.lan().GAME_LEVELS[self.st.auto_join_level])
-        options = self.st.lan().GAME_LEVELS
+        self.auto_join_level_var = tk.StringVar()
         self.combo_autojoin_level = ttk.Combobox(
             _frame,
             textvariable=self.auto_join_level_var,
-            values=options,
+            values=[],
             state="readonly",
-            width=8
+            width=10
         )
         self.combo_autojoin_level.grid(row=1, column=0, padx=3, pady=3)   
         self.combo_autojoin_level.bind("<<ComboboxSelected>>", self._on_autojoin_level_selected)        
-        mode_idx = GAME_MODES.index(self.st.auto_join_mode)
-        self.auto_join_mode_var = tk.StringVar(value=self.st.lan().GAME_MODES[mode_idx])
-        options = self.st.lan().GAME_MODES
+        self.auto_join_mode_var = tk.StringVar()
         self.combo_autojoin_mode = ttk.Combobox(
             _frame,
             textvariable=self.auto_join_mode_var,
-            values=options,
+            values=[],
             state="readonly",
-            width=8
+            width=10
         )
         self.combo_autojoin_mode.grid(row=2, column=0, padx=3, pady=3)
         self.combo_autojoin_mode.bind("<<ComboboxSelected>>", self._on_autojoin_mode_selected)
@@ -205,28 +202,53 @@ class MainGUI(tk.Tk):
     
     def _on_autojoin_level_selected(self, _event):
         new_value = self.auto_join_level_var.get()    # convert to index
-        self.st.auto_join_level = self.st.lan().GAME_LEVELS.index(new_value)
+        self.st.auto_join_level = self._get_autojoin_level_labels().index(new_value)
         
     def _on_autojoin_room_selected(self, _event):
         new_room = self.auto_join_room_var.get()
         self.st.auto_join_room = AUTO_JOIN_ROOMS[self.st.lan().AUTO_JOIN_ROOMS.index(new_room)]
+        if self.st.auto_join_room == AUTO_JOIN_ROOMS[1]:
+            self.st.auto_join_mode = MATCH_GAME_MODES[0]
         self._update_autojoin_selectors()
         
         
     def _on_autojoin_mode_selected(self, _event):
         new_mode = self.auto_join_mode_var.get()  # convert to string
-        new_mode = self.st.lan().GAME_MODES.index(new_mode)
-        new_mode = GAME_MODES[new_mode]
+        mode_labels = self._get_autojoin_mode_labels()
+        mode_values = self._get_autojoin_mode_values()
+        new_mode = mode_values[mode_labels.index(new_mode)]
         self.st.auto_join_mode = new_mode
 
+    def _get_autojoin_level_labels(self) -> list[str]:
+        if self.st.auto_join_room == AUTO_JOIN_ROOMS[1]:
+            return self.st.lan().MATCH_LEVELS
+        return self.st.lan().GAME_LEVELS
+
+    def _get_autojoin_mode_labels(self) -> list[str]:
+        if self.st.auto_join_room == AUTO_JOIN_ROOMS[1]:
+            return self.st.lan().MATCH_GAME_MODES
+        return self.st.lan().GAME_MODES
+
+    def _get_autojoin_mode_values(self) -> list[str]:
+        if self.st.auto_join_room == AUTO_JOIN_ROOMS[1]:
+            return MATCH_GAME_MODES
+        return GAME_MODES
+
     def _update_autojoin_selectors(self):
-        """Enable ranked selectors only when ranked auto join is selected."""
-        if self.st.auto_join_room == AUTO_JOIN_ROOMS[0]:
-            self.combo_autojoin_level.config(state="readonly")
-            self.combo_autojoin_mode.config(state="readonly")
-        else:
-            self.combo_autojoin_level.config(state="disabled")
-            self.combo_autojoin_mode.config(state="disabled")
+        """Refresh selector contents for ranked/match auto join."""
+        level_labels = self._get_autojoin_level_labels()
+        mode_labels = self._get_autojoin_mode_labels()
+        mode_values = self._get_autojoin_mode_values()
+
+        self.combo_autojoin_level.config(values=level_labels, state="readonly")
+        self.combo_autojoin_mode.config(values=mode_labels, state="readonly")
+
+        self.st.auto_join_level = max(0, min(self.st.auto_join_level, len(level_labels)-1))
+        if self.st.auto_join_mode not in mode_values:
+            self.st.auto_join_mode = mode_values[0]
+
+        self.auto_join_level_var.set(level_labels[self.st.auto_join_level])
+        self.auto_join_mode_var.set(mode_labels[mode_values.index(self.st.auto_join_mode)])
         
 
     def _on_btn_start_browser_clicked(self):

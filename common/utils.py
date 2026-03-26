@@ -54,6 +54,7 @@ class GameMode(Enum):
 
 # for automation
 GAME_MODES = ['4E', '4S', '3E', '3S']
+MATCH_GAME_MODES = ['4E']
 AUTO_JOIN_ROOMS = ['ranked', 'match']
 
 

@@ -16,7 +16,7 @@ from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJA
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
 from common.log_helper import LOGGER
 from common.settings import Settings
-from common.utils import UiState, GAME_MODES, AUTO_JOIN_ROOMS
+from common.utils import UiState, GAME_MODES, MATCH_GAME_MODES, AUTO_JOIN_ROOMS
 
 from .img_proc import ImgTemp, GameVisual
 from .browser import GameBrowser
@@ -94,7 +94,7 @@ class Positions:
     ]
     MENUS = {
         AUTO_JOIN_ROOMS[0]: (11.5, 2.75),   # Ranked 段位场
-        AUTO_JOIN_ROOMS[1]: (11.35, 4.65),  # Match 比赛场
+        AUTO_JOIN_ROOMS[1]: (11.5, 4.65),  # Match 比赛场
     }
     
     LEVELS = [
@@ -112,9 +112,9 @@ class Positions:
         (11.6, 7.35),  # 3S 三人南
     ]
 
-    MATCH_TIANMING = (11.45, 5.55)
+    MATCH_LEVELS = LEVELS
     MATCH_MODE_BUTTONS = {
-        '4E': (11.45, 4.55),
+        '4E': (11.6, 3.325), # 4E 四人东
     }
 
 
@@ -287,6 +287,8 @@ class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul.
     Screen positions are calculated using pre-defined constants in 16x9 resolution,
     and are translated to client resolution before execution"""
+    MAIN_MENU_WAIT_VISUAL_TIMEOUT = 10.0
+
     def __init__(self, browser: GameBrowser, setting:Settings):
         if browser is None:
             raise ValueError("Browser is None")
@@ -296,6 +298,7 @@ class Automation:
         
         self._task:AutomationTask = None        # the task thread        
         self.ui_state:UiState = UiState.NOT_RUNNING   # Where game UI is at. initially not running 
+        self._last_lobby_login_time:float = 0.0
         
         self.last_emoji_time:float = 0.0        # timestamp of last emoji sent   
     
@@ -768,6 +771,7 @@ class Automation:
         if self.ui_state != UiState.IN_GAME:
             self.stop_previous()
             self.ui_state = UiState.MAIN_MENU
+            self._last_lobby_login_time = time.time()
 
     def on_enter_game(self):
         """ enter game handler"""
@@ -843,11 +847,32 @@ class Automation:
 
     def _wait_for_main_menu_iter(self) -> Iterator[ActionStep]:
         """Wait until the main menu is visible."""
+        wait_start = time.time()
         while True:     # Wait for main menu
             res, diff = self.g_v.comp_temp(ImgTemp.MAIN_MENU)
             if res:
                 LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UiState.MAIN_MENU
+                break
+
+            elapsed = time.time() - wait_start
+            if (
+                self.ui_state == UiState.MAIN_MENU and
+                self.executor.is_page_normal() and
+                elapsed >= self.MAIN_MENU_WAIT_VISUAL_TIMEOUT
+            ):
+                since_login = (
+                    time.time() - self._last_lobby_login_time
+                    if self._last_lobby_login_time > 0 else elapsed
+                )
+                LOGGER.warning(
+                    "Main menu visual detection timed out after %.1fs (diff=%s). "
+                    "Falling back to lobby-login readiness after %.1fs. "
+                    "This can happen on non-CN clients such as mahjongsoul.com.",
+                    elapsed,
+                    f"{diff:.1f}" if diff >= 0 else "screenshot-timeout",
+                    since_login,
+                )
                 break
             yield ActionStepDelay(random.uniform(0.5, 1))
 
@@ -879,21 +904,30 @@ class Automation:
             yield step
 
     def _join_match_game_iter(self) -> Iterator[ActionStep]:
-        """Enter the match hall, select Tianming mode, then queue the visible room button."""
+        """Join the configured match lobby and queue its fixed 4E mode."""
         x,y = Positions.MENUS[AUTO_JOIN_ROOMS[1]]
         for step in self.steps_randomized_move_click(x,y):
             yield step
-        yield ActionStepDelay(random.uniform(1.0, 1.8))
+        yield ActionStepDelay(random.uniform(0.5, 1.5))
 
-        x,y = Positions.MATCH_TIANMING
+        if self.st.auto_join_level >= 3:  # activity 3 / casual hall require wheel
+            wx,wy = Positions.MATCH_LEVELS[1]
+            for step in self.steps_randomized_move(wx,wy):
+                yield step
+            yield ActionStepDelay(random.uniform(0.5, 0.9))
+            for step in self.steps_random_wheels(0, 1000):
+                yield step
+            yield ActionStepDelay(random.uniform(0.5, 1.0))
+
+        x,y = Positions.MATCH_LEVELS[self.st.auto_join_level]
         for step in self.steps_randomized_move_click(x,y):
             yield step
         yield ActionStepDelay(random.uniform(0.8, 1.5))
 
         mode_key = self.st.auto_join_mode
-        if mode_key not in Positions.MATCH_MODE_BUTTONS:
+        if mode_key not in MATCH_GAME_MODES or mode_key not in Positions.MATCH_MODE_BUTTONS:
             LOGGER.warning(
-                "Match auto join does not support mode %s yet. Falling back to 4E.",
+                "Match auto join only supports 4E. Falling back from %s to 4E.",
                 mode_key
             )
             mode_key = '4E'

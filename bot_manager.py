@@ -129,11 +129,16 @@ class BotManager:
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
     
     def is_browser_zoom_off(self):
-        """ check browser zoom level, return true if zoomlevel is not 1"""
+        """Check whether the browser client area mismatches the configured automation size."""
         if self.browser and self.browser.is_page_normal():
-            zoom = self.browser.zoomlevel_check
-            if zoom is not None:
-                if abs(zoom - 1) > 0.001:
+            client_size = self.browser.client_size_check
+            if client_size is not None:
+                inner_width, inner_height = client_size
+                tolerance = self.browser.CLIENT_SIZE_TOLERANCE_PX
+                if (
+                    abs(inner_width - self.browser.width) > tolerance or
+                    abs(inner_height - self.browser.height) > tolerance
+                ):
                     return True
         return False
         

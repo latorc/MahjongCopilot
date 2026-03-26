@@ -313,6 +313,24 @@ class GameState:
         self.pending_start_tsumo_msg = None
         LOGGER.debug("Deferred start_kyoku bootstrapped with dora %s", dora_marker)
 
+    def _sync_pending_start_hand(self):
+        """Keep deferred bot bootstrap messages aligned with the latest local hand state."""
+        if self.pending_start_kyoku_msg is None:
+            return
+
+        tehais = self.pending_start_kyoku_msg.get('tehais')
+        if isinstance(tehais, list) and 0 <= self.seat < len(tehais):
+            tehais[self.seat] = list(self.kyoku_state.my_tehai)
+
+        if self.pending_start_tsumo_msg is not None and self.pending_start_tsumo_msg.get('actor') == self.seat:
+            self.pending_start_tsumo_msg['pai'] = self.kyoku_state.my_tsumohai
+
+        LOGGER.debug(
+            "Synced deferred start_kyoku hand after change: tehai=%s tsumo=%s",
+            self.kyoku_state.my_tehai,
+            self.kyoku_state.my_tsumohai,
+        )
+
     def _update_self_hand_after_change(self, in_tiles_ms:list[str], out_tiles_ms:list[str]):
         """Apply ActionChangeTile to the local hand state so GUI and autoplay keep working."""
         if not self._ensure_self_hand_ready('ActionChangeTile'):
@@ -339,6 +357,8 @@ class GameState:
         else:
             self.kyoku_state.my_tsumohai = None
             self.kyoku_state.my_tehai = total_hand
+
+        self._sync_pending_start_hand()
 
     def _merge_self_tsumohai(self, action_name:str) -> bool:
         """Move the pending draw into hand before self discard/kan/nukidora updates."""
@@ -517,6 +537,11 @@ class GameState:
                 self.kyoku_state.pending_reach_acc = None
         
         liqi_data_data = liqi_data['data']
+        if liqi_data_name == 'ActionChangeTile':
+            self._update_self_hand_after_change(
+                liqi_data_data.get('inTiles', []),
+                liqi_data_data.get('outTiles', []),
+            )
         self._bootstrap_pending_start_kyoku(liqi_data_data)
         if 'data' in liqi_data:
             # Process dora events
@@ -549,10 +574,6 @@ class GameState:
             return self._react_all(liqi_data_data)
 
         elif liqi_data_name == 'ActionChangeTile':
-            self._update_self_hand_after_change(
-                liqi_data_data.get('inTiles', []),
-                liqi_data_data.get('outTiles', []),
-            )
             return self._react_all(liqi_data_data)
         
         # LiqiAction.DiscardTile -> MJAI_TYPE.DAHAI
