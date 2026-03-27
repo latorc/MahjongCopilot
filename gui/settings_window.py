@@ -33,6 +33,36 @@ class SettingsWindow(tk.Toplevel):
         style = ttk.Style(self)
         GUI_STYLE.set_style_normal(style)
         self.create_widgets()
+
+    def _server_options(self) -> dict[str, str]:
+        """Localized Majsoul server options."""
+        return {
+            "CN": self.st.lan().MAJSOUL_CN,
+            "JP": self.st.lan().MAJSOUL_JP,
+            "CUSTOM": self.st.lan().MAJSOUL_CUSTOM,
+        }
+
+    def _selected_server_key(self) -> str:
+        """Return server key from localized combobox label."""
+        selected_name = self.ms_server_var.get()
+        for key, label in self._server_options().items():
+            if label == selected_name:
+                return key
+        return self.st.get_majsoul_server()
+
+    def _sync_ms_url_from_server(self, _event=None):
+        """Refresh the readonly URL field when the server selection changes."""
+        server_key = self._selected_server_key()
+        if getattr(self, "_last_server_key", None) == "CUSTOM":
+            self._custom_ms_url = self.ms_url_var.get().strip()
+
+        self.ms_url_entry.configure(state="normal")
+        if server_key == "CUSTOM":
+            self.ms_url_var.set(self._custom_ms_url)
+        else:
+            self.ms_url_var.set(self.st.get_majsoul_server_url(server_key))
+            self.ms_url_entry.configure(state="readonly")
+        self._last_server_key = server_key
         
 
     def create_widgets(self):
@@ -67,11 +97,30 @@ class SettingsWindow(tk.Toplevel):
         
         # majsoul url
         cur_row += 1
-        _label = ttk.Label(main_frame, text=self.st.lan().MAJSOUL_URL)
+        _label = ttk.Label(main_frame, text=self.st.lan().MAJSOUL_SERVER)
         _label.grid(row=cur_row, column=0, **args_label)
-        self.ms_url_var = tk.StringVar(value=self.st.ms_url)
-        string_entry = ttk.Entry(main_frame, textvariable=self.ms_url_var, width=std_wid*3)
-        string_entry.grid(row=cur_row, column=1,columnspan=2,  **args_entry)
+        url_frame = ttk.Frame(main_frame)
+        url_frame.grid(row=cur_row, column=1, columnspan=2, **args_entry)
+        server_options = self._server_options()
+        current_server_key = self.st.get_majsoul_server()
+        self._custom_ms_url = self.st.ms_url if current_server_key == "CUSTOM" else ""
+        self._last_server_key = current_server_key
+        self.ms_server_var = tk.StringVar(value=server_options[current_server_key])
+        server_menu = ttk.Combobox(
+            url_frame,
+            textvariable=self.ms_server_var,
+            values=list(server_options.values()),
+            state="readonly",
+            width=8,
+        )
+        server_menu.pack(side=tk.LEFT, padx=(0, 6))
+        server_menu.bind("<<ComboboxSelected>>", self._sync_ms_url_from_server)
+
+        current_url = self.st.ms_url if current_server_key == "CUSTOM" else self.st.get_majsoul_server_url(current_server_key)
+        self.ms_url_var = tk.StringVar(value=current_url)
+        self.ms_url_entry = ttk.Entry(url_frame, textvariable=self.ms_url_var, width=std_wid*2 + 2)
+        self.ms_url_entry.pack(side=tk.LEFT)
+        self._sync_ms_url_from_server()
         # extensions
         self.enable_extension_var = tk.BooleanVar(value=self.st.enable_chrome_ext)
         auto_launch_entry = ttk.Checkbutton(
@@ -261,8 +310,11 @@ class SettingsWindow(tk.Toplevel):
         size_list = self.client_size_var.get().split(' x ')
         width_new = int(size_list[0])
         height_new = int(size_list[1])
-        # url
-        ms_url_new = self.ms_url_var.get()
+        ms_server_new = self._selected_server_key()
+        ms_url_new = self.ms_url_var.get().strip()
+        if ms_server_new == "CUSTOM" and not self.st.valid_url(ms_url_new):
+            messagebox.showerror("⚠", self.st.lan().MAJSOUL_URL_ERROR_PROMPT)
+            return
         
         # mitm & proxy inject
         mitm_port_new = int(self.mitm_port_var.get())
@@ -325,7 +377,7 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_launch_browser = self.auto_launch_var.get()
         self.st.browser_width = width_new
         self.st.browser_height = height_new
-        self.st.ms_url = ms_url_new
+        self.st.set_majsoul_server(ms_server_new, ms_url_new)
         self.st.enable_chrome_ext = self.enable_extension_var.get()
         self.st.mitm_port = mitm_port_new
         self.st.upstream_proxy = upstream_proxy_new

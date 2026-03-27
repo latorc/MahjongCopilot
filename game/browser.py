@@ -1,4 +1,5 @@
 """ Game Broswer class for controlling maj-soul web client operations"""
+import base64
 import logging
 import time
 import threading
@@ -31,6 +32,7 @@ class GameBrowser:
         """ initialize internal variables"""
         self.context:BrowserContext = None
         self.page:Page = None        # playwright page, only used by thread
+        self._page_cdp_session = None
         self.fps_counter = FPSCounter()
 
         # for tracking page info
@@ -214,6 +216,7 @@ class GameBrowser:
                 self.page = self._get_primary_page()
                 if self.page.url != url:
                     self.page.goto(url)
+                self._page_cdp_session = self.context.new_cdp_session(self.page)
                 self._calibrate_window_bounds()
             except Exception as e:
                 LOGGER.error('Error opening page. Check if certificate is installed. \n%s',e)
@@ -623,11 +626,33 @@ class GameBrowser:
             res_queue: queue for saving the image buff data"""
         if self.is_page_normal():
             try:
-                ss_bytes:BytesIO = self.page.screenshot(timeout=time_ms)
+                if self._page_cdp_session is None:
+                    self._page_cdp_session = self.context.new_cdp_session(self.page)
+                payload = self._page_cdp_session.send(
+                    "Page.captureScreenshot",
+                    {
+                        "format": "png",
+                        "fromSurface": True,
+                        "captureBeyondViewport": False,
+                        "optimizeForSpeed": True,
+                    },
+                )
+                ss_bytes = base64.b64decode(payload["data"])
                 res_queue.put(ss_bytes)
-            except Exception as e:
-                LOGGER.error("Error taking screenshot: %s", e, exc_info=True)
-                res_queue.put(None)
+            except Exception as cdp_error:
+                LOGGER.warning("CDP screenshot failed, falling back to Playwright screenshot: %s", cdp_error)
+                self._page_cdp_session = None
+                try:
+                    ss_bytes:BytesIO = self.page.screenshot(
+                        timeout=time_ms,
+                        animations="disabled",
+                        caret="hide",
+                        scale="css",
+                    )
+                    res_queue.put(ss_bytes)
+                except Exception as e:
+                    LOGGER.error("Error taking screenshot: %s", e, exc_info=True)
+                    res_queue.put(None)
         else:
             res_queue.put(None)
             LOGGER.debug("Page not loaded, no screenshot")

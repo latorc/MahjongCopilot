@@ -287,7 +287,8 @@ class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul.
     Screen positions are calculated using pre-defined constants in 16x9 resolution,
     and are translated to client resolution before execution"""
-    MAIN_MENU_WAIT_VISUAL_TIMEOUT = 10.0
+    END_GAME_CLICK_DELAY_LOWER = 1.2
+    END_GAME_CLICK_DELAY_UPPER = 1.8
 
     def __init__(self, browser: GameBrowser, setting:Settings):
         if browser is None:
@@ -298,7 +299,6 @@ class Automation:
         
         self._task:AutomationTask = None        # the task thread        
         self.ui_state:UiState = UiState.NOT_RUNNING   # Where game UI is at. initially not running 
-        self._last_lobby_login_time:float = 0.0
         
         self.last_emoji_time:float = 0.0        # timestamp of last emoji sent   
     
@@ -771,7 +771,6 @@ class Automation:
         if self.ui_state != UiState.IN_GAME:
             self.stop_previous()
             self.ui_state = UiState.MAIN_MENU
-            self._last_lobby_login_time = time.time()
 
     def on_enter_game(self):
         """ enter game handler"""
@@ -783,7 +782,6 @@ class Automation:
         self.stop_previous()
         if self.ui_state != UiState.NOT_RUNNING:
             self.ui_state = UiState.GAME_ENDING
-        # if auto next. go to lobby, then next
         
     def on_exit_lobby(self):
         """ exit lobby handler"""
@@ -804,16 +802,21 @@ class Automation:
         return True
         
     def _end_game_iter(self) -> Iterator[ActionStep]:
-        # generate action steps for exiting a match until main menu tested
+        # exit the settlement/result flow until the main menu template is visible again
         while True:
             res, diff = self.g_v.comp_temp(ImgTemp.MAIN_MENU)
             if res:     # stop on main menu
                 LOGGER.debug("Visual sees main menu with diff %.1f", diff)
                 self.ui_state = UiState.MAIN_MENU
                 break
-            
-            yield ActionStepDelay(random.uniform(2,3))
-            
+
+            yield ActionStepDelay(
+                random.uniform(
+                    self.END_GAME_CLICK_DELAY_LOWER,
+                    self.END_GAME_CLICK_DELAY_UPPER,
+                )
+            )
+
             x,y = Positions.GAMEOVER[0]
             for step in self.steps_randomized_move_click(x,y):
                 yield step
@@ -847,7 +850,6 @@ class Automation:
 
     def _wait_for_main_menu_iter(self) -> Iterator[ActionStep]:
         """Wait until the main menu is visible."""
-        wait_start = time.time()
         while True:     # Wait for main menu
             res, diff = self.g_v.comp_temp(ImgTemp.MAIN_MENU)
             if res:
@@ -855,25 +857,6 @@ class Automation:
                 self.ui_state = UiState.MAIN_MENU
                 break
 
-            elapsed = time.time() - wait_start
-            if (
-                self.ui_state == UiState.MAIN_MENU and
-                self.executor.is_page_normal() and
-                elapsed >= self.MAIN_MENU_WAIT_VISUAL_TIMEOUT
-            ):
-                since_login = (
-                    time.time() - self._last_lobby_login_time
-                    if self._last_lobby_login_time > 0 else elapsed
-                )
-                LOGGER.warning(
-                    "Main menu visual detection timed out after %.1fs (diff=%s). "
-                    "Falling back to lobby-login readiness after %.1fs. "
-                    "This can happen on non-CN clients such as mahjongsoul.com.",
-                    elapsed,
-                    f"{diff:.1f}" if diff >= 0 else "screenshot-timeout",
-                    since_login,
-                )
-                break
             yield ActionStepDelay(random.uniform(0.5, 1))
 
     def _join_ranked_game_iter(self) -> Iterator[ActionStep]:
@@ -924,15 +907,7 @@ class Automation:
             yield step
         yield ActionStepDelay(random.uniform(0.8, 1.5))
 
-        mode_key = self.st.auto_join_mode
-        if mode_key not in MATCH_GAME_MODES or mode_key not in Positions.MATCH_MODE_BUTTONS:
-            LOGGER.warning(
-                "Match auto join only supports 4E. Falling back from %s to 4E.",
-                mode_key
-            )
-            mode_key = '4E'
-
-        x,y = Positions.MATCH_MODE_BUTTONS[mode_key]
+        x,y = Positions.MATCH_MODE_BUTTONS['4E']
         for step in self.steps_randomized_move_click(x,y):
             yield step
     

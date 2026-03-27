@@ -7,6 +7,11 @@ from .lan_str import LanStr, LAN_OPTIONS
 from . import utils
 
 DEFAULT_SETTING_FILE = 'settings.json'
+MAJSOUL_SERVER_URLS = {
+    "CN": "https://game.maj-soul.com/1/",
+    "JP": "https://game.mahjongsoul.com/",
+}
+MAJSOUL_SERVER_TYPES = tuple(MAJSOUL_SERVER_URLS.keys()) + ("CUSTOM",)
 
 class Settings:
     """ Settings class to load and save settings to json file"""
@@ -23,6 +28,11 @@ class Settings:
         self.browser_width:int = self._get_value("browser_width", 1280, lambda x: 0 < x < 19999)
         self.browser_height:int = self._get_value("browser_height", 720, lambda x: 0 < x < 19999)
         self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/",self.valid_url)
+        self.ms_server_select:str = self._get_value(
+            "ms_server_select",
+            self.infer_majsoul_server(self.ms_url),
+            self.valid_majsoul_server,
+        )
         self.enable_chrome_ext:bool = self._get_value("enable_chrome_ext", False, self.valid_bool)
         self.mitm_port:int = self._get_value("mitm_port", 10999, self.valid_mitm_port)
         self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
@@ -64,6 +74,9 @@ class Settings:
         self.auto_join_room:str = self._get_value("auto_join_room", utils.AUTO_JOIN_ROOMS[0], self.valid_auto_join_room)
         self.auto_join_level:int = self._get_value("auto_join_level", 1, self.valid_game_level)
         self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)
+
+        if self.ms_server_select in MAJSOUL_SERVER_URLS:
+            self.ms_url = self.get_majsoul_server_url(self.ms_server_select)
         
         self.save_json()
         LOGGER.info("Settings initialized and saved to %s", self._json_file)
@@ -107,6 +120,35 @@ class Settings:
     def lan(self) -> LanStr:
         """ return the LanString instance"""
         return LAN_OPTIONS[self.language]
+
+    def infer_majsoul_server(self, url:str) -> str:
+        """Infer the Majsoul server type from a configured URL."""
+        url = (url or "").lower()
+        if "mahjongsoul.com" in url:
+            return "JP"
+        if "maj-soul.com" in url:
+            return "CN"
+        return "CUSTOM"
+
+    def get_majsoul_server(self) -> str:
+        """Return the selected Majsoul server type."""
+        return getattr(self, "ms_server_select", self.infer_majsoul_server(self.ms_url))
+
+    def get_majsoul_server_url(self, server:str|None=None) -> str:
+        """Return the canonical URL for the selected Majsoul server."""
+        if server is None:
+            server = self.get_majsoul_server()
+        return MAJSOUL_SERVER_URLS.get(server, MAJSOUL_SERVER_URLS["CN"])
+
+    def set_majsoul_server(self, server:str, custom_url:str|None=None) -> None:
+        """Update Majsoul URL by server selection."""
+        if server == "CUSTOM":
+            self.ms_server_select = "CUSTOM"
+            if custom_url is not None:
+                self.ms_url = custom_url
+            return
+        self.ms_server_select = server
+        self.ms_url = self.get_majsoul_server_url(server)
     
     ### Validate functions: return true if the value is valid
        
@@ -154,6 +196,10 @@ class Settings:
     def valid_auto_join_room(self, room:str) -> bool:
         """ return true if auto join room type is valid"""
         return room in utils.AUTO_JOIN_ROOMS
+
+    def valid_majsoul_server(self, server:str) -> bool:
+        """Return True if the selected Majsoul server type is valid."""
+        return server in MAJSOUL_SERVER_TYPES
         
     def valid_url(self, url:str) -> bool:
         """ validate url"""
