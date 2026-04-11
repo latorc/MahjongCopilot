@@ -7,7 +7,7 @@ import queue
 import os
 
 from io import BytesIO
-from playwright._impl._errors import TargetClosedError
+from playwright._impl._errors import TargetClosedError, TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 from common import utils
 from common.utils import Folder, FPSCounter, list_children
@@ -17,6 +17,15 @@ class GameBrowser:
     """ Wrapper for Playwright browser controlling maj-soul operations
     Browser runs in a thread, and actions are queued to be processed by the thread"""
     CLIENT_SIZE_TOLERANCE_PX = 4
+    LAUNCH_CONTEXT_TIMEOUT_MS = 6000
+    LAUNCH_TIMEOUT_RETRY_DELAY_S = 2.0
+    BROWSER_STOP_JOIN_TIMEOUT = 5.0
+    STARTUP_CLICK_POS = (5, 5)
+    TRANSIENT_PAGE_ERROR_PATTERNS = (
+        "execution context was destroyed",
+        "cannot find context with specified id",
+        "most likely because of a navigation",
+    )
 
     def __init__(self, width:int, height:int):
         """ Set browser with viewport size (width, height)"""
@@ -75,6 +84,7 @@ class GameBrowser:
             "user_data_dir": utils.sub_folder(Folder.BROWSER_DATA),
             "headless": False,
             "no_viewport": True,
+            "timeout": self.LAUNCH_CONTEXT_TIMEOUT_MS,
             "proxy": proxy_object,
             "ignore_default_args": ["--enable-automation"],
             "args": self._build_launch_args(url, enable_chrome_ext, extensions_list),
@@ -203,23 +213,60 @@ class GameBrowser:
             LOGGER.info('Extensions loaded: %s', extensions_list)
         launch_options = self._build_launch_options(url, proxy_object, enable_chrome_ext, extensions_list)
 
-        LOGGER.info('Starting Chromium, viewport=%dx%d, proxy=%s', self.width, self.height, proxy)
         with sync_playwright() as playwright:
-            try:
-                chromium = playwright.chromium
-                self.context = chromium.launch_persistent_context(**launch_options)
-            except Exception as e:
-                LOGGER.error('Error launching the browser: %s', e, exc_info=True)
-                return
+            chromium = playwright.chromium
+            launch_attempt = 0
 
-            try:
-                self.page = self._get_primary_page()
-                if self.page.url != url:
-                    self.page.goto(url)
-                self._page_cdp_session = self.context.new_cdp_session(self.page)
-                self._calibrate_window_bounds()
-            except Exception as e:
-                LOGGER.error('Error opening page. Check if certificate is installed. \n%s',e)
+            while not self._stop_event.is_set():
+                launch_attempt += 1
+                LOGGER.info(
+                    'Starting Chromium, viewport=%dx%d, proxy=%s (attempt %d)',
+                    self.width,
+                    self.height,
+                    proxy,
+                    launch_attempt,
+                )
+                try:
+                    self.context = chromium.launch_persistent_context(**launch_options)
+                    self.page = self._get_primary_page()
+                    if self.page.url != url:
+                        self.page.goto(url)
+                    self._page_cdp_session = self.context.new_cdp_session(self.page)
+                    self._calibrate_window_bounds()
+                    click_x, click_y = self.STARTUP_CLICK_POS
+                    self.page.mouse.click(x=click_x, y=click_y, delay=60)
+                    break
+                except PlaywrightTimeoutError as e:
+                    LOGGER.warning(
+                        "Browser startup timed out after %dms (attempt %d). Closing and retrying in %.1fs.",
+                        self.LAUNCH_CONTEXT_TIMEOUT_MS,
+                        launch_attempt,
+                        self.LAUNCH_TIMEOUT_RETRY_DELAY_S,
+                    )
+                    LOGGER.debug("Startup timeout details: %s", e)
+                    self._cleanup_after_init_failure()
+                    if self._stop_event.wait(self.LAUNCH_TIMEOUT_RETRY_DELAY_S):
+                        return
+                except RuntimeError as e:
+                    if "Timed out waiting for Chromium app page" in str(e):
+                        LOGGER.warning(
+                            "Browser startup timed out waiting for app page (attempt %d). Closing and retrying in %.1fs.",
+                            launch_attempt,
+                            self.LAUNCH_TIMEOUT_RETRY_DELAY_S,
+                        )
+                        self._cleanup_after_init_failure()
+                        if self._stop_event.wait(self.LAUNCH_TIMEOUT_RETRY_DELAY_S):
+                            return
+                        continue
+                    LOGGER.error('Error opening page. Browser init aborted.\n%s', e, exc_info=True)
+                    self._cleanup_after_init_failure()
+                    return
+                except Exception as e:
+                    LOGGER.error('Error launching the browser: %s', e, exc_info=True)
+                    self._cleanup_after_init_failure()
+                    return
+            else:
+                return
 
             # # Do not allow new page tab
             # def on_page(page:Page):
@@ -241,6 +288,12 @@ class GameBrowser:
                         self.client_size_check = (metrics['innerWidth'], metrics['innerHeight'])
                         self._last_update_time = time.time()
                 except Exception as e:
+                    if self._stop_event.is_set():
+                        break
+                    if self._is_transient_page_error(e):
+                        LOGGER.debug("Transient page error during navigation: %s", e)
+                        time.sleep(0.05)
+                        continue
                     LOGGER.warning("Page error %s. exiting.", e)
                     break
 
@@ -268,6 +321,20 @@ class GameBrowser:
             self.init_vars()
         return
 
+    def _cleanup_after_init_failure(self):
+        """Best-effort cleanup when browser startup fails before entering main loop."""
+        try:
+            if self.page and self.page.is_closed() is False:
+                self.page.close()
+            if self.context:
+                self.context.close()
+        except TargetClosedError:
+            pass
+        except Exception as e:
+            LOGGER.debug("Ignore cleanup error after init failure: %s", e)
+        finally:
+            self.init_vars()
+
     def _clear_action_queue(self):
         """ Clear the action queue"""
         while True:
@@ -276,13 +343,31 @@ class GameBrowser:
             except queue.Empty:
                 break
 
+    def _is_transient_page_error(self, err:Exception) -> bool:
+        """Return True for temporary navigation errors that should not kill the browser loop."""
+        err_text = str(err).lower()
+        return any(pattern in err_text for pattern in self.TRANSIENT_PAGE_ERROR_PATTERNS)
+
     def stop(self, join_thread:bool=False):
         """ Shutdown browser thread"""
-        if self.is_running():
+        thread = self._browser_thread
+        if thread is None:
+            return True
+
+        if thread.is_alive():
             self._stop_event.set()
             if join_thread:
-                self._browser_thread.join()
+                thread.join(timeout=self.BROWSER_STOP_JOIN_TIMEOUT)
+                if thread.is_alive():
+                    LOGGER.error(
+                        "Timed out waiting %.1fs for browser thread to stop",
+                        self.BROWSER_STOP_JOIN_TIMEOUT,
+                    )
+                    return False
+
+        if not thread.is_alive():
             self._browser_thread = None
+        return not thread.is_alive()
 
     def is_running(self):
         """ return True if browser thread is still running"""

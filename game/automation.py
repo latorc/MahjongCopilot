@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import time
 import random
 import threading
-from typing import Iterable, Iterator
+from typing import Callable, Iterable, Iterator
 
 from common.mj_helper import MjaiType, MSType, MJAI_TILES_19, MJAI_TILES_28, MJAI_TILES_SORTED
 from common.mj_helper import sort_mjai_tiles, cvt_ms2mjai
@@ -194,6 +194,11 @@ class ActionStepWheel(ActionStep):
 class ActionStepDelay(ActionStep):
     """ Delay action"""
     delay:float
+
+@dataclass
+class ActionStepCallback(ActionStep):
+    """Execute a callback for non-mouse automation steps."""
+    callback:Callable[[], None]
         
 class AutomationTask:
     """ Managing automation task and its thread
@@ -243,6 +248,8 @@ class AutomationTask:
             self.executor.mouse_wheel(step.dx, step.dy, True)
         elif isinstance(step, ActionStepDelay):
             time.sleep(step.delay)
+        elif isinstance(step, ActionStepCallback):
+            step.callback()
         else:
             raise NotImplementedError(f"Execution not implemented for step type {type(step)}")
         self.last_exe_time = time.time()
@@ -282,6 +289,7 @@ class AutomationTask:
 
 END_GAME = "Auto_EndGame"
 JOIN_GAME = "Auto_JoinGame"
+RECONNECT = "Auto_Reconnect"
 
 class Automation:
     """ Convert mjai reaction messages to browser actions, automating the AI actions on Majsoul.
@@ -289,18 +297,34 @@ class Automation:
     and are translated to client resolution before execution"""
     END_GAME_CLICK_DELAY_LOWER = 1.2
     END_GAME_CLICK_DELAY_UPPER = 1.8
+    RECONNECT_RESTART_DELAY = 3.0
+    RECONNECT_LOBBY_GRACE = 15.0
+    DISCONNECT_CHECK_INTERVAL = 1.0
+    DISCONNECT_TEMPS = (
+        ImgTemp.DISCONNECT_RETRYING,
+        ImgTemp.DISCONNECT_TIMEOUT,
+        ImgTemp.DISCONNECT_MAIN,
+    )
 
-    def __init__(self, browser: GameBrowser, setting:Settings):
+    def __init__(
+        self,
+        browser: GameBrowser,
+        setting:Settings,
+        restart_browser_cb:Callable[[], None] | None = None,
+    ):
         if browser is None:
             raise ValueError("Browser is None")
         self.executor = browser
         self.st = setting
         self.g_v = GameVisual(browser)
+        self.restart_browser_cb = restart_browser_cb
         
         self._task:AutomationTask = None        # the task thread        
         self.ui_state:UiState = UiState.NOT_RUNNING   # Where game UI is at. initially not running 
         
         self.last_emoji_time:float = 0.0        # timestamp of last emoji sent   
+        self._last_disconnect_check:float = 0.0
+        self._reconnect_hold_until:float = 0.0
     
     def is_running_execution(self):
         """ if task is still running"""
@@ -343,7 +367,7 @@ class Automation:
         if mjai_type == MjaiType.DAHAI:
             # extra time for first round and East
             if gi.is_first_round and  gi.jikaze  == 'E':
-                delay += 4.5
+                delay += 3.0
                 
             extra_time:float = 0.0
             
@@ -365,6 +389,8 @@ class Automation:
         elif mjai_type == MjaiType.HORA:
             delay += 0.0
         elif mjai_type == MjaiType.NUKIDORA:
+            if gi.is_first_round and gi.jikaze  == 'E':
+                delay += 3.0
             delay += 0.0
         elif mjai_type == MjaiType.RYUKYOKU: # more time for RYUKYOKU
             if gi.jikaze  == 'E':
@@ -548,6 +574,48 @@ class Automation:
             self._task = AutomationTask(self.executor, "IdleMove", "Move mouse around in other's turn")
             self._task.start_action_steps(action_steps, None)
         
+    def _detect_disconnect(self) -> tuple[ImgTemp | None, float]:
+        """Detect whether the in-game disconnect modal is currently visible."""
+        self._last_disconnect_check = time.time()
+        return self.g_v.comp_temps(self.DISCONNECT_TEMPS)
+
+    def automate_reconnect(self):
+        """Wait for Majsoul self-reconnect, then restart browser only if still disconnected."""
+        if not self.st.enable_automation:
+            return False
+        if not self.executor.is_page_normal():
+            return False
+        if self.restart_browser_cb is None:
+            LOGGER.error("Reconnect requested but restart_browser_cb is not configured")
+            return False
+        if self.is_running_execution() and self._task.name == RECONNECT:
+            return True
+
+        self.stop_previous()
+        self._task = AutomationTask(self.executor, RECONNECT, "Wait and recheck disconnect dialog")
+        self._task.start_action_steps(self._reconnect_iter(), None)
+        return True
+
+    def _restart_browser_if_still_disconnected(self):
+        """Re-check the disconnect dialog after a wait and restart only if still present."""
+        matched_temp, diff = self._detect_disconnect()
+        if matched_temp is None:
+            LOGGER.info("Disconnect dialog cleared during wait; skip browser restart (best diff %.1f)", diff)
+            return
+
+        LOGGER.warning(
+            "Disconnect dialog still visible after %.1fs: %s (diff %.1f). Restarting browser.",
+            self.RECONNECT_RESTART_DELAY,
+            matched_temp.name,
+            diff,
+        )
+        self._reconnect_hold_until = time.time() + self.RECONNECT_LOBBY_GRACE
+        self.restart_browser_cb()
+
+    def _reconnect_iter(self) -> Iterator[ActionStep]:
+        yield ActionStepDelay(self.RECONNECT_RESTART_DELAY)
+        yield ActionStepCallback(self._restart_browser_if_still_disconnected)
+
     
     def steps_action_dahai(self, mjai_action:dict, gi:GameInfo) -> list[ActionStep]:
         """ generate steps for dahai (discard tile) action
@@ -771,23 +839,33 @@ class Automation:
         if self.ui_state != UiState.IN_GAME:
             self.stop_previous()
             self.ui_state = UiState.MAIN_MENU
+        self._last_disconnect_check = 0.0
 
     def on_enter_game(self):
         """ enter game handler"""
         self.stop_previous()
         self.ui_state = UiState.IN_GAME
+        self._last_disconnect_check = 0.0
+        self._reconnect_hold_until = 0.0
 
     def on_end_game(self):
         """ end game handler"""
         self.stop_previous()
         if self.ui_state != UiState.NOT_RUNNING:
             self.ui_state = UiState.GAME_ENDING
+        self._last_disconnect_check = 0.0
         
     def on_exit_lobby(self):
         """ exit lobby handler"""
+        if self.is_running_execution() and self._task.name == RECONNECT:
+            LOGGER.debug("Keep reconnect task running on lobby exit")
+            self._last_disconnect_check = 0.0
+            return
+
         if self.ui_state != UiState.IN_GAME:
             self.stop_previous()
             self.ui_state = UiState.NOT_RUNNING
+        self._last_disconnect_check = 0.0
    
     def automate_end_game(self):
         """Automate Game end go back to menu"""  
@@ -913,7 +991,26 @@ class Automation:
     
     def decide_lobby_action(self):
         """ decide what "lobby action" to execute based on current state."""
-        if not self.can_automate(True):
+        if not self.st.enable_automation:
+            return
+        if not self.executor.is_page_normal():
+            return
+
+        current_task_name = self._task.name if self.is_running_execution() else None
+        if (
+            current_task_name != RECONNECT
+            and time.time() - self._last_disconnect_check >= self.DISCONNECT_CHECK_INTERVAL
+        ):
+            matched_temp, diff = self._detect_disconnect()
+            if matched_temp is not None:
+                LOGGER.warning("Trigger reconnect from %s screen (diff %.1f)", matched_temp.name, diff)
+                self.automate_reconnect()
+                return True
+
+        if time.time() < self._reconnect_hold_until:
+            return
+
+        if self.is_running_execution():
             return
         if self._task:      # Cancel if interval not reached
             if time.time() - self._task.last_exe_time < self.st.auto_retry_interval:                

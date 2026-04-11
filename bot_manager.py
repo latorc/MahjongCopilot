@@ -33,6 +33,8 @@ METHODS_TO_IGNORE = [
 
 class BotManager:
     """ Bot logic manager"""
+    FLOW_STALE_TIMEOUT = 12.0
+
     def __init__(self, setting:Settings) -> None:
         self.st = setting
         self.game_state:GameState = None
@@ -41,7 +43,7 @@ class BotManager:
         self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
         self.proxy_injector = proxinject.ProxyInjector()
         self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
-        self.automation = Automation(self.browser, self.st)
+        self.automation = Automation(self.browser, self.st, self.restart_browser_for_reconnect)
         self.bot:Bot = None
 
         self._thread:threading.Thread = None
@@ -56,6 +58,7 @@ class BotManager:
         self.is_loading_bot:bool = False                # is bot being loaded
         self.main_thread_exception:Exception = None     # Exception that had stopped the main thread
         self.game_exception:Exception = None            # game run time error (but does not break main thread)        
+        self._last_ws_event_time:float = 0.0
         
         
     def start(self):
@@ -127,6 +130,15 @@ class BotManager:
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
+
+    def restart_browser_for_reconnect(self):
+        """Restart the browser with the current Majsoul URL/proxy after a disconnect."""
+        LOGGER.warning("Restarting browser for disconnect recovery")
+        stop_ok = self.browser.stop(True)
+        if not stop_ok:
+            LOGGER.error("Browser stop timed out during reconnect; skipping relaunch")
+            return
+        self.start_browser()
     
     def is_browser_zoom_off(self):
         """Check whether the browser client area mismatches the configured automation size."""
@@ -279,7 +291,9 @@ class BotManager:
                                     
             # loop ended, clean up before exit
             LOGGER.info("Shutting down browser")
-            self.browser.stop(True)                
+            stop_ok = self.browser.stop(True)
+            if not stop_ok:
+                LOGGER.error("Browser stop timed out during shutdown; continuing cleanup")
             LOGGER.info("Shutting down MITM")
             self.mitm_server.stop()
             if self.proxy_injector.is_running():
@@ -311,6 +325,8 @@ class BotManager:
                 
     def _loop_post_msg(self):
         # things to do in every loop after processing msg
+        self._clear_stale_flow_ids()
+
         # check mitm
         if self.mitm_server.is_running() is False:
             self.game_exception = utils.MITMException("MITM server stopped")
@@ -334,10 +350,33 @@ class BotManager:
         
         if not self.game_exception:     # skip on game error
             self.automation.decide_lobby_action()
+
+    def _clear_stale_flow_ids(self):
+        """Clear stale flow ids when browser is closed and websocket events have stopped."""
+        if not (self.lobby_flow_id or self.game_flow_id):
+            return
+        if self.browser.is_running():
+            return
+        if self.game_state is not None:
+            return
+        if self._last_ws_event_time > 0:
+            idle_seconds = time.time() - self._last_ws_event_time
+            if idle_seconds < self.FLOW_STALE_TIMEOUT:
+                return
+
+        LOGGER.warning(
+            "Clearing stale websocket flow ids (lobby=%s, game=%s)",
+            self.lobby_flow_id,
+            self.game_flow_id,
+        )
+        self.lobby_flow_id = None
+        self.game_flow_id = None
+        self.automation.on_exit_lobby()
             
         
     def _process_msg(self, msg:mitm.WSMessage):
         """ process websocket message from mitm server"""
+        self._last_ws_event_time = time.time()
         
         if msg.type == mitm.WsType.START:
             LOGGER.debug("Websocket Flow started: %s", msg.flow_id)

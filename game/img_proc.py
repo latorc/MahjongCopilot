@@ -1,6 +1,7 @@
 """ image processing and visual analysis for Majsoul game screen"""
 from enum import Enum, auto
 import io
+from typing import Iterable
 from PIL import Image, ImageChops, ImageStat, ImageDraw
 import common.utils as utils
 from common.utils import Folder
@@ -59,10 +60,14 @@ def img_avg_diff(base_img:Image.Image, input_img:Image.Image, mask_img:Image.Ima
 class ImgTemp(Enum):
     """ game image templates"""
     MAIN_MENU = auto()
+    DISCONNECT_RETRYING = auto()
+    DISCONNECT_TIMEOUT = auto()
+    DISCONNECT_MAIN = auto()
     
 
 class GameVisual:
     """ image analysis for game screen"""
+    NORMALIZED_TEMPLATE_SIZE = (1280, 720)
     
     def __init__(self, browser:GameBrowser) -> None:
         self.browser = browser
@@ -116,6 +121,33 @@ class GameVisual:
         scale = min(size[0] / 1280, size[1] / 720)
         width = max(1, int(round(width_px * scale)))
         draw.ellipse(scaled_box, outline=255, width=width)
+
+    def _normalize_template(self, img:Image.Image) -> Image.Image:
+        """Crop slight aspect-ratio drift and resize a screenshot template to 1280x720."""
+        src_w, src_h = img.size
+        target_w, target_h = self.NORMALIZED_TEMPLATE_SIZE
+        target_ratio = target_w / target_h
+        src_ratio = src_w / src_h
+
+        if abs(src_ratio - target_ratio) > 1e-4:
+            if src_ratio > target_ratio:
+                new_w = int(round(src_h * target_ratio))
+                left = max(0, (src_w - new_w) // 2)
+                img = img.crop((left, 0, left + new_w, src_h))
+            else:
+                new_h = int(round(src_w / target_ratio))
+                top = max(0, (src_h - new_h) // 2)
+                img = img.crop((0, top, src_w, top + new_h))
+
+        return img.resize(self.NORMALIZED_TEMPLATE_SIZE, Image.Resampling.LANCZOS)
+
+    def _load_rgb_template(self, img_file:str, normalize:bool=False) -> Image.Image:
+        """Load a template image from resources."""
+        img_path = utils.sub_file(Folder.RES, img_file)
+        img = Image.open(img_path).convert('RGB')
+        if normalize:
+            img = self._normalize_template(img)
+        return img
 
     def _build_generic_main_menu_mask(self, size:tuple[int, int]) -> Image.Image:
         """Build a language-agnostic main menu mask using only shared UI chrome.
@@ -171,23 +203,60 @@ class GameVisual:
             self._draw_rect(draw, size, box)
 
         return mask
+
+    def _build_disconnect_mask(self, size:tuple[int, int]) -> Image.Image:
+        """Compare only the central disconnect modal and restart button."""
+        mask = Image.new('L', size, 0)
+        draw = ImageDraw.Draw(mask)
+        self._draw_rect(draw, size, (278, 195, 913, 541))
+        return mask
         
     def _load_imgs(self) -> None:
         """ load all template images"""
-        files = [
-            (ImgTemp.MAIN_MENU, 'mainmenu.png', 'mainmenu_mask.png')
+        img_mainmenu = self._load_rgb_template('mainmenu.png')
+        mask_mainmenu = Image.open(utils.sub_file(Folder.RES, 'mainmenu_mask.png')).convert('L')
+        generic_mask = self._build_generic_main_menu_mask(img_mainmenu.size)
+        self.temp_dict[ImgTemp.MAIN_MENU] = [
+            (img_mainmenu, mask_mainmenu, 30.0),
+            (img_mainmenu, generic_mask, 28.0),
         ]
-        for loc, img_file, mask_file in files:
-            img_file = utils.sub_file(Folder.RES, img_file)
-            mask_file = utils.sub_file(Folder.RES, mask_file)
-            img_mainmenu = Image.open(img_file).convert('RGB')
-            mask_mainmenu = Image.open(mask_file).convert('L')
-            generic_mask = self._build_generic_main_menu_mask(img_mainmenu.size)
-            self.temp_dict[loc] = [
-                (img_mainmenu, mask_mainmenu, 30.0),
-                (img_mainmenu, generic_mask, 28.0),
+
+        disconnect_mask = self._build_disconnect_mask(self.NORMALIZED_TEMPLATE_SIZE)
+        for tmp, img_file in [
+            (ImgTemp.DISCONNECT_RETRYING, 'disconnect1.png'),
+            (ImgTemp.DISCONNECT_TIMEOUT, 'disconnect2.png'),
+            (ImgTemp.DISCONNECT_MAIN, 'disconnect3.png'),
+        ]:
+            img_disconnect = self._load_rgb_template(img_file, normalize=True)
+            self.temp_dict[tmp] = [
+                (img_disconnect, disconnect_mask, 12.0),
             ]
 
+    def _comp_temp_on_img(
+        self,
+        img_input:Image.Image,
+        tmp:ImgTemp,
+        thres:float|None=None,
+    ) -> tuple[bool, float]:
+        """Compare a prepared screenshot against one template entry."""
+        template_variants:list[tuple[Image.Image, Image.Image, float]] = self.temp_dict[tmp]
+        best_diff = None
+        for base_img, mask, variant_thres in template_variants:
+            diff = img_avg_diff(base_img, img_input, mask)
+            if best_diff is None or diff < best_diff:
+                best_diff = diff
+            threshold = thres if thres is not None else variant_thres
+            if diff < threshold:
+                return True, diff
+        return False, best_diff if best_diff is not None else -1
+
+    def _capture_screen_img(self) -> Image.Image | None:
+        """Capture the current browser viewport as a PIL image."""
+        img_bytes = self.browser.screen_shot()
+        if img_bytes is None:
+            return None
+        img_io = io.BytesIO(img_bytes)
+        return Image.open(img_io).convert('RGB')
 
     def comp_temp(self, tmp:ImgTemp, thres:float|None=None) -> tuple[bool, float]:
         """ compare current screen to template
@@ -198,22 +267,34 @@ class GameVisual:
         return:
             bool: True if the current screen matches the template
             float: average difference between current screen and loc template"""
-        img_bytes = self.browser.screen_shot()
-        if img_bytes is None:
+        img_input = self._capture_screen_img()
+        if img_input is None:
             return False, -1
-        img_io = io.BytesIO(img_bytes)
-        img_input = Image.open(img_io).convert('RGB')
-        template_variants:list[tuple[Image.Image, Image.Image, float]] = self.temp_dict[tmp]
-        best_diff = None
         try:
-            for base_img, mask, variant_thres in template_variants:
-                diff = img_avg_diff(base_img, img_input, mask)
-                if best_diff is None or diff < best_diff:
-                    best_diff = diff
-                threshold = thres if thres is not None else variant_thres
-                if diff < threshold:
-                    return True, diff
-            return False, best_diff if best_diff is not None else -1
+            return self._comp_temp_on_img(img_input, tmp, thres)
         except Exception as e:
             LOGGER.error("Error in testing template %s: %s", tmp.name, e, exc_info=True)
             return False, -1
+
+    def comp_temps(self, tmps:Iterable[ImgTemp], thres:float|None=None) -> tuple[ImgTemp | None, float]:
+        """Compare the current screen against multiple templates using a single screenshot."""
+        img_input = self._capture_screen_img()
+        if img_input is None:
+            return None, -1
+        best_diff = None
+        best_match = None
+        best_match_diff = None
+        try:
+            for tmp in tmps:
+                matched, diff = self._comp_temp_on_img(img_input, tmp, thres)
+                if best_diff is None or (diff >= 0 and diff < best_diff):
+                    best_diff = diff
+                if matched and (best_match_diff is None or diff < best_match_diff):
+                    best_match = tmp
+                    best_match_diff = diff
+            if best_match is not None:
+                return best_match, best_match_diff
+            return None, best_diff if best_diff is not None else -1
+        except Exception as e:
+            LOGGER.error("Error in testing template group: %s", e, exc_info=True)
+            return None, -1
